@@ -1,9 +1,9 @@
 python-telegram-bot==22.2
-feedparser
-requests
-beautifulsoup4
-Pillow
-deep-translator
-python-dotenv
-schedule
-lxml
+feedparser==6.0.11
+requests==2.32.3
+beautifulsoup4==4.13.4
+Pillow==11.3.0
+deep-translator==1.11.4
+python-dotenv==1.1.1
+schedule==1.2.2
+lxml==6.0.0
