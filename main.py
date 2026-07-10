@@ -8,9 +8,10 @@ from news_db import (
     mark_as_published,
 )
 
+CHECK_INTERVAL = 300  # هر ۵ دقیقه
 
-async def main():
-    init_db()
+
+async def check_news():
 
     news = get_latest_news()
 
@@ -35,6 +36,23 @@ async def main():
         print("✅ New article published.")
 
         break
+
+
+async def main():
+
+    init_db()
+
+    print("🚀 KhabarF24 Started")
+
+    while True:
+
+        try:
+            await check_news()
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+        await asyncio.sleep(CHECK_INTERVAL)
 
 
 if __name__ == "__main__":
