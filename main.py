@@ -2,6 +2,10 @@ import asyncio
 
 from news_fetcher import get_latest_news
 from telegram_bot import send_message
+from database.published_news import (
+    is_published,
+    mark_as_published,
+)
 
 
 async def main():
@@ -11,14 +15,23 @@ async def main():
         print("No news found.")
         return
 
-    first_news = news[0]
+    for item in news:
 
-    message = f"""📰 {first_news['title']}
+        if is_published(item["link"]):
+            continue
 
-🔗 {first_news['link']}
+        message = f"""📰 {item['title']}
+
+🔗 {item['link']}
 """
 
-    await send_message(message)
+        await send_message(message)
+
+        mark_as_published(item["link"])
+
+        print("✅ New article published.")
+
+        break
 
 
 asyncio.run(main())
