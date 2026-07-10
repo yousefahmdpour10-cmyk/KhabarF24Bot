@@ -2,13 +2,16 @@ import asyncio
 
 from news_fetcher import get_latest_news
 from telegram_bot import send_message
-from database.published_news import (
+from database.news_db import (
+    init_db,
     is_published,
     mark_as_published,
 )
 
 
 async def main():
+    init_db()
+
     news = get_latest_news()
 
     if not news:
@@ -34,4 +37,5 @@ async def main():
         break
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
