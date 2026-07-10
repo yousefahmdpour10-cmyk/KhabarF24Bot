@@ -31,6 +31,8 @@ def is_published(link):
 
     conn.close()
 
+    print(f"CHECK: {link} -> {result}")
+
     return result is not None
 
 
@@ -44,4 +46,7 @@ def mark_as_published(link):
     )
 
     conn.commit()
+
+    print(f"SAVED: {link}")
+
     conn.close()
