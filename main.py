@@ -2,7 +2,7 @@ import asyncio
 
 from news_fetcher import get_latest_news
 from telegram_bot import send_message
-from database.news_db import (
+from news_db import (
     init_db,
     is_published,
     mark_as_published,
