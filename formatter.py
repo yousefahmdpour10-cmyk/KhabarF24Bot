@@ -1,11 +1,9 @@
-def format_news(news):
+def format_news(title, summary, source, category, hashtag):
+    return f"""{category}
 
-    category = news.get("category", "🌍 جهان")
-    source = news.get("source", "منبع نامشخص")
+📰 {title}
 
-    message = f"""{category}
-
-📰 {news["title"]}
+✍️ {summary}
 
 🗞 {source}
 
@@ -13,7 +11,5 @@ def format_news(news):
 
 ━━━━━━━━━━━━
 
-#خبر
+{hashtag}
 """
-
-    return message
