@@ -8,6 +8,8 @@ from news_db import (
     mark_as_published,
 )
 
+from category_detector import detect_category
+
 CHECK_INTERVAL = 300  # هر ۵ دقیقه
 
 
@@ -23,6 +25,13 @@ async def check_news():
 
         if is_published(item["link"]):
             continue
+
+        category = detect_category(
+            item.get("source", ""),
+            item["title"]
+        )
+
+        print(f"Category: {category}")
 
         message = f"""📰 {item['title']}
 
