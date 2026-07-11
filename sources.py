@@ -12,6 +12,7 @@ RSS_SOURCES = {
     "iran": [
 
         # فعلاً خالی
+
     ],
 
     "technology": [
@@ -30,7 +31,6 @@ RSS_SOURCES = {
 
     "gaming": [
 
-        "https://news.ubisoft.com/rss",
         "https://blog.playstation.com/feed/",
         "https://news.xbox.com/en-us/feed/",
 
