@@ -1,34 +1,47 @@
-import sqlite3
+import os
+import psycopg2
+from psycopg2 import sql
 
-DB_NAME = "news.db"
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+def get_connection():
+    return psycopg2.connect(DATABASE_URL)
 
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS published_news (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         link TEXT UNIQUE
     )
     """)
 
     conn.commit()
+    cursor.close()
     conn.close()
+
+    print("✅ PostgreSQL database ready.")
 
 
 def is_published(link):
-    conn = sqlite3.connect(DB_NAME)
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT 1 FROM published_news WHERE link=?",
+        "SELECT 1 FROM published_news WHERE link=%s",
         (link,)
     )
 
     result = cursor.fetchone()
 
+    cursor.close()
     conn.close()
 
     print(f"CHECK: {link} -> {result}")
@@ -37,16 +50,22 @@ def is_published(link):
 
 
 def mark_as_published(link):
-    conn = sqlite3.connect(DB_NAME)
+
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT OR IGNORE INTO published_news(link) VALUES(?)",
+        """
+        INSERT INTO published_news(link)
+        VALUES(%s)
+        ON CONFLICT(link) DO NOTHING
+        """,
         (link,)
     )
 
     conn.commit()
 
-    print(f"SAVED: {link}")
-
+    cursor.close()
     conn.close()
+
+    print(f"SAVED: {link}")
