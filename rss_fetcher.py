@@ -1,7 +1,11 @@
 import feedparser
 
 
-def fetch_news(rss_url):
+def fetch_news(source_info):
+
+    rss_url = source_info["url"]
+    source_name = source_info["name"]
+    category = source_info["category"]
 
     feed = feedparser.parse(rss_url)
 
@@ -12,24 +16,18 @@ def fetch_news(rss_url):
 
     for entry in feed.entries:
 
-        source = ""
-
-        if "source" in entry:
-            source = entry.source.get("title", "").strip()
-
-        if not source:
-            source = feed.feed.get("title", "").strip()
-
         news.append({
-
             "title": entry.get("title", "").strip(),
 
             "link": entry.get("link", "").strip(),
 
             "summary": entry.get("summary", "").strip(),
 
-            "source": source
+            # اطلاعات منبع برای هوشمندی ربات
+            "source": source_name,
 
+            # دسته‌بندی از قبل مشخص شده
+            "category": category
         })
 
     return news
