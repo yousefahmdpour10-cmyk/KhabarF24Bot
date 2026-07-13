@@ -6,14 +6,12 @@ def get_latest_news():
 
     news = []
 
-    for category in RSS_SOURCES.values():
+    for source in RSS_SOURCES:
 
-        for url in category:
+        try:
+            news.extend(fetch_news(source))
 
-            try:
-                news.extend(fetch_news(url))
-
-            except Exception as e:
-                print(f"RSS Error: {e}")
+        except Exception as e:
+            print(f"RSS Error {source.get('name', '')}: {e}")
 
     return news
