@@ -12,9 +12,11 @@ def format_news(title, summary, source):
         }
     )
 
-    sticker = data["sticker"]
     flag = data["country"]
+    sticker = data["sticker"]
     hashtag = data["hashtag"]
+
+    category_name = hashtag.replace("#", "")
 
     title = (title or "").strip()
     summary = (summary or "").strip()
@@ -22,7 +24,9 @@ def format_news(title, summary, source):
     if not summary:
         summary = "جزئیات بیشتر به‌زودی..."
 
-    return f"""{sticker}
+    return f"""━━━━━━━━━━━━━━━━
+🔴 KhabarF24 | {sticker} {category_name}
+━━━━━━━━━━━━━━━━
 
 📰 {title}
 
