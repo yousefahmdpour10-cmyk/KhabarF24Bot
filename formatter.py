@@ -1,15 +1,27 @@
-def format_news(title, summary, source, category, hashtag):
-    return f"""{category}
+from metadata import SOURCE_METADATA
+
+
+def format_news(title, summary, source):
+
+    data = SOURCE_METADATA.get(source, {
+        "country": "🌐",
+        "sticker": "📰",
+        "hashtag": "#خبر"
+    })
+
+    sticker = data["sticker"]
+    flag = data["country"]
+    hashtag = data["hashtag"]
+
+    return f"""{sticker}
 
 📰 {title}
 
 ✍️ {summary}
 
-🗞 {source}
-
-📢 @KhabarF24
+🗞️ {flag} {source}
 
 ━━━━━━━━━━━━
-
+📢 @KhabarF24
 {hashtag}
 """
