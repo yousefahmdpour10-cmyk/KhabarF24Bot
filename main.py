@@ -9,7 +9,7 @@ from news_db import (
 )
 
 from category_detector import detect_category
-
+from formatter import format_news
 
 CHECK_INTERVAL = 300  # هر ۵ دقیقه
 
@@ -32,7 +32,6 @@ async def check_news():
         if is_published(link):
             continue
 
-
         # اولویت با دسته‌ای که منبع مشخص کرده
         category = item.get("category")
 
@@ -43,21 +42,14 @@ async def check_news():
                 item.get("title", "")
             )
 
-
         print(f"Source: {item.get('source')}")
         print(f"Category: {category}")
 
-
-        message = f"""📰 {item['title']}
-
-{item.get('summary', '')}
-
-🗞️ {item.get('source', '')}
-
-━━━━━━━━━━━━
-📢 @KhabarF24
-"""
-
+        message = format_news(
+            title=item.get("title", ""),
+            summary=item.get("summary", ""),
+            source=item.get("source", "")
+        )
 
         await send_message(message)
 
@@ -66,7 +58,6 @@ async def check_news():
         print("✅ New article published.")
 
         break
-
 
 
 async def main():
@@ -84,7 +75,6 @@ async def main():
             print(f"Error: {e}")
 
         await asyncio.sleep(CHECK_INTERVAL)
-
 
 
 if __name__ == "__main__":
