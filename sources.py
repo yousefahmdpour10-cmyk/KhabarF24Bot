@@ -1,45 +1,75 @@
-RSS_SOURCES = {
+RSS_SOURCES = [
 
-    "world": [
+    # 🌍 World News
 
-        # World News
-        "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-        "https://feeds.bbci.co.uk/news/world/rss.xml",
-        "https://www.aljazeera.com/xml/rss/all.xml",
+    {
+        "name": "BBC",
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "category": "world"
+    },
 
-    ],
+    {
+        "name": "NYTimes",
+        "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+        "category": "world"
+    },
 
-    "iran": [
+    {
+        "name": "Al Jazeera",
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "category": "world"
+    },
 
-        # فعلاً خالی
 
-    ],
+    # 💻 Technology
 
-    "technology": [
+    {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/feed/",
+        "category": "technology"
+    },
 
-        "https://feeds.arstechnica.com/arstechnica/index",
-        "https://www.theverge.com/rss/index.xml",
-        "https://techcrunch.com/feed/",
+    {
+        "name": "The Verge",
+        "url": "https://www.theverge.com/rss/index.xml",
+        "category": "technology"
+    },
 
-    ],
+    {
+        "name": "Ars Technica",
+        "url": "https://feeds.arstechnica.com/arstechnica/index",
+        "category": "technology"
+    },
 
-    "sport": [
 
-        "https://www.espn.com/espn/rss/news",
+    # ⚽ Sport
 
-    ],
+    {
+        "name": "ESPN",
+        "url": "https://www.espn.com/espn/rss/news",
+        "category": "sport"
+    },
 
-    "gaming": [
 
-        "https://blog.playstation.com/feed/",
-        "https://news.xbox.com/en-us/feed/",
+    # 🎮 Gaming
 
-    ],
+    {
+        "name": "PlayStation",
+        "url": "https://blog.playstation.com/feed/",
+        "category": "gaming"
+    },
 
-    "economy": [
+    {
+        "name": "Xbox",
+        "url": "https://news.xbox.com/en-us/feed/",
+        "category": "gaming"
+    },
 
-        # فعلاً خالی
 
-    ]
+    # 🇮🇷 Iran
+    # بعداً اضافه می‌کنیم
 
-}
+    # 💰 Economy
+    # بعداً اضافه می‌کنیم
+
+]
