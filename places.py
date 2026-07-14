@@ -1,7 +1,8 @@
 """
 KhabarF24 Protected Places v4.4
 
-نام مکان‌ها و مناطق که نباید ترجمه ماشینی شوند
+مکان‌ها، مناطق و نام‌های جغرافیایی
+که نباید ترجمه ماشینی خرابشان کند
 """
 
 
@@ -13,22 +14,29 @@ PROTECTED_PLACES = [
     "Kuh Kolang",
     "Koh-e Kolang",
 
-    "Strait of Hormuz",
-    "Persian Gulf",
-
     "Tehran",
     "Iran",
-    "Iraq",
-    "Syria",
 
-    
+    "Persian Gulf",
+    "Strait of Hormuz",
+
+    "Hormuz Strait",
+
+
     # 🌍 Middle East
 
     "Gaza",
+    "Gaza Strip",
+
     "West Bank",
+
     "Red Sea",
 
     "Yemen",
+
+    "Iraq",
+
+    "Syria",
 
     "Lebanon",
 
@@ -37,9 +45,10 @@ PROTECTED_PLACES = [
     "Suez Canal",
 
 
-    # 🌎 Global
+    # 🌎 World
 
     "Washington",
+
     "New York",
 
     "Moscow",
@@ -51,5 +60,9 @@ PROTECTED_PLACES = [
     "Ukraine",
 
     "Russia",
+
+    "China",
+
+    "United States",
 
 ]
