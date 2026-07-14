@@ -5,14 +5,40 @@ from entities import PROTECTED_ENTITIES
 from brand_dictionary import replace_official_names
 
 
-print("🤖 KhabarF24 AI v4.2 News Writer")
+print("🤖 KhabarF24 AI v4.3 Headline Writer")
 
 
 
 NEWS_PHRASES = {
 
+    # اصطلاحات خبری
+
+    "claims": "مدعی شد",
+    "claimed": "مدعی شد",
+
+    "alleges": "مدعی شد",
+    "alleged": "ادعا شده",
+
+    "accuses": "متهم کرد",
+    "accused": "متهم کرد",
+
+    "sues": "شکایت کرد",
+
+    "files a lawsuit": "شکایتی مطرح کرد",
+    "files lawsuit": "شکایتی ثبت کرد",
+
+    "lawsuit": "شکایت حقوقی",
+
+    "officials": "مقام‌ها",
+
+    "official": "رسمی",
+
+    "administration": "دولت",
+
+    "government officials": "مقام‌های دولتی",
+
+
     "put off": "منصرف کردن",
-    "puts off": "منصرف می‌کند",
 
     "steps down": "کناره‌گیری کرد",
 
@@ -24,8 +50,6 @@ NEWS_PHRASES = {
 
     "amid": "در بحبوحه",
 
-    "backs down": "عقب‌نشینی کرد",
-
     "warns": "هشدار داد",
 
     "reveals": "فاش کرد",
@@ -33,8 +57,6 @@ NEWS_PHRASES = {
     "announces": "اعلام کرد",
 
     "joins": "پیوست",
-
-    "leaves": "ترک کرد",
 
     "wins": "پیروز شد",
 
@@ -44,39 +66,42 @@ NEWS_PHRASES = {
 
 
 
-# اصلاح عبارت‌های ماشینی رایج
 STYLE_REPLACEMENTS = {
 
-    "ممکن است پایان یابد":
-        "احتمال پایان آن افزایش یافته است",
 
-    "در پیش است":
-        "در انتظار است",
+    "مدعی توطئه می شود":
+    "مدعی توطئه شد",
 
-    "پیامدهای منطقه ای در پیش است":
-        "می‌تواند پیامدهای منطقه‌ای داشته باشد",
 
-    "صلح شکننده":
-        "آتش‌بس شکننده",
+    "مدعی توطئه می‌شود":
+    "مدعی توطئه شد",
 
-    "بن بست طولانی":
-        "بن‌بست چندساله",
 
-    "بدون جنگ، بدون صلح":
-        "وضعیت «نه جنگ، نه صلح»",
+    "به دلیل":
+    "به‌دلیل",
 
-    "به شدت افزایش یافته":
-        "افزایش یافته",
 
     "در حال حاضر":
-        "اکنون",
+    "اکنون",
+
 
     "می باشد":
-        "است",
+    "است",
+
+
+    "پیامدهای منطقه ای":
+    "پیامدهای منطقه‌ای",
+
+
+    "بن بست":
+    "بن‌بست",
+
+
+    "بدون جنگ، بدون صلح":
+    "نه جنگ، نه صلح",
+
 
 }
-
-
 
 
 
@@ -149,7 +174,9 @@ def translate_text(text):
 
     text = clean_text(text)
 
+
     if not text:
+
         return ""
 
 
@@ -158,13 +185,17 @@ def translate_text(text):
 
     try:
 
-        text, protected = protect_entities(text)
+        text, protected = protect_entities(
+            text
+        )
 
 
         translated = GoogleTranslator(
             source="auto",
             target="fa"
-        ).translate(text)
+        ).translate(
+            text
+        )
 
 
         translated = restore_entities(
@@ -188,7 +219,11 @@ def translate_text(text):
 
 
 
-def apply_dictionary(text):
+def improve_news_style(text):
+
+    if not text:
+        return ""
+
 
     for old, new in NEWS_PHRASES.items():
 
@@ -206,15 +241,15 @@ def apply_dictionary(text):
         )
 
 
-    return text
+    return text.strip()
 
 
 
 
 
-def create_headline(title):
+def rewrite_headline(title):
 
-    title = apply_dictionary(
+    title = improve_news_style(
         title
     )
 
@@ -224,7 +259,39 @@ def create_headline(title):
     )
 
 
-    # حذف نقل قول‌های اضافی
+    # اصلاح شروع‌های ضعیف
+
+    replacements = {
+
+
+        "چرا":
+        "بررسی",
+
+
+        "ممکن است":
+        "احتمال",
+
+
+        "به نظر می رسد":
+        "به نظر می‌رسد",
+
+
+        "مدعی شد که":
+        "مدعی شد",
+
+
+    }
+
+
+    for old, new in replacements.items():
+
+        title = title.replace(
+            old,
+            new
+        )
+
+
+    # حذف علامت‌های اضافی
 
     title = title.replace(
         '"',
@@ -232,12 +299,11 @@ def create_headline(title):
     )
 
 
-    # کوتاه سازی
+    # کوتاه سازی تیتر
 
-    if len(title) > 95:
+    if len(title) > 100:
 
-        title = title[:95]
-
+        title = title[:100]
 
         if " " in title:
 
@@ -253,9 +319,9 @@ def create_headline(title):
 
 
 
-def create_summary(summary):
+def rewrite_summary(summary):
 
-    summary = apply_dictionary(
+    summary = improve_news_style(
         summary
     )
 
@@ -297,13 +363,12 @@ def process_news(title, summary):
     )
 
 
-
-    title = create_headline(
+    title = rewrite_headline(
         title
     )
 
 
-    summary = create_summary(
+    summary = rewrite_summary(
         summary
     )
 
