@@ -5,40 +5,74 @@ from entities import PROTECTED_ENTITIES
 from brand_dictionary import replace_official_names
 
 
+print("🤖 KhabarF24 AI v4.2 News Writer")
 
-# =====================================
-# 🧠 KhabarF24 AI v4.1
-# Persian News Writer Engine
-# =====================================
 
 
 NEWS_PHRASES = {
 
     "put off": "منصرف کردن",
     "puts off": "منصرف می‌کند",
+
     "steps down": "کناره‌گیری کرد",
-    "steps aside": "کناره‌گیری کرد",
 
     "rules out": "رد کرد",
-    "rules out the possibility": "احتمال را رد کرد",
 
     "set to": "قرار است",
+
     "expected to": "انتظار می‌رود",
 
     "amid": "در بحبوحه",
 
     "backs down": "عقب‌نشینی کرد",
-    "backs away": "عقب‌نشینی کرد",
 
     "warns": "هشدار داد",
+
     "reveals": "فاش کرد",
+
     "announces": "اعلام کرد",
 
     "joins": "پیوست",
+
     "leaves": "ترک کرد",
 
     "wins": "پیروز شد",
+
     "defeats": "شکست داد",
+
+}
+
+
+
+# اصلاح عبارت‌های ماشینی رایج
+STYLE_REPLACEMENTS = {
+
+    "ممکن است پایان یابد":
+        "احتمال پایان آن افزایش یافته است",
+
+    "در پیش است":
+        "در انتظار است",
+
+    "پیامدهای منطقه ای در پیش است":
+        "می‌تواند پیامدهای منطقه‌ای داشته باشد",
+
+    "صلح شکننده":
+        "آتش‌بس شکننده",
+
+    "بن بست طولانی":
+        "بن‌بست چندساله",
+
+    "بدون جنگ، بدون صلح":
+        "وضعیت «نه جنگ، نه صلح»",
+
+    "به شدت افزایش یافته":
+        "افزایش یافته",
+
+    "در حال حاضر":
+        "اکنون",
+
+    "می باشد":
+        "است",
 
 }
 
@@ -115,26 +149,22 @@ def translate_text(text):
 
     text = clean_text(text)
 
-
     if not text:
         return ""
+
 
     original = text
 
 
     try:
 
-        text, protected = protect_entities(
-            text
-        )
+        text, protected = protect_entities(text)
 
 
         translated = GoogleTranslator(
             source="auto",
             target="fa"
-        ).translate(
-            text
-        )
+        ).translate(text)
 
 
         translated = restore_entities(
@@ -144,7 +174,6 @@ def translate_text(text):
 
 
         return translated.strip()
-
 
 
     except Exception as e:
@@ -159,7 +188,7 @@ def translate_text(text):
 
 
 
-def apply_news_phrases(text):
+def apply_dictionary(text):
 
     for old, new in NEWS_PHRASES.items():
 
@@ -168,56 +197,8 @@ def apply_news_phrases(text):
             new
         )
 
-    return text
 
-
-
-
-
-def improve_persian_style(text):
-
-    if not text:
-        return ""
-
-
-    replacements = {
-
-
-        "به پایان دهد":
-        "به پایان داد",
-
-
-        "به دست می آورد":
-        "کسب می‌کند",
-
-
-        "به دست آورد":
-        "کسب کرد",
-
-
-        "می باشد":
-        "است",
-
-
-        "در حال حاضر":
-        "اکنون",
-
-
-        "اعلام کرد که":
-        "اعلام کرد",
-
-
-        "خواهد شد":
-        "خواهد شد",
-
-
-        "می کند":
-        "می‌کند",
-
-    }
-
-
-    for old, new in replacements.items():
+    for old, new in STYLE_REPLACEMENTS.items():
 
         text = text.replace(
             old,
@@ -225,47 +206,7 @@ def improve_persian_style(text):
         )
 
 
-    return text.strip()
-
-
-
-
-
-def fix_english_start(text):
-
-    """
-    جلوگیری از شروع جمله با برند انگلیسی
-    """
-
-    if not text:
-        return ""
-
-
-    words = [
-        "Apple",
-        "Google",
-        "Microsoft",
-        "OpenAI",
-        "Tesla",
-        "Samsung",
-        "Meta"
-    ]
-
-
-    for word in words:
-
-        if text.startswith(word):
-
-            text = text.replace(
-                word,
-                "",
-                1
-            )
-
-            text = word + " " + text.strip()
-
-
-    return text.strip()
+    return text
 
 
 
@@ -273,25 +214,37 @@ def fix_english_start(text):
 
 def create_headline(title):
 
-    title = improve_persian_style(
+    title = apply_dictionary(
         title
     )
 
 
-    title = fix_english_start(
+    title = replace_official_names(
         title
     )
 
 
-    # کوتاه سازی تیتر
+    # حذف نقل قول‌های اضافی
 
-    if len(title) > 100:
+    title = title.replace(
+        '"',
+        ""
+    )
 
-        parts = title.split("؛")
 
-        if len(parts) > 1:
+    # کوتاه سازی
 
-            title = parts[0]
+    if len(title) > 95:
+
+        title = title[:95]
+
+
+        if " " in title:
+
+            title = title.rsplit(
+                " ",
+                1
+            )[0]
 
 
     return title.strip()
@@ -300,35 +253,32 @@ def create_headline(title):
 
 
 
-def summarize_text(text, max_length=320):
+def create_summary(summary):
 
-    text = clean_text(
-        text
+    summary = apply_dictionary(
+        summary
     )
 
 
-    text = improve_persian_style(
-        text
+    summary = replace_official_names(
+        summary
     )
 
 
-    if len(text) <= max_length:
+    if len(summary) > 320:
 
-        return text
-
-
-    text = text[:max_length]
+        summary = summary[:320]
 
 
-    last_dot = text.rfind(".")
+        if "." in summary:
+
+            summary = summary.rsplit(
+                ".",
+                1
+            )[0]
 
 
-    if last_dot > 100:
-
-        text = text[:last_dot]
-
-
-    return text.strip()
+    return summary.strip()
 
 
 
@@ -337,68 +287,37 @@ def summarize_text(text, max_length=320):
 def process_news(title, summary):
 
 
-    print(
-        "🤖 KhabarF24 AI v4.1"
-    )
-
-
-    fa_title = translate_text(
+    title = translate_text(
         title
     )
 
 
-    fa_summary = translate_text(
+    summary = translate_text(
         summary
     )
 
 
 
-    # اصلاح نام رسمی برندها
-
-    fa_title = replace_official_names(
-        fa_title
+    title = create_headline(
+        title
     )
 
 
-    fa_summary = replace_official_names(
-        fa_summary
+    summary = create_summary(
+        summary
     )
 
 
+    if not summary:
 
-    # اصلاح لحن خبری
-
-    fa_title = apply_news_phrases(
-        fa_title
-    )
-
-    fa_summary = apply_news_phrases(
-        fa_summary
-    )
-
-
-
-    fa_title = create_headline(
-        fa_title
-    )
-
-
-    fa_summary = summarize_text(
-        fa_summary
-    )
-
-
-
-    if not fa_summary:
-
-        fa_summary = fa_title
+        summary = title
 
 
 
     return {
 
-        "title": fa_title,
+        "title": title,
 
-        "summary": fa_summary
+        "summary": summary
 
     }
