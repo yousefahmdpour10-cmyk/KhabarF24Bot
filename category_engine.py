@@ -1,7 +1,7 @@
 """
 category_engine.py
 
-KhabarF24 Smart Category Engine
+KhabarF24 Smart Category Engine v3.1
 
 تشخیص دسته خبر بر اساس:
 - عنوان
@@ -9,9 +9,8 @@ KhabarF24 Smart Category Engine
 - منبع
 
 اولویت:
-ورزش > فناوری > اقتصاد > سلامت > علم > هواشناسی > جهان > ایران
+ورزش > فناوری > اقتصاد > سلامت > علم > هواشناسی > ایران > جهان
 """
-
 
 
 CATEGORIES = {
@@ -19,7 +18,8 @@ CATEGORIES = {
 
     "sport": [
 
-        # Football
+        # ⚽ Football
+
         "football",
         "soccer",
         "fifa",
@@ -30,40 +30,69 @@ CATEGORIES = {
         "laliga",
         "serie a",
         "bundesliga",
+
         "barcelona",
         "real madrid",
         "manchester",
         "liverpool",
         "arsenal",
         "chelsea",
+
         "messi",
         "mbappe",
         "ronaldo",
         "yamal",
 
-        # Basketball
+
+        # 🏀 Basketball
+
         "nba",
         "wnba",
         "basketball",
         "lebron",
+        "player",
+        "athlete",
 
-        # Volleyball
+
+        # 🏐 Volleyball
+
         "volleyball",
         "fivb",
 
-        # Wrestling
+
+        # 🤼 Wrestling
+
         "wrestling",
         "fila",
         "united world wrestling",
 
-        # Tennis
+
+        # 🎾 Tennis
+
         "tennis",
         "atp",
         "wta",
 
-        # Motorsport
+
+        # 🏎 Motorsport
+
         "formula 1",
+        "formula one",
         "f1",
+
+
+        # 🎲 Other sports
+
+        "poker",
+        "world series of poker",
+        "olympic",
+        "championship",
+        "tournament",
+        "coach",
+        "match",
+        "win",
+        "loss",
+        "score",
 
     ],
 
@@ -72,9 +101,8 @@ CATEGORIES = {
     "technology": [
 
         "technology",
-        "tech",
-        "ai",
         "artificial intelligence",
+        "ai model",
         "openai",
         "google",
         "apple",
@@ -83,7 +111,8 @@ CATEGORIES = {
         "robot",
         "chip",
         "software",
-        "cyber",
+        "cybersecurity",
+        "cyber attack",
 
     ],
 
@@ -99,6 +128,7 @@ CATEGORIES = {
         "bitcoin",
         "currency",
         "bank",
+        "investment",
 
     ],
 
@@ -145,7 +175,8 @@ CATEGORIES = {
 
         "iran",
         "tehran",
-        "islamic republic",
+        "isfahan",
+        "shiraz",
 
     ]
 
@@ -168,9 +199,11 @@ def detect_smart_category(title="", summary="", source=""):
     scores = {}
 
 
+
     for category, keywords in CATEGORIES.items():
 
         score = 0
+
 
         for word in keywords:
 
@@ -183,6 +216,13 @@ def detect_smart_category(title="", summary="", source=""):
 
 
 
+    # اولویت ورزش
+    if scores.get("sport", 0) > 0:
+
+        return "sport"
+
+
+
     best_category = max(
         scores,
         key=scores.get
@@ -190,7 +230,6 @@ def detect_smart_category(title="", summary="", source=""):
 
 
 
-    # اگر هیچ چیزی پیدا نشد
     if scores[best_category] == 0:
 
         return "world"
