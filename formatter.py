@@ -8,17 +8,9 @@ def format_news(title, summary, source, category="world"):
 
         "country": "🌐",
 
-        "sticker": "📰",
-
         "hashtag": f"#{category}"
 
     })
-
-
-    sticker = data.get(
-        "sticker",
-        "📰"
-    )
 
 
     flag = data.get(
@@ -55,6 +47,7 @@ def format_news(title, summary, source, category="world"):
     }
 
 
+
     header = category_names.get(
         category,
         "🌍 جهان"
@@ -66,8 +59,6 @@ def format_news(title, summary, source, category="world"):
 🔴 KhabarF24 | {header}
 ━━━━━━━━━━━━━━━━
 
-{sticker}
-
 📰 {title}
 
 ✍️ {summary}
@@ -75,5 +66,6 @@ def format_news(title, summary, source, category="world"):
 🗞️ {flag} {source}
 
 ━━━━━━━━━━━━
+📢 @KhabarF24
 {hashtag}
 """
