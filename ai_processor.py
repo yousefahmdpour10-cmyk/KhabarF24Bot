@@ -4,6 +4,7 @@ import re
 from entities import PROTECTED_ENTITIES
 
 
+
 def clean_text(text):
 
     if not text:
@@ -23,6 +24,7 @@ def protect_entities(text):
 
     counter = 0
 
+
     for entity in PROTECTED_ENTITIES:
 
         if entity in text:
@@ -38,7 +40,9 @@ def protect_entities(text):
 
             counter += 1
 
+
     return text, protected
+
 
 
 
@@ -51,7 +55,9 @@ def restore_entities(text, protected):
             value
         )
 
+
     return text
+
 
 
 
@@ -59,10 +65,12 @@ def translate_text(text):
 
     text = clean_text(text)
 
+
     if not text:
         return ""
 
-    original_text = text
+
+    original = text
 
 
     try:
@@ -89,70 +97,138 @@ def translate_text(text):
 
         print(f"Translation Error: {e}")
 
-        return original_text
+        return original
 
 
 
-def improve_news_style(text):
+
+
+def improve_persian_style(text):
+
 
     if not text:
         return ""
 
 
+
     replacements = {
 
-        "به دست می آورند": "کسب کردند",
+
+        # اصلاح ترجمه‌های ماشینی رایج
+
+        "به پایان دهد": "به پایان داد",
+
+        "به دست می آورد": "کسب کرد",
 
         "به دست آورد": "کسب کرد",
 
-        "نیمه نهایی": "نیمه‌نهایی",
-
-        "برد": "پیروزی",
+        "به دست می آورند": "کسب کردند",
 
         "با هم": "درخشش",
 
+        "برد": "پیروزی",
+
+        "شکست داد": "شکست داد",
+
         "می باشد": "است",
+
+        "در حال حاضر": "اکنون",
+
+        "اعلام کرد که": "اعلام کرد",
+
+
+        # فاصله و نگارش
+
+        "های ": "‌های ",
+
+        "ه ای": "ه‌ای",
 
     }
 
 
+
     for old, new in replacements.items():
 
-        text = text.replace(old, new)
+        text = text.replace(
+            old,
+            new
+        )
+
 
 
     return text.strip()
 
 
 
+
+
+def create_headline(title):
+
+
+    title = improve_persian_style(title)
+
+
+
+    # کوتاه کردن تیترهای خیلی طولانی
+
+    if len(title) > 100:
+
+
+        parts = title.split("؛")
+
+
+        if len(parts) > 1:
+
+            title = parts[0]
+
+
+
+    return title.strip()
+
+
+
+
+
 def summarize_text(text, max_length=300):
+
 
     text = clean_text(text)
 
 
+    text = improve_persian_style(text)
+
+
+
     if len(text) <= max_length:
 
-        return improve_news_style(text)
+        return text
+
 
 
     text = text[:max_length]
 
 
+
     last_dot = text.rfind(".")
+
 
     if last_dot > 100:
 
         text = text[:last_dot]
 
 
-    return improve_news_style(text.strip())
+
+    return text.strip()
+
+
 
 
 
 def process_news(title, summary):
 
 
-    print("🤖 KhabarF24 AI v2")
+    print("🤖 KhabarF24 AI v3.2")
+
 
 
     fa_title = translate_text(title)
@@ -160,14 +236,22 @@ def process_news(title, summary):
     fa_summary = translate_text(summary)
 
 
-    fa_title = improve_news_style(fa_title)
 
-    fa_summary = summarize_text(fa_summary)
+    fa_title = create_headline(
+        fa_title
+    )
+
+
+    fa_summary = summarize_text(
+        fa_summary
+    )
+
 
 
     if not fa_summary:
 
         fa_summary = fa_title
+
 
 
     return {
