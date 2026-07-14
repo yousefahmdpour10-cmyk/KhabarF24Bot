@@ -1,6 +1,8 @@
 from deep_translator import GoogleTranslator
 import re
 
+from entities import PROTECTED_ENTITIES
+
 
 def clean_text(text):
 
@@ -15,6 +17,44 @@ def clean_text(text):
 
 
 
+def protect_entities(text):
+
+    protected = {}
+
+    counter = 0
+
+    for entity in PROTECTED_ENTITIES:
+
+        if entity in text:
+
+            key = f"ENTITY_{counter}"
+
+            protected[key] = entity
+
+            text = text.replace(
+                entity,
+                key
+            )
+
+            counter += 1
+
+    return text, protected
+
+
+
+def restore_entities(text, protected):
+
+    for key, value in protected.items():
+
+        text = text.replace(
+            key,
+            value
+        )
+
+    return text
+
+
+
 def translate_text(text):
 
     text = clean_text(text)
@@ -22,20 +62,34 @@ def translate_text(text):
     if not text:
         return ""
 
+    original_text = text
+
+
     try:
+
+        text, protected = protect_entities(text)
+
 
         translated = GoogleTranslator(
             source="auto",
             target="fa"
         ).translate(text)
 
+
+        translated = restore_entities(
+            translated,
+            protected
+        )
+
+
         return translated.strip()
+
 
     except Exception as e:
 
         print(f"Translation Error: {e}")
 
-        return text
+        return original_text
 
 
 
@@ -47,19 +101,15 @@ def improve_news_style(text):
 
     replacements = {
 
-        "جام جهانی لالیگا": "جام جهانی فوتبال",
+        "به دست می آورند": "کسب کردند",
+
+        "به دست آورد": "کسب کرد",
 
         "نیمه نهایی": "نیمه‌نهایی",
 
-        "ستاره های": "ستاره‌های",
+        "برد": "پیروزی",
 
-        "به تعویق افتاد": "به تعویق افتاده است",
-
-        "حضور دارند": "حضور دارند",
-
-        "پس از یک شکست": "پس از شکست",
-
-        "اعلام کرد که": "اعلام کرد",
+        "با هم": "درخشش",
 
         "می باشد": "است",
 
@@ -75,24 +125,7 @@ def improve_news_style(text):
 
 
 
-def create_headline(title):
-
-    title = improve_news_style(title)
-
-
-    if len(title) > 90:
-
-        parts = title.split("؛")
-
-        if len(parts) > 1:
-            title = parts[0]
-
-
-    return title.strip()
-
-
-
-def summarize_text(text, max_length=280):
+def summarize_text(text, max_length=300):
 
     text = clean_text(text)
 
@@ -119,7 +152,7 @@ def summarize_text(text, max_length=280):
 def process_news(title, summary):
 
 
-    print("🤖 Processing news...")
+    print("🤖 KhabarF24 AI v2")
 
 
     fa_title = translate_text(title)
@@ -127,22 +160,14 @@ def process_news(title, summary):
     fa_summary = translate_text(summary)
 
 
-    fa_title = create_headline(fa_title)
+    fa_title = improve_news_style(fa_title)
 
     fa_summary = summarize_text(fa_summary)
-
 
 
     if not fa_summary:
 
         fa_summary = fa_title
-
-
-
-    print("TITLE:", fa_title)
-
-    print("SUMMARY:", fa_summary)
-
 
 
     return {
