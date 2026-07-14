@@ -1,60 +1,141 @@
 import os
 import psycopg2
-from psycopg2 import sql
+import time
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
+
 def get_connection():
-    return psycopg2.connect(DATABASE_URL)
+
+    return psycopg2.connect(
+        DATABASE_URL,
+        sslmode="require",
+        connect_timeout=10
+    )
+
+
+
+def execute_with_retry(query, params=None, fetch=False):
+
+    attempts = 3
+
+
+    for attempt in range(attempts):
+
+        conn = None
+        cursor = None
+
+
+        try:
+
+            conn = get_connection()
+
+            cursor = conn.cursor()
+
+
+            cursor.execute(
+                query,
+                params
+            )
+
+
+            if fetch:
+
+                result = cursor.fetchone()
+
+            else:
+
+                result = None
+
+
+            conn.commit()
+
+
+            return result
+
+
+
+        except Exception as e:
+
+
+            print(
+                f"Database error ({attempt+1}/{attempts}): {e}"
+            )
+
+
+            time.sleep(2)
+
+
+
+        finally:
+
+            if cursor:
+
+                cursor.close()
+
+
+            if conn:
+
+                conn.close()
+
+
+
+    return None
+
+
+
 
 
 def init_db():
 
-    conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS published_news (
-        id SERIAL PRIMARY KEY,
-        link TEXT UNIQUE
+    execute_with_retry(
+        """
+        CREATE TABLE IF NOT EXISTS published_news (
+            id SERIAL PRIMARY KEY,
+            link TEXT UNIQUE
+        )
+        """
     )
-    """)
 
-    conn.commit()
-    cursor.close()
-    conn.close()
 
     print("✅ PostgreSQL database ready.")
 
 
+
+
+
 def is_published(link):
 
-    conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT 1 FROM published_news WHERE link=%s",
-        (link,)
+    result = execute_with_retry(
+        """
+        SELECT 1 
+        FROM published_news 
+        WHERE link=%s
+        """,
+        (link,),
+        fetch=True
     )
 
-    result = cursor.fetchone()
 
-    cursor.close()
-    conn.close()
+    print(
+        f"CHECK: {link} -> {result}"
+    )
 
-    print(f"CHECK: {link} -> {result}")
 
     return result is not None
 
 
+
+
+
 def mark_as_published(link):
 
-    conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute(
+    execute_with_retry(
         """
         INSERT INTO published_news(link)
         VALUES(%s)
@@ -63,9 +144,7 @@ def mark_as_published(link):
         (link,)
     )
 
-    conn.commit()
 
-    cursor.close()
-    conn.close()
-
-    print(f"SAVED: {link}")
+    print(
+        f"SAVED: {link}"
+    )
