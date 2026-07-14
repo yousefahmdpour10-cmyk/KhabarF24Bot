@@ -2,6 +2,7 @@ from deep_translator import GoogleTranslator
 import re
 
 from entities import PROTECTED_ENTITIES
+from brand_dictionary import replace_official_names
 
 
 
@@ -46,6 +47,7 @@ def protect_entities(text):
 
 
 
+
 def restore_entities(text, protected):
 
     for key, value in protected.items():
@@ -57,6 +59,7 @@ def restore_entities(text, protected):
 
 
     return text
+
 
 
 
@@ -84,13 +87,22 @@ def translate_text(text):
         ).translate(text)
 
 
+
         translated = restore_entities(
             translated,
             protected
         )
 
 
+        # اصلاح نام تیم‌ها و برندها
+
+        translated = replace_official_names(
+            translated
+        )
+
+
         return translated.strip()
+
 
 
     except Exception as e:
@@ -114,8 +126,6 @@ def improve_persian_style(text):
     replacements = {
 
 
-        # اصلاح ترجمه‌های ماشینی رایج
-
         "به پایان دهد": "به پایان داد",
 
         "به دست می آورد": "کسب کرد",
@@ -124,20 +134,11 @@ def improve_persian_style(text):
 
         "به دست می آورند": "کسب کردند",
 
-        "با هم": "درخشش",
-
-        "برد": "پیروزی",
-
-        "شکست داد": "شکست داد",
-
         "می باشد": "است",
 
         "در حال حاضر": "اکنون",
 
         "اعلام کرد که": "اعلام کرد",
-
-
-        # فاصله و نگارش
 
         "های ": "‌های ",
 
@@ -168,8 +169,12 @@ def create_headline(title):
     title = improve_persian_style(title)
 
 
+    # تبدیل نام‌های رسمی در تیتر
 
-    # کوتاه کردن تیترهای خیلی طولانی
+    title = replace_official_names(
+        title
+    )
+
 
     if len(title) > 100:
 
@@ -196,6 +201,11 @@ def summarize_text(text, max_length=300):
 
 
     text = improve_persian_style(text)
+
+
+    text = replace_official_names(
+        text
+    )
 
 
 
@@ -227,7 +237,7 @@ def summarize_text(text, max_length=300):
 def process_news(title, summary):
 
 
-    print("🤖 KhabarF24 AI v3.2")
+    print("🤖 KhabarF24 AI v3.3")
 
 
 
