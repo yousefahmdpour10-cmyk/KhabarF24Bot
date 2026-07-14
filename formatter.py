@@ -1,32 +1,72 @@
 from metadata import SOURCE_METADATA
 
 
-def format_news(title, summary, source):
+def format_news(title, summary, source, category="world"):
 
-    data = SOURCE_METADATA.get(
-        source,
-        {
-            "country": "🌐",
-            "sticker": "📰",
-            "hashtag": "#خبر"
-        }
+
+    data = SOURCE_METADATA.get(source, {
+
+        "country": "🌐",
+
+        "sticker": "📰",
+
+        "hashtag": f"#{category}"
+
+    })
+
+
+    sticker = data.get(
+        "sticker",
+        "📰"
     )
 
-    flag = data["country"]
-    sticker = data["sticker"]
-    hashtag = data["hashtag"]
 
-    category_name = hashtag.replace("#", "")
+    flag = data.get(
+        "country",
+        "🌐"
+    )
 
-    title = (title or "").strip()
-    summary = (summary or "").strip()
 
-    if not summary:
-        summary = "جزئیات بیشتر به‌زودی..."
+    hashtag = data.get(
+        "hashtag",
+        f"#{category}"
+    )
+
+
+
+    category_names = {
+
+        "world": "🌍 جهان",
+
+        "iran": "🇮🇷 ایران",
+
+        "sport": "🏅 ورزش",
+
+        "technology": "💻 فناوری",
+
+        "economy": "💰 اقتصاد",
+
+        "health": "❤️ سلامت",
+
+        "science": "🔬 علم",
+
+        "weather": "🌦️ هواشناسی",
+
+    }
+
+
+    header = category_names.get(
+        category,
+        "🌍 جهان"
+    )
+
+
 
     return f"""━━━━━━━━━━━━━━━━
-🔴 KhabarF24 | {sticker} {category_name}
+🔴 KhabarF24 | {header}
 ━━━━━━━━━━━━━━━━
+
+{sticker}
 
 📰 {title}
 
@@ -35,6 +75,5 @@ def format_news(title, summary, source):
 🗞️ {flag} {source}
 
 ━━━━━━━━━━━━
-📢 @KhabarF24
 {hashtag}
 """
