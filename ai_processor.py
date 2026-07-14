@@ -2,65 +2,50 @@ from deep_translator import GoogleTranslator
 import re
 
 from entities import PROTECTED_ENTITIES
+from places import PROTECTED_PLACES
 from brand_dictionary import replace_official_names
 
 
-print("🤖 KhabarF24 AI v4.3 Headline Writer")
+print("🤖 KhabarF24 AI v4.4 Entity Protection")
 
 
 
 NEWS_PHRASES = {
 
-    # اصطلاحات خبری
-
     "claims": "مدعی شد",
     "claimed": "مدعی شد",
 
     "alleges": "مدعی شد",
-    "alleged": "ادعا شده",
 
     "accuses": "متهم کرد",
+
     "accused": "متهم کرد",
 
     "sues": "شکایت کرد",
 
     "files a lawsuit": "شکایتی مطرح کرد",
+
     "files lawsuit": "شکایتی ثبت کرد",
 
     "lawsuit": "شکایت حقوقی",
 
     "officials": "مقام‌ها",
 
-    "official": "رسمی",
-
     "administration": "دولت",
 
     "government officials": "مقام‌های دولتی",
 
-
-    "put off": "منصرف کردن",
-
-    "steps down": "کناره‌گیری کرد",
-
-    "rules out": "رد کرد",
-
-    "set to": "قرار است",
-
-    "expected to": "انتظار می‌رود",
-
-    "amid": "در بحبوحه",
-
-    "warns": "هشدار داد",
-
-    "reveals": "فاش کرد",
-
-    "announces": "اعلام کرد",
-
-    "joins": "پیوست",
-
     "wins": "پیروز شد",
 
     "defeats": "شکست داد",
+
+    "joins": "پیوست",
+
+    "announces": "اعلام کرد",
+
+    "reveals": "فاش کرد",
+
+    "warns": "هشدار داد",
 
 }
 
@@ -68,40 +53,33 @@ NEWS_PHRASES = {
 
 STYLE_REPLACEMENTS = {
 
-
     "مدعی توطئه می شود":
     "مدعی توطئه شد",
-
 
     "مدعی توطئه می‌شود":
     "مدعی توطئه شد",
 
-
-    "به دلیل":
-    "به‌دلیل",
-
-
-    "در حال حاضر":
-    "اکنون",
-
-
-    "می باشد":
-    "است",
-
-
-    "پیامدهای منطقه ای":
-    "پیامدهای منطقه‌ای",
-
+    "بدون جنگ، بدون صلح":
+    "نه جنگ، نه صلح",
 
     "بن بست":
     "بن‌بست",
 
+    "بن بست طولانی":
+    "بن‌بست چندساله",
 
-    "بدون جنگ، بدون صلح":
-    "نه جنگ، نه صلح",
+    "می باشد":
+    "است",
 
+    "در حال حاضر":
+    "اکنون",
+
+    "پیامدهای منطقه ای":
+    "پیامدهای منطقه‌ای",
 
 }
+
+
 
 
 
@@ -133,7 +111,14 @@ def protect_entities(text):
     counter = 0
 
 
-    for entity in PROTECTED_ENTITIES:
+    all_entities = (
+        PROTECTED_ENTITIES
+        +
+        PROTECTED_PLACES
+    )
+
+
+    for entity in all_entities:
 
         if entity in text:
 
@@ -163,6 +148,7 @@ def restore_entities(text, protected):
             key,
             value
         )
+
 
     return text
 
@@ -207,6 +193,7 @@ def translate_text(text):
         return translated.strip()
 
 
+
     except Exception as e:
 
         print(
@@ -222,6 +209,7 @@ def translate_text(text):
 def improve_news_style(text):
 
     if not text:
+
         return ""
 
 
@@ -259,58 +247,33 @@ def rewrite_headline(title):
     )
 
 
-    # اصلاح شروع‌های ضعیف
-
-    replacements = {
-
-
-        "چرا":
-        "بررسی",
-
-
-        "ممکن است":
-        "احتمال",
-
-
-        "به نظر می رسد":
-        "به نظر می‌رسد",
-
-
-        "مدعی شد که":
-        "مدعی شد",
-
-
-    }
-
-
-    for old, new in replacements.items():
-
-        title = title.replace(
-            old,
-            new
-        )
-
-
-    # حذف علامت‌های اضافی
-
     title = title.replace(
         '"',
         ""
     )
 
 
-    # کوتاه سازی تیتر
+    # اصلاح تیترهای سوالی بد ترجمه شده
+
+    if title.startswith(
+        "چرا "
+    ):
+
+        title = (
+            "بررسی "
+            +
+            title[4:]
+        )
+
 
     if len(title) > 100:
 
         title = title[:100]
 
-        if " " in title:
-
-            title = title.rsplit(
-                " ",
-                1
-            )[0]
+        title = title.rsplit(
+            " ",
+            1
+        )[0]
 
 
     return title.strip()
@@ -334,7 +297,6 @@ def rewrite_summary(summary):
     if len(summary) > 320:
 
         summary = summary[:320]
-
 
         if "." in summary:
 
