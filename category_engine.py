@@ -1,184 +1,207 @@
 """
-category_engine.py
+KhabarF24 Smart Category Engine v4
 
-KhabarF24 Smart Category Engine v3.1
-
-تشخیص دسته خبر بر اساس:
-- عنوان
-- خلاصه
-- منبع
-
-اولویت:
-ورزش > فناوری > اقتصاد > سلامت > علم > هواشناسی > ایران > جهان
+تشخیص دسته:
+- sport
+- technology
+- economy
+- health
+- science
+- weather
+- iran
+- world
 """
 
 
 CATEGORIES = {
 
 
-    "sport": [
+"sport": [
 
-        # ⚽ Football
+"fifa",
+"uefa",
+"afc",
+"football",
+"soccer",
+"premier league",
+"champions league",
+"laliga",
+"serie a",
+"bundesliga",
 
-        "football",
-        "soccer",
-        "fifa",
-        "uefa",
-        "afc",
-        "premier league",
-        "champions league",
-        "laliga",
-        "serie a",
-        "bundesliga",
+"barcelona",
+"real madrid",
+"manchester united",
+"manchester city",
+"liverpool",
+"arsenal",
+"chelsea",
 
-        "barcelona",
-        "real madrid",
-        "manchester",
-        "liverpool",
-        "arsenal",
-        "chelsea",
+"messi",
+"ronaldo",
+"mbappe",
+"yamal",
 
-        "messi",
-        "mbappe",
-        "ronaldo",
-        "yamal",
+"nba",
+"wnba",
+"basketball",
 
+"tennis",
+"atp",
+"wta",
 
-        # 🏀 Basketball
+"wrestling",
+"fila",
+"fivb",
 
-        "nba",
-        "wnba",
-        "basketball",
-        "lebron",
-        "player",
-        "athlete",
+"formula 1",
+"f1",
 
+"فوتبال",
+"بسکتبال",
+"کشتی",
+"والیبال",
+"جام جهانی",
+"لیگ"
 
-        # 🏐 Volleyball
-
-        "volleyball",
-        "fivb",
-
-
-        # 🤼 Wrestling
-
-        "wrestling",
-        "fila",
-        "united world wrestling",
-
-
-        # 🎾 Tennis
-
-        "tennis",
-        "atp",
-        "wta",
-
-
-        # 🏎 Motorsport
-
-        "formula 1",
-        "formula one",
-        "f1",
-
-
-        # 🎲 Other sports
-
-        "poker",
-        "world series of poker",
-        "olympic",
-        "championship",
-        "tournament",
-        "coach",
-        "match",
-        "win",
-        "loss",
-        "score",
-
-    ],
+],
 
 
 
-    "technology": [
+"technology": [
 
-        "technology",
-        "artificial intelligence",
-        "ai model",
-        "openai",
-        "google",
-        "apple",
-        "microsoft",
-        "tesla",
-        "robot",
-        "chip",
-        "software",
-        "cybersecurity",
-        "cyber attack",
+"technology",
+"tech",
+"ai",
+"artificial intelligence",
+"openai",
+"apple",
+"google",
+"microsoft",
+"tesla",
+"nvidia",
+"robot",
+"software",
+"chip",
+"cyber",
 
-    ],
+"هوش مصنوعی",
+"فناوری",
+"ربات",
+"تکنولوژی"
 
-
-
-    "economy": [
-
-        "economy",
-        "market",
-        "stock",
-        "finance",
-        "inflation",
-        "bitcoin",
-        "currency",
-        "bank",
-        "investment",
-
-    ],
+],
 
 
 
-    "health": [
+"economy": [
 
-        "health",
-        "medical",
-        "medicine",
-        "hospital",
-        "virus",
-        "who",
+"economy",
+"market",
+"stock",
+"finance",
+"bitcoin",
+"crypto",
+"inflation",
+"bank",
 
-    ],
+"اقتصاد",
+"بورس",
+"دلار",
+"ارز",
+"طلا"
 
-
-
-    "science": [
-
-        "science",
-        "space",
-        "nasa",
-        "research",
-        "discovery",
-
-    ],
+],
 
 
 
-    "weather": [
+"health": [
 
-        "weather",
-        "storm",
-        "rain",
-        "temperature",
-        "climate",
+"health",
+"medical",
+"medicine",
+"hospital",
+"virus",
+"disease",
 
-    ],
+"سلامت",
+"پزشکی",
+"بیماری",
+"واکسن"
+
+],
 
 
 
-    "iran": [
+"science": [
 
-        "iran",
-        "tehran",
-        "isfahan",
-        "shiraz",
+"science",
+"space",
+"nasa",
+"research",
 
-    ]
+"علم",
+"فضا",
+"تحقیق"
+
+],
+
+
+
+"weather": [
+
+"weather",
+"storm",
+"rain",
+"climate",
+
+"هوا",
+"طوفان",
+"باران"
+
+],
+
+
+
+"iran": [
+
+"iran",
+"iranian",
+"tehran",
+
+"ایران",
+"ایرانی",
+"تهران"
+
+],
+
+
+
+"world": [
+
+"war",
+"attack",
+"strike",
+"missile",
+"trump",
+"biden",
+"israel",
+"russia",
+"china",
+"america",
+
+"جنگ",
+"حمله",
+"موشک",
+"ترامپ",
+"اسرائیل",
+"آمریکا",
+"روسیه",
+"چین",
+"تحریم",
+"سپاه"
+
+]
 
 }
 
@@ -188,24 +211,20 @@ CATEGORIES = {
 def detect_smart_category(title="", summary="", source=""):
 
 
-    text = f"""
-    {title}
-    {summary}
-    {source}
-    """.lower()
+    text = (
+        f"{title} {summary} {source}"
+    ).lower()
 
 
 
     scores = {}
 
 
-
-    for category, keywords in CATEGORIES.items():
+    for category, words in CATEGORIES.items():
 
         score = 0
 
-
-        for word in keywords:
+        for word in words:
 
             if word.lower() in text:
 
@@ -216,24 +235,65 @@ def detect_smart_category(title="", summary="", source=""):
 
 
 
-    # اولویت ورزش
-    if scores.get("sport", 0) > 0:
-
-        return "sport"
-
+    # -------------------------
+    # اولویت‌های مهم
+    # -------------------------
 
 
-    best_category = max(
-        scores,
-        key=scores.get
-    )
-
-
-
-    if scores[best_category] == 0:
+    # جنگ و سیاست
+    if scores["world"] >= 2:
 
         return "world"
 
 
 
-    return best_category
+    # ورزش واقعی
+    if scores["sport"] >= 2:
+
+        return "sport"
+
+
+
+    # فناوری
+    if scores["technology"] >= 1:
+
+        return "technology"
+
+
+
+    # اقتصاد
+    if scores["economy"] >= 1:
+
+        return "economy"
+
+
+
+    # سلامت
+    if scores["health"] >= 1:
+
+        return "health"
+
+
+
+    # علم
+    if scores["science"] >= 1:
+
+        return "science"
+
+
+
+    # هوا
+    if scores["weather"] >= 1:
+
+        return "weather"
+
+
+
+    # ایران
+    if scores["iran"] >= 1:
+
+        return "iran"
+
+
+
+    return "world"
