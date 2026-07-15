@@ -1,5 +1,5 @@
 """
-KhabarF24 Main Engine v6.0
+KhabarF24 Main Engine v6.1
 
 Pipeline:
 
@@ -61,6 +61,7 @@ CHECK_INTERVAL = 300
 
 
 
+
 async def check_news():
 
 
@@ -76,6 +77,8 @@ async def check_news():
         )
 
         return
+
+
 
 
 
@@ -105,6 +108,7 @@ async def check_news():
         if is_published(link):
 
             continue
+
 
 
 
@@ -143,6 +147,8 @@ async def check_news():
         print(
             f"📂 Category: {category}"
         )
+
+
 
 
 
@@ -200,6 +206,7 @@ async def check_news():
 
 
 
+
         # =====================
         # Quality Check
         # =====================
@@ -232,8 +239,11 @@ async def check_news():
 
 
 
+
+
         # =====================
         # Importance Check
+        # اتصال به قوانین دسته
         # =====================
 
 
@@ -242,7 +252,9 @@ async def check_news():
 
             title,
 
-            summary
+            summary,
+
+            category
 
 
         ):
@@ -256,6 +268,8 @@ async def check_news():
 
 
             continue
+
+
 
 
 
@@ -298,6 +312,10 @@ async def check_news():
 
 
 
+
+
+
+
         # =====================
         # Send Telegram
         # =====================
@@ -308,6 +326,7 @@ async def check_news():
             message
 
         )
+
 
 
 
@@ -349,6 +368,8 @@ async def check_news():
 
 
 
+
+
 async def main():
 
 
@@ -359,7 +380,7 @@ async def main():
 
     print(
 
-        "🚀 KhabarF24 Started v6"
+        "🚀 KhabarF24 Started v6.1"
 
     )
 
