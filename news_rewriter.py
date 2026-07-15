@@ -1,19 +1,19 @@
 """
-KhabarF24 News Rewriter v5
+KhabarF24 News Rewriter v5.1
 
 وظیفه:
 - طبیعی کردن فارسی خبر
 - حذف ترجمه ماشینی خشک
 - اصلاح تیتر
 - حفظ سبک خبری کوتاه
+- پاکسازی HTML از RSS
 """
 
 
 import re
+import html
 
 
-
-# اصلاح عبارت‌های رایج ترجمه ماشینی
 
 REWRITE_RULES = {
 
@@ -39,6 +39,7 @@ REWRITE_RULES = {
     "اکنون",
 
 
+
     # اصطلاحات خبری
 
     "بن بست":
@@ -57,7 +58,8 @@ REWRITE_RULES = {
     "موجب شد",
 
 
-    # ترجمه‌های بد رایج
+
+    # ترجمه‌های بد
 
     "به دست آورد":
     "کسب کرد",
@@ -72,6 +74,7 @@ REWRITE_RULES = {
     "باخت",
 
 
+
     # سیاسی
 
     "رئیس جمهور آمریکا":
@@ -80,7 +83,22 @@ REWRITE_RULES = {
     "ایالات متحده":
     "آمریکا",
 
+
+
+    # ترجمه ماشینی رایج
+
+    "طرح خروج":
+    "برنامه خروج",
+
+    "مناطق آزمایشی":
+    "مناطق حائل",
+
+    "مقام گفت":
+    "یک مقام گفت",
+
 }
+
+
 
 
 
@@ -90,7 +108,7 @@ def apply_rules(text):
         return ""
 
 
-    for old,new in REWRITE_RULES.items():
+    for old, new in REWRITE_RULES.items():
 
         text = text.replace(
             old,
@@ -106,13 +124,52 @@ def apply_rules(text):
 
 def clean_spaces(text):
 
+    if not text:
+        return ""
+
+
+    # حذف HTML entity های RSS
+
+    text = html.unescape(
+        text
+    )
+
+
     text = re.sub(
         r"\s+",
         " ",
         text
     )
 
+
     return text.strip()
+
+
+
+
+
+def finish_sentence(text):
+
+    if not text:
+        return ""
+
+
+    text = text.strip()
+
+
+    # اگر متن با علامت تمام نشده بود
+
+    if text[-1] not in [
+        ".",
+        "!",
+        "؟",
+        "؛"
+    ]:
+
+        text += "."
+
+
+    return text
 
 
 
@@ -124,8 +181,6 @@ def shorten_title(title, limit=90):
 
         return title
 
-
-    # اولویت با جدا کردن جمله
 
     for sep in [
         "؛",
@@ -149,6 +204,11 @@ def shorten_title(title, limit=90):
 
 def improve_title(title):
 
+    title = html.unescape(
+        title
+    )
+
+
     title = apply_rules(
         title
     )
@@ -164,13 +224,20 @@ def improve_title(title):
     )
 
 
-    return title
+    return finish_sentence(
+        title
+    )
 
 
 
 
 
 def improve_summary(summary):
+
+    summary = html.unescape(
+        summary
+    )
+
 
     summary = apply_rules(
         summary
@@ -182,7 +249,9 @@ def improve_summary(summary):
     )
 
 
-    return summary
+    return finish_sentence(
+        summary
+    )
 
 
 
@@ -192,11 +261,13 @@ def rewrite_news(title, summary):
 
     return {
 
+
         "title":
         improve_title(title),
+
 
 
         "summary":
         improve_summary(summary)
 
-}
+    }
