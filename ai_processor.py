@@ -1,5 +1,5 @@
 """
-KhabarF24 AI Processor v4.3
+KhabarF24 AI Processor v4.4
 
 Pipeline:
 
@@ -8,6 +8,8 @@ Translate
 Official Names
 ↓
 News Rewrite
+↓
+Official Names Again
 ↓
 RTL Cleaner
 ↓
@@ -31,6 +33,8 @@ from news_rewriter import (
 from rtl_cleaner import (
     fix_rtl_text,
 )
+
+
 
 
 
@@ -63,17 +67,18 @@ def translate_text(text):
 
 
 
+
 def process_news(title, summary):
 
 
     print(
-        "🤖 KhabarF24 AI v4.3"
+        "🤖 KhabarF24 AI v4.4"
     )
 
 
 
     # =====================
-    # Translation
+    # 1. Translation
     # =====================
 
 
@@ -88,8 +93,15 @@ def process_news(title, summary):
 
 
 
+    print(
+        "After Translation:",
+        fa_title
+    )
+
+
+
     # =====================
-    # Official Names
+    # 2. Official Names
     # =====================
 
 
@@ -105,7 +117,7 @@ def process_news(title, summary):
 
 
     # =====================
-    # News Rewrite
+    # 3. News Rewrite
     # =====================
 
 
@@ -116,6 +128,7 @@ def process_news(title, summary):
         fa_summary
 
     )
+
 
 
     fa_title = rewritten.get(
@@ -132,7 +145,23 @@ def process_news(title, summary):
 
 
     # =====================
-    # RTL Fix
+    # 4. Official Names Again
+    # =====================
+
+
+    fa_title = replace_official_names(
+        fa_title
+    )
+
+
+    fa_summary = replace_official_names(
+        fa_summary
+    )
+
+
+
+    # =====================
+    # 5. RTL Cleaner
     # =====================
 
 
@@ -149,8 +178,12 @@ def process_news(title, summary):
 
     return {
 
-        "title": fa_title,
 
-        "summary": fa_summary
+        "title":
+        fa_title,
+
+
+        "summary":
+        fa_summary
 
     }
