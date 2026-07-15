@@ -37,71 +37,119 @@ async def check_news():
             continue
 
 
+        # جلوگیری از خبر تکراری
+
         if is_published(link):
             continue
 
 
 
+        title = item.get(
+            "title",
+            ""
+        )
+
+        summary = item.get(
+            "summary",
+            ""
+        )
+
+        source = item.get(
+            "source",
+            ""
+        )
+
+
+
         # =========================
-        # 🧠 تشخیص هوشمند دسته خبر
+        # 🧠 تشخیص دسته هوشمند
         # =========================
 
         category = detect_smart_category(
-            title=item.get("title", ""),
-            summary=item.get("summary", ""),
-            source=item.get("source", "")
+
+            title=title,
+
+            summary=summary,
+
+            source=source
+
         )
 
 
-        print(f"Source: {item.get('source')}")
-        print(f"Smart Category: {category}")
+        print(
+            f"Source: {source}"
+        )
+
+        print(
+            f"Smart Category: {category}"
+        )
 
 
 
         # =========================
-        # 🤖 پردازش فارسی خبر
+        # 🤖 پردازش فارسی
         # =========================
 
         processed = process_news(
-            item.get("title", ""),
-            item.get("summary", "")
+
+            title,
+
+            summary
+
         )
 
 
 
-        title = processed.get(
+        final_title = processed.get(
+
             "title",
-            item.get("title", "")
+
+            title
+
         )
 
 
-        summary = processed.get(
+        final_summary = processed.get(
+
             "summary",
-            item.get("summary", "")
+
+            summary
+
         )
 
 
 
         # =========================
-        # 📰 ساخت پست نهایی
+        # 📰 ساخت پیام تلگرام
         # =========================
 
         message = format_news(
-            title=title,
-            summary=summary,
-            source=item.get("source", ""),
+
+            title=final_title,
+
+            summary=final_summary,
+
+            source=source,
+
             category=category
+
         )
 
 
 
-        await send_message(message)
+        await send_message(
+            message
+        )
 
 
-        mark_as_published(link)
+        mark_as_published(
+            link
+        )
 
 
-        print("✅ New article published.")
+        print(
+            "✅ New article published."
+        )
 
 
         break
@@ -109,14 +157,21 @@ async def check_news():
 
 
 
+
 async def main():
+
 
     init_db()
 
-    print("🚀 KhabarF24 Started")
+
+    print(
+        "🚀 KhabarF24 Started"
+    )
+
 
 
     while True:
+
 
         try:
 
@@ -125,10 +180,16 @@ async def main():
 
         except Exception as e:
 
-            print(f"Error: {e}")
+            print(
+                f"Error: {e}"
+            )
 
 
-        await asyncio.sleep(CHECK_INTERVAL)
+
+        await asyncio.sleep(
+            CHECK_INTERVAL
+        )
+
 
 
 
