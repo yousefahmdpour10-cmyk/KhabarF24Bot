@@ -1,344 +1,307 @@
 """
-KhabarF24 Category Engine v6
+KhabarF24 Category Engine v4.0
 
-Hybrid Category System:
+تشخیص هوشمند دسته خبر
 
-1- Source Rules
-2- Special Exceptions
-3- Keyword Scoring
-4- Final Category
+اولویت:
+1- ورزش
+2- فناوری
+3- اقتصاد
+4- سلامت
+5- علم
+6- هواشناسی
+7- ایران
+8- جهان
 """
 
 
-from category_rules import SOURCE_RULES
+CATEGORIES = {
 
 
-
-# =====================================
-# کلمات کلیدی عمومی
-# =====================================
-
-
-KEYWORDS = {
-
+    # ⚽ ورزش
 
     "sport": [
 
+        # فوتبال
+
+        "فوتبال",
         "football",
         "soccer",
         "fifa",
         "uefa",
-        "afc",
-        "premier league",
-        "champions league",
-        "laliga",
-        "serie a",
-        "bundesliga",
-
-        "manchester united",
-        "manchester city",
-        "real madrid",
-        "barcelona",
-        "liverpool",
-        "arsenal",
-        "chelsea",
-
-        "messi",
-        "ronaldo",
-        "mbappe",
-        "yamal",
-
-        "nba",
-        "basketball",
-        "tennis",
-        "wrestling",
-
-        "فوتبال",
-        "بسکتبال",
-        "کشتی",
-        "والیبال",
         "جام جهانی",
-        "لیگ",
+        "world cup",
+
+        "لیگ قهرمانان",
+        "champions league",
+
         "فینال",
         "نیمه نهایی",
+        "نیمه‌نهایی",
+
+        "انگلیس",
+        "آرژانتین",
+        "برزیل",
+        "فرانسه",
+        "اسپانیا",
+
+        "منچستر",
+        "لیورپول",
+        "آرسنال",
+        "چلسی",
+        "رئال مادرید",
+        "بارسلونا",
+
+        "مسی",
+        "رونالدو",
+        "امباپه",
+        "یامال",
+
+        # مسابقه
+
+        "مسابقه",
+        "بازی",
+        "دقیقه",
+        "گل",
+        "گلزنی",
+        "نتیجه",
+        "امتیاز",
+        "آمار",
+
+        "بازیکن",
+        "مربی",
+        "داور",
+
+        "کارت زرد",
+        "کارت قرمز",
+
+        # نقل و انتقالات
+
+        "انتقال",
+        "نقل و انتقالات",
+        "قرارداد",
+        "اخراج مربی",
+
+        # سایر ورزش‌ها
+
+        "nba",
+        "بسکتبال",
+        "تنیس",
+        "والیبال",
+        "کشتی",
+        "المپیک",
 
     ],
 
 
+
+
+
+    # 💻 فناوری
 
     "technology": [
 
+        "فناوری",
         "technology",
-        "tech",
-        "ai",
-        "artificial intelligence",
-
-        "openai",
-        "apple",
-        "google",
-        "microsoft",
-        "tesla",
-        "nvidia",
-
-        "robot",
-        "software",
-        "chip",
+        "تکنولوژی",
 
         "هوش مصنوعی",
-        "فناوری",
+        "artificial intelligence",
+        "ai",
+
         "ربات",
+        "تراشه",
+        "چیپ",
+
+        "اپل",
+        "گوگل",
+        "مایکروسافت",
+        "openai",
+
+        "هک",
+        "امنیت سایبری",
 
     ],
 
 
+
+
+
+    # 💰 اقتصاد
 
     "economy": [
 
-        "economy",
-        "market",
-        "stock",
-        "finance",
-        "bitcoin",
-        "crypto",
-        "bank",
-
         "اقتصاد",
-        "بورس",
+        "economy",
+
         "دلار",
+        "ارز",
+        "یورو",
         "طلا",
+
+        "بیت کوین",
+        "bitcoin",
+        "کریپتو",
+
+        "بورس",
+        "سهام",
+
+        "تورم",
+        "بانک",
+        "نفت",
+
+        "بازار",
 
     ],
 
 
+
+
+
+    # 🏥 سلامت
 
     "health": [
 
-        "health",
-        "medical",
-        "medicine",
-        "hospital",
-        "virus",
-
         "سلامت",
-        "پزشکی",
+        "health",
         "بیماری",
+        "ویروس",
+        "واکسن",
+        "پزشکی",
+        "بیمارستان",
 
     ],
 
 
+
+
+
+    # 🔬 علم
+
+    "science": [
+
+        "علم",
+        "science",
+        "تحقیق",
+        "فضا",
+        "ناسا",
+        "nasa",
+
+    ],
+
+
+
+
+
+    # 🌧 هواشناسی
+
+    "weather": [
+
+        "هواشناسی",
+        "weather",
+        "طوفان",
+        "سیل",
+        "زلزله",
+        "باران",
+        "برف",
+        "موج گرما",
+
+    ],
+
+
+
+
+
+    # 🇮🇷 ایران
 
     "iran": [
 
-        "iran",
-        "iranian",
-        "tehran",
-
         "ایران",
         "تهران",
+        "اصفهان",
+        "شیراز",
 
     ],
-
-
-
-    "world": [
-
-        "war",
-        "attack",
-        "strike",
-        "missile",
-
-        "trump",
-        "biden",
-        "israel",
-        "russia",
-        "ukraine",
-
-        "جنگ",
-        "حمله",
-        "موشک",
-        "ترامپ",
-        "اسرائیل",
-        "آمریکا",
-        "سپاه",
-        "تحریم",
-
-    ]
 
 }
 
 
 
 
-# =====================================
-# امتیازدهی
-# =====================================
 
+CATEGORY_PRIORITY = [
 
-def calculate_score(text, words):
+    "sport",
 
-    score = 0
+    "technology",
 
+    "economy",
 
-    for word in words:
+    "health",
 
-        if word.lower() in text:
+    "science",
 
-            score += 1
+    "weather",
 
+    "iran",
 
-    return score
+    "world",
 
-
-
-
-
-# =====================================
-# تشخیص دسته
-# =====================================
-
-
-def detect_smart_category(
-        title="",
-        summary="",
-        source=""
-):
-
-
-    text = (
-        f"{title} {summary}"
-        .lower()
-    )
-
-
-
-    # -----------------------------
-    # 1) بررسی قانون منبع
-    # -----------------------------
-
-
-    source_category = None
-
-    source_rule = None
-
-
-
-    for name, rule in SOURCE_RULES.items():
-
-        if name.lower() in source.lower():
-
-            source_category = rule.get(
-                "default"
-            )
-
-            source_rule = rule
-
-            break
-
-
-
-    # -----------------------------
-    # 2) قوانین اجباری
-    # -----------------------------
-
-
-    if source_rule:
-
-
-        force_world = source_rule.get(
-            "force_world",
-            []
-        )
-
-
-        for word in force_world:
-
-            if word.lower() in text:
-
-                return "world"
+]
 
 
 
 
-        # اگر منبع تخصصی است
-
-        if source_category:
-
-            return source_category
 
 
 
+def detect_smart_category(title="", summary="", source=""):
 
-    # -----------------------------
-    # 3) امتیاز کلمات
-    # -----------------------------
+
+    text = f"""
+    {title}
+    {summary}
+    {source}
+    """.lower()
+
 
 
     scores = {}
 
 
 
-    for category, words in KEYWORDS.items():
-
-        scores[category] = calculate_score(
-            text,
-            words
-        )
+    for category, keywords in CATEGORIES.items():
 
 
-
-    # -----------------------------
-    # 4) استثناهای مهم
-    # -----------------------------
+        score = 0
 
 
-    # جنگ همیشه جهان
+        for word in keywords:
 
-    if scores["world"] >= 2:
 
-        return "world"
+            if word.lower() in text:
+
+                score += 1
 
 
 
-    # ورزش نیاز به چند نشانه دارد
-
-    if scores["sport"] >= 2:
-
-        return "sport"
+        scores[category] = score
 
 
 
-    if scores["technology"] >= 2:
-
-        return "technology"
 
 
 
-    if scores["economy"] >= 2:
+    # اولویت دسته‌ها
 
-        return "economy"
-
-
-
-    if scores["health"] >= 2:
-
-        return "health"
+    for category in CATEGORY_PRIORITY:
 
 
+        if scores.get(category,0) > 0:
 
-    if scores["iran"] >= 2:
-
-        return "iran"
-
+            return category
 
 
-    # -----------------------------
-    # 5) آخرین انتخاب
-    # -----------------------------
-
-
-    if source_category:
-
-        return source_category
 
 
 
