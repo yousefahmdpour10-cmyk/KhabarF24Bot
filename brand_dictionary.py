@@ -1,12 +1,15 @@
 """
-KhabarF24 Brand Dictionary v4.6
+KhabarF24 Brand Dictionary v4.7
 
-نام‌های رسمی:
+حفظ نام‌های رسمی:
 - کشورها
 - مکان‌ها
 - تیم‌ها
 - بازیکنان
 - برندها
+- شرکت‌های فناوری
+- رسانه‌ها
+- سازمان‌های ورزشی
 """
 
 
@@ -15,183 +18,205 @@ BRAND_DICTIONARY = {
 
     # 🌍 Countries
 
+    "Islamic Republic of Iran": "جمهوری اسلامی ایران",
+
+    "United States": "آمریکا",
+
+    "United Kingdom": "بریتانیا",
+
     "Iran": "ایران",
 
-    "Islamic Republic of Iran":
-    "جمهوری اسلامی ایران",
+    "Israel": "اسرائیل",
 
-    "Israel":
-    "اسرائیل",
+    "Israeli": "اسرائیلی",
 
-    "Israeli":
-    "اسرائیلی",
+    "Lebanon": "لبنان",
 
-    "Lebanon":
-    "لبنان",
+    "Yemen": "یمن",
 
-    "Yemen":
-    "یمن",
+    "Gaza": "غزه",
 
-    "Gaza":
-    "غزه",
+    "Ukraine": "اوکراین",
 
-    "Ukraine":
-    "اوکراین",
+    "Russia": "روسیه",
 
-    "Russia":
-    "روسیه",
+    "China": "چین",
 
-    "China":
-    "چین",
+    "France": "فرانسه",
 
-    "United States":
-    "آمریکا",
+    "Spain": "اسپانیا",
 
-    "United Kingdom":
-    "بریتانیا",
+    "Argentina": "آرژانتین",
+
+    "England": "انگلیس",
 
 
 
     # 👤 People
 
-    "Donald Trump":
-    "دونالد ترامپ",
+    "Donald Trump": "دونالد ترامپ",
 
-    "Trump":
-    "ترامپ",
+    "Joe Biden": "جو بایدن",
 
-    "Joe Biden":
-    "جو بایدن",
+    "Lionel Messi": "لیونل مسی",
 
+    "Cristiano Ronaldo": "کریستیانو رونالدو",
 
+    "Kylian Mbappe": "کیلیان امباپه",
 
-    # ⚽ Clubs
+    "Lamine Yamal": "لامین یامال",
 
-    "Manchester United":
-    "منچستر یونایتد",
+    "Jude Bellingham": "جود بلینگهام",
 
-    "Manchester City":
-    "منچستر سیتی",
-
-    "Real Madrid":
-    "رئال مادرید",
-
-    "Barcelona":
-    "بارسلونا",
-
-    "FC Barcelona":
-    "بارسلونا",
-
-    "Liverpool":
-    "لیورپول",
-
-    "Arsenal":
-    "آرسنال",
-
-    "Chelsea":
-    "چلسی",
-
-    "Bayern Munich":
-    "بایرن مونیخ",
-
-    "Paris Saint-Germain":
-    "پاری‌سن‌ژرمن",
-
-    "PSG":
-    "پاری‌سن‌ژرمن",
-
-    "Juventus":
-    "یوونتوس",
+    "Erling Haaland": "ارلینگ هالند",
 
 
 
-    # ⚽ Players
+    # ⚽ Football Clubs
 
-    "Lionel Messi":
-    "لیونل مسی",
+    "Manchester United": "منچستر یونایتد",
 
-    "Cristiano Ronaldo":
-    "کریستیانو رونالدو",
+    "Manchester City": "منچستر سیتی",
 
-    "Kylian Mbappe":
-    "کیلیان امباپه",
+    "Real Madrid": "رئال مادرید",
 
-    "Lamine Yamal":
-    "لامین یامال",
+    "FC Barcelona": "بارسلونا",
 
-    "Jude Bellingham":
-    "جود بلینگهام",
+    "Barcelona": "بارسلونا",
+
+    "Liverpool": "لیورپول",
+
+    "Arsenal": "آرسنال",
+
+    "Chelsea": "چلسی",
+
+    "Bayern Munich": "بایرن مونیخ",
+
+    "Paris Saint-Germain": "پاری‌سن‌ژرمن",
+
+    "PSG": "پاری‌سن‌ژرمن",
+
+    "Juventus": "یوونتوس",
+
+    "Borussia Dortmund": "بوروسیا دورتموند",
+
+
+
+    # 🏆 Sports Organizations
+
+    "Premier League": "لیگ برتر انگلیس",
+
+    "Champions League": "لیگ قهرمانان اروپا",
+
+    "FIFA": "فیفا",
+
+    "UEFA": "یوفا",
+
+    "AFC": "کنفدراسیون فوتبال آسیا",
+
+    "FIVB": "فدراسیون جهانی والیبال",
+
+    "NBA": "NBA",
+
+    "WNBA": "WNBA",
+
+    "ATP": "ATP",
+
+    "WTA": "WTA",
+
+    "Formula 1": "فرمول یک",
 
 
 
     # 💻 Technology
 
-    "Apple":
-    "اپل",
+    "Thinking Machines": "تینکینگ ماشینز",
 
-    "Google":
-    "گوگل",
+    "Inkling": "اینکلینگ",
 
-    "Microsoft":
-    "مایکروسافت",
+    "Anthropic": "آنتروپیک",
 
-    "OpenAI":
-    "OpenAI",
+    "Claude": "کلود",
 
-    "ChatGPT":
-    "ChatGPT",
+    "Google DeepMind": "گوگل دیپ‌مایند",
 
-    "Boston Dynamics":
-    "بوستون داینامیکس",
+    "DeepMind": "دیپ‌مایند",
 
-    "RingConn":
-    "رینگ‌کان",
+    "Gemini": "جمینای",
 
-    "Siri":
-    "سیری",
+    "Grok": "گروک",
 
-    "iPhone":
-    "آیفون",
+    "xAI": "xAI",
 
-    "iOS":
-    "iOS",
+    "NVIDIA": "انویدیا",
+
+    "Meta": "متا",
+
+    "Tesla": "تسلا",
+
+    "Samsung": "سامسونگ",
+
+    "Amazon": "آمازون",
+
+    "Apple": "اپل",
+
+    "Google": "گوگل",
+
+    "Microsoft": "مایکروسافت",
+
+    "OpenAI": "OpenAI",
+
+    "ChatGPT": "ChatGPT",
+
+    "Boston Dynamics": "بوستون داینامیکس",
+
+    "RingConn": "رینگ‌کان",
+
+    "Siri": "سیری",
+
+    "iPhone": "آیفون",
+
+    "iOS": "iOS",
 
 
 
     # 🎮 Gaming
 
-    "Assassin's Creed":
-    "اساسینز کرید",
+    "Assassin's Creed": "اساسینز کرید",
 
-    "PlayStation":
-    "پلی‌استیشن",
+    "PlayStation": "پلی‌استیشن",
 
-    "Xbox":
-    "ایکس‌باکس",
+    "Xbox": "ایکس‌باکس",
+
+    "Nintendo": "نینتندو",
+
+    "Steam": "استیم",
 
 
 
     # 📰 Media
 
-    "BBC":
-    "بی‌بی‌سی",
+    "Al Jazeera": "الجزیره",
 
-    "CNN":
-    "سی‌ان‌ان",
+    "TechCrunch": "تک‌کرانچ",
 
-    "Al Jazeera":
-    "الجزیره",
+    "The Verge": "د ورج",
 
-    "ESPN":
-    "ESPN",
+    "BBC": "بی‌بی‌سی",
 
-    "The Verge":
-    "د ورج",
+    "CNN": "سی‌ان‌ان",
 
-    "TechCrunch":
-    "تک‌کرانچ",
+    "Reuters": "رویترز",
+
+    "ESPN": "ESPN",
+
+    "New York Times": "نیویورک تایمز",
+
+    "NYTimes": "نیویورک تایمز",
 
 }
+
+
 
 
 
@@ -201,7 +226,7 @@ def replace_official_names(text):
         return ""
 
 
-    # موارد طولانی‌تر اول جایگزین شوند
+    # نام‌های طولانی اول پردازش شوند
 
     names = sorted(
         BRAND_DICTIONARY.keys(),
@@ -218,4 +243,4 @@ def replace_official_names(text):
         )
 
 
-    return text
+    return text.strip()
