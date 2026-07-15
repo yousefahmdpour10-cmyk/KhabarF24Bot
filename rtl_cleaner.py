@@ -1,42 +1,127 @@
 """
-KhabarF24 RTL Cleaner v1
+KhabarF24 RTL Cleaner v2.0
 
 Fix:
-- English words at beginning of Persian sentences
+- English entities at beginning of Persian sentences
 - RTL/LTR mixing
-- Hidden direction problems
+- Company names
+- Sports clubs
+- Countries
 """
 
 
 import re
 
 
-# کلمات رایج انگلیسی که بهتر است فارسی شوند
+
 ENGLISH_TO_PERSIAN = {
 
+
+    # Technology
+
+    "Thinking Machines": "تینکینگ ماشینز",
+
     "Apple": "اپل",
+
     "Google": "گوگل",
+
     "Microsoft": "مایکروسافت",
+
     "OpenAI": "OpenAI",
+
     "Tesla": "تسلا",
+
     "NVIDIA": "انویدیا",
 
+    "Anthropic": "آنتروپیک",
+
+    "Claude": "کلود",
+
+    "Gemini": "جمینای",
+
+    "Grok": "گروک",
+
+    "Boston Dynamics": "بوستون داینامیکس",
+
+
+
+    # Sports
+
     "Manchester United": "منچستر یونایتد",
+
     "Manchester City": "منچستر سیتی",
 
-    "United States": "ایالات متحده",
-    "US": "آمریکا",
+    "Real Madrid": "رئال مادرید",
+
+    "Barcelona": "بارسلونا",
+
+    "Liverpool": "لیورپول",
+
+
+
+    # Countries
+
+    "United States": "آمریکا",
+
     "USA": "آمریکا",
 
+    "US": "آمریکا",
+
     "UK": "بریتانیا",
+
     "Iran": "ایران",
+
     "Iraq": "عراق",
+
     "Israel": "اسرائیل",
 
-    "Google Maps": "گوگل مپس",
-    "Apple Maps": "اپل مپس",
-
 }
+
+
+
+
+
+COMPANY_NAMES = [
+
+    "Thinking Machines",
+
+    "Apple",
+
+    "Google",
+
+    "Microsoft",
+
+    "OpenAI",
+
+    "Anthropic",
+
+    "Boston Dynamics",
+
+    "Tesla",
+
+    "NVIDIA",
+
+]
+
+
+
+CLUB_NAMES = [
+
+    "Manchester United",
+
+    "Manchester City",
+
+    "Real Madrid",
+
+    "Barcelona",
+
+    "Liverpool",
+
+    "Arsenal",
+
+]
+
+
 
 
 
@@ -46,7 +131,6 @@ def replace_english_names(text):
         return ""
 
 
-    # طولانی‌ها اول
     items = sorted(
         ENGLISH_TO_PERSIAN.items(),
         key=lambda x: len(x[0]),
@@ -67,43 +151,58 @@ def replace_english_names(text):
 
 
 
+
 def fix_rtl_text(text):
 
     if not text:
         return ""
 
 
-    # حذف فاصله‌های اضافی
     text = " ".join(
         text.split()
     )
 
 
-    # اصلاح نام‌ها
+    # اول اسم‌های رسمی را تبدیل کن
+
     text = replace_english_names(
         text
     )
 
 
-    # اگر جمله با حرف انگلیسی شروع شد
-    if re.match(
-        r"^[A-Za-z]",
-        text
-    ):
 
-        parts = text.split(" ", 1)
+    # اگر هنوز جمله با انگلیسی شروع شد
 
-        if len(parts) == 2:
+    for company in COMPANY_NAMES:
 
-            first = parts[0]
+        if text.startswith(company):
 
-            rest = parts[1]
+            text = text.replace(
+                company,
+                "شرکت " + company,
+                1
+            )
 
-            text = f"{rest} ({first})"
-
+            return text
 
 
-    # فاصله قبل از علائم
+
+    for club in CLUB_NAMES:
+
+        if text.startswith(club):
+
+            text = text.replace(
+                club,
+                "باشگاه " + club,
+                1
+            )
+
+            return text
+
+
+
+    # علائم نگارشی
+
     text = re.sub(
         r"\s+([،.!؟])",
         r"\1",
@@ -111,7 +210,6 @@ def fix_rtl_text(text):
     )
 
 
-    # جدا کردن خط‌های مشکل‌دار
     text = text.replace(
         " - ",
         " – "
