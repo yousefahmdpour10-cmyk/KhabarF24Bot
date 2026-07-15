@@ -1,51 +1,35 @@
 from deep_translator import GoogleTranslator
 import re
+import html
 
 from entities import PROTECTED_ENTITIES
 from places import PROTECTED_PLACES
 from brand_dictionary import replace_official_names
 
 
-print("🤖 KhabarF24 AI v4.4 Entity Protection")
+print("🤖 KhabarF24 AI v4.5 RTL + Brand Mode")
 
 
 
 NEWS_PHRASES = {
 
     "claims": "مدعی شد",
-    "claimed": "مدعی شد",
-
     "alleges": "مدعی شد",
-
     "accuses": "متهم کرد",
-
-    "accused": "متهم کرد",
-
-    "sues": "شکایت کرد",
-
-    "files a lawsuit": "شکایتی مطرح کرد",
-
-    "files lawsuit": "شکایتی ثبت کرد",
 
     "lawsuit": "شکایت حقوقی",
 
-    "officials": "مقام‌ها",
+    "files a lawsuit":
+    "شکایتی مطرح کرد",
 
-    "administration": "دولت",
+    "joins":
+    "پیوست",
 
-    "government officials": "مقام‌های دولتی",
+    "announces":
+    "اعلام کرد",
 
-    "wins": "پیروز شد",
-
-    "defeats": "شکست داد",
-
-    "joins": "پیوست",
-
-    "announces": "اعلام کرد",
-
-    "reveals": "فاش کرد",
-
-    "warns": "هشدار داد",
+    "reveals":
+    "فاش کرد",
 
 }
 
@@ -53,29 +37,23 @@ NEWS_PHRASES = {
 
 STYLE_REPLACEMENTS = {
 
-    "مدعی توطئه می شود":
-    "مدعی توطئه شد",
+    "می شود":
+    "می‌شود",
 
-    "مدعی توطئه می‌شود":
-    "مدعی توطئه شد",
-
-    "بدون جنگ، بدون صلح":
-    "نه جنگ، نه صلح",
+    "می شود":
+    "شد",
 
     "بن بست":
     "بن‌بست",
 
-    "بن بست طولانی":
-    "بن‌بست چندساله",
-
-    "می باشد":
-    "است",
+    "بدون جنگ، بدون صلح":
+    "نه جنگ، نه صلح",
 
     "در حال حاضر":
     "اکنون",
 
-    "پیامدهای منطقه ای":
-    "پیامدهای منطقه‌ای",
+    "می باشد":
+    "است",
 
 }
 
@@ -88,15 +66,24 @@ def clean_text(text):
     if not text:
         return ""
 
+    # تبدیل HTML entities
+
+    text = html.unescape(text)
+
+
+    # حذف تگ HTML
+
     text = re.sub(
         r"<.*?>",
         "",
         text
     )
 
+
     text = " ".join(
         text.split()
     )
+
 
     return text.strip()
 
@@ -142,7 +129,7 @@ def protect_entities(text):
 
 def restore_entities(text, protected):
 
-    for key, value in protected.items():
+    for key,value in protected.items():
 
         text = text.replace(
             key,
@@ -160,9 +147,7 @@ def translate_text(text):
 
     text = clean_text(text)
 
-
     if not text:
-
         return ""
 
 
@@ -206,24 +191,19 @@ def translate_text(text):
 
 
 
-def improve_news_style(text):
+def improve_style(text):
 
-    if not text:
+    for old,new in NEWS_PHRASES.items():
 
-        return ""
-
-
-    for old, new in NEWS_PHRASES.items():
-
-        text = text.replace(
+        text=text.replace(
             old,
             new
         )
 
 
-    for old, new in STYLE_REPLACEMENTS.items():
+    for old,new in STYLE_REPLACEMENTS.items():
 
-        text = text.replace(
+        text=text.replace(
             old,
             new
         )
@@ -235,9 +215,55 @@ def improve_news_style(text):
 
 
 
+def fix_rtl_headline(text):
+
+    if not text:
+        return ""
+
+
+    # اگر تیتر با انگلیسی شروع شد
+
+    english_start = re.match(
+        r"^[A-Za-z]",
+        text
+    )
+
+
+    if english_start:
+
+
+        words = text.split()
+
+
+        if len(words) > 1:
+
+
+            first = words[0]
+
+
+            text = (
+                first
+                +
+                " "
+                +
+                " ".join(words[1:])
+            )
+
+
+            text = replace_official_names(
+                text
+            )
+
+
+    return text
+
+
+
+
+
 def rewrite_headline(title):
 
-    title = improve_news_style(
+    title = improve_style(
         title
     )
 
@@ -247,33 +273,14 @@ def rewrite_headline(title):
     )
 
 
-    title = title.replace(
-        '"',
-        ""
+    title = fix_rtl_headline(
+        title
     )
 
 
-    # اصلاح تیترهای سوالی بد ترجمه شده
-
-    if title.startswith(
-        "چرا "
-    ):
-
-        title = (
-            "بررسی "
-            +
-            title[4:]
-        )
-
-
-    if len(title) > 100:
+    if len(title)>100:
 
         title = title[:100]
-
-        title = title.rsplit(
-            " ",
-            1
-        )[0]
 
 
     return title.strip()
@@ -284,7 +291,7 @@ def rewrite_headline(title):
 
 def rewrite_summary(summary):
 
-    summary = improve_news_style(
+    summary = improve_style(
         summary
     )
 
@@ -294,16 +301,9 @@ def rewrite_summary(summary):
     )
 
 
-    if len(summary) > 320:
+    if len(summary)>320:
 
-        summary = summary[:320]
-
-        if "." in summary:
-
-            summary = summary.rsplit(
-                ".",
-                1
-            )[0]
+        summary=summary[:320]
 
 
     return summary.strip()
@@ -312,7 +312,7 @@ def rewrite_summary(summary):
 
 
 
-def process_news(title, summary):
+def process_news(title,summary):
 
 
     title = translate_text(
@@ -337,14 +337,13 @@ def process_news(title, summary):
 
     if not summary:
 
-        summary = title
-
+        summary=title
 
 
     return {
 
-        "title": title,
+        "title":title,
 
-        "summary": summary
+        "summary":summary
 
     }
