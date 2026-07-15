@@ -1,32 +1,50 @@
+"""
+KhabarF24 AI Processor v5
+
+Pipeline:
+
+Raw News
+ ↓
+Clean
+ ↓
+Protect Entities
+ ↓
+Translate Persian
+ ↓
+Official Names
+ ↓
+News Rewriter
+ ↓
+Telegram Formatter
+
+"""
+
+
 from deep_translator import GoogleTranslator
 import re
 import html
 
+
 from entities import PROTECTED_ENTITIES
 from places import PROTECTED_PLACES
-from brand_dictionary import replace_official_names
+
+from brand_dictionary import (
+    replace_official_names
+)
+
+from news_rewriter import (
+    rewrite_news
+)
 
 
-print("🤖 KhabarF24 AI v4.6 Translation Engine")
+
+print("🤖 KhabarF24 AI v5 Engine Started")
 
 
 
-STYLE_REPLACEMENTS = {
 
-    "می شود":
-    "می‌شود",
+STYLE_RULES = {
 
-    "می شود":
-    "شد",
-
-    "به پایان دهد":
-    "به پایان داد",
-
-    "به دست می آورد":
-    "کسب می‌کند",
-
-    "به دست آورد":
-    "کسب کرد",
 
     "می باشد":
     "است",
@@ -34,44 +52,22 @@ STYLE_REPLACEMENTS = {
     "در حال حاضر":
     "اکنون",
 
-    "بدون جنگ، بدون صلح":
-    "نه جنگ، نه صلح",
+    "به پایان دهد":
+    "به پایان داد",
+
+    "به دست آورد":
+    "کسب کرد",
+
+    "به دست می آورد":
+    "کسب می‌کند",
 
     "بن بست":
     "بن‌بست",
 
-}
-
-
-
-NEWS_WORDS = {
-
-    "claims":
-    "مدعی شد",
-
-    "alleges":
-    "مدعی شد",
-
-    "accuses":
-    "متهم کرد",
-
-    "lawsuit":
-    "شکایت حقوقی",
-
-    "announces":
-    "اعلام کرد",
-
-    "reveals":
-    "فاش کرد",
-
-    "warns":
-    "هشدار داد",
-
-    "joins":
-    "پیوست",
+    "بدون جنگ، بدون صلح":
+    "نه جنگ، نه صلح",
 
 }
-
 
 
 
@@ -79,9 +75,14 @@ NEWS_WORDS = {
 def clean_text(text):
 
     if not text:
+
         return ""
 
-    text = html.unescape(text)
+
+    text = html.unescape(
+        text
+    )
+
 
     text = re.sub(
         r"<.*?>",
@@ -89,9 +90,11 @@ def clean_text(text):
         text
     )
 
+
     text = " ".join(
         text.split()
     )
+
 
     return text.strip()
 
@@ -106,27 +109,33 @@ def protect_entities(text):
     counter = 0
 
 
-    all_entities = (
+    entities = (
         PROTECTED_ENTITIES
         +
         PROTECTED_PLACES
     )
 
 
-    for entity in all_entities:
+    for item in entities:
 
-        if entity in text:
 
-            key = f"KEEP{counter}"
+        if item in text:
 
-            protected[key] = entity
+
+            key = f"KEEP_{counter}"
+
+
+            protected[key] = item
+
 
             text = text.replace(
-                entity,
+                item,
                 key
             )
 
+
             counter += 1
+
 
 
     return text, protected
@@ -137,7 +146,9 @@ def protect_entities(text):
 
 def restore_entities(text, protected):
 
+
     for key,value in protected.items():
+
 
         text = text.replace(
             key,
@@ -153,17 +164,24 @@ def restore_entities(text, protected):
 
 def translate_text(text):
 
-    text = clean_text(text)
+
+    text = clean_text(
+        text
+    )
 
 
     if not text:
+
         return ""
+
 
 
     original = text
 
 
+
     try:
+
 
         text, protected = protect_entities(
             text
@@ -184,8 +202,6 @@ def translate_text(text):
         )
 
 
-        # اصلاح نام‌ها بعد از ترجمه
-
         translated = replace_official_names(
             translated
         )
@@ -194,11 +210,14 @@ def translate_text(text):
         return translated.strip()
 
 
+
     except Exception as e:
+
 
         print(
             f"Translation Error: {e}"
         )
+
 
         return original
 
@@ -206,26 +225,22 @@ def translate_text(text):
 
 
 
-def improve_style(text):
+def apply_style(text):
+
 
     if not text:
+
         return ""
 
 
-    for old,new in NEWS_WORDS.items():
+
+    for old,new in STYLE_RULES.items():
 
         text = text.replace(
             old,
             new
         )
 
-
-    for old,new in STYLE_REPLACEMENTS.items():
-
-        text = text.replace(
-            old,
-            new
-        )
 
 
     return text.strip()
@@ -234,25 +249,31 @@ def improve_style(text):
 
 
 
-def fix_rtl(text):
+def fix_rtl_start(text):
+
 
     if not text:
+
         return ""
 
 
-    # اگر جمله با کلمه انگلیسی شروع شد
+
+    # جلوگیری از شروع جمله با انگلیسی
 
     match = re.match(
-        r"^([A-Za-z]+)\s+(.*)",
+        r"^([A-Za-z]+)[\s-](.*)",
         text
     )
 
 
+
     if match:
+
 
         first = match.group(1)
 
         rest = match.group(2)
+
 
 
         converted = replace_official_names(
@@ -269,54 +290,19 @@ def fix_rtl(text):
         )
 
 
+
     return text
 
 
 
 
 
-def rewrite_title(title):
-
-    title = improve_style(
-        title
-    )
-
-
-    title = replace_official_names(
-        title
-    )
-
-
-    title = fix_rtl(
-        title
-    )
-
-
-    return title.strip()
-
-
-
-
-
-def rewrite_summary(summary):
-
-    summary = improve_style(
-        summary
-    )
-
-
-    summary = replace_official_names(
-        summary
-    )
-
-
-    return summary.strip()
-
-
-
-
-
 def process_news(title, summary):
+
+
+    print(
+        "🤖 Processing News..."
+    )
 
 
     fa_title = translate_text(
@@ -329,28 +315,93 @@ def process_news(title, summary):
     )
 
 
-    fa_title = rewrite_title(
+
+    fa_title = apply_style(
         fa_title
     )
 
 
-    fa_summary = rewrite_summary(
+    fa_summary = apply_style(
         fa_summary
     )
 
 
-    if not fa_summary:
 
-        fa_summary = fa_title
+    fa_title = fix_rtl_start(
+        fa_title
+    )
+
+
+
+    # ورود به موتور بازنویسی
+
+    rewritten = rewrite_news(
+
+        fa_title,
+
+        fa_summary
+
+    )
+
+
+
+    final_title = rewritten.get(
+
+        "title",
+
+        fa_title
+
+    )
+
+
+
+    final_summary = rewritten.get(
+
+        "summary",
+
+        fa_summary
+
+    )
+
+
+
+    # آخرین چک اسم‌ها
+
+    final_title = replace_official_names(
+
+        final_title
+
+    )
+
+
+    final_summary = replace_official_names(
+
+        final_summary
+
+    )
+
+
+
+    if not final_summary:
+
+
+        final_summary = final_title
+
 
 
 
     return {
 
+
         "title":
-        fa_title,
+
+        final_title,
+
+
 
         "summary":
-        fa_summary
+
+        final_summary
+
 
     }
