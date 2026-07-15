@@ -1,299 +1,260 @@
 """
-KhabarF24 Smart Category Engine v4
+category_engine.py
 
-تشخیص دسته:
-- sport
-- technology
-- economy
-- health
-- science
-- weather
-- iran
-- world
+KhabarF24 Smart Category Engine v5
 """
 
+# -----------------------------
+# دسته پیش فرض هر منبع
+# -----------------------------
 
-CATEGORIES = {
+SOURCE_CATEGORY = {
 
+    # World
+    "Al Jazeera": "world",
+    "BBC": "world",
+    "BBC News": "world",
+    "Reuters": "world",
+    "CNN": "world",
+    "Associated Press": "world",
+    "AP": "world",
+    "New York Times": "world",
+    "NYTimes": "world",
+    "The Guardian": "world",
+    "France24": "world",
+    "DW": "world",
+    "Arab News": "world",
+    "العربية": "world",
 
-"sport": [
+    # Sport
+    "ESPN": "sport",
+    "Sky Sports": "sport",
+    "FIFA": "sport",
+    "UEFA": "sport",
+    "The Athletic": "sport",
+    "Fabrizio Romano": "sport",
+    "Di Marzio": "sport",
+    "Bundesliga": "sport",
+    "Premier League": "sport",
+    "LaLiga": "sport",
+    "Serie A": "sport",
 
-"fifa",
-"uefa",
-"afc",
-"football",
-"soccer",
-"premier league",
-"champions league",
-"laliga",
-"serie a",
-"bundesliga",
+    # Technology
+    "TechCrunch": "technology",
+    "The Verge": "technology",
+    "Ars Technica": "technology",
+    "Wired": "technology",
 
-"barcelona",
-"real madrid",
-"manchester united",
-"manchester city",
-"liverpool",
-"arsenal",
-"chelsea",
+    # Economy
+    "Bloomberg": "economy",
+    "CoinDesk": "economy",
+    "Financial Times": "economy",
 
-"messi",
-"ronaldo",
-"mbappe",
-"yamal",
-
-"nba",
-"wnba",
-"basketball",
-
-"tennis",
-"atp",
-"wta",
-
-"wrestling",
-"fila",
-"fivb",
-
-"formula 1",
-"f1",
-
-"فوتبال",
-"بسکتبال",
-"کشتی",
-"والیبال",
-"جام جهانی",
-"لیگ"
-
-],
-
-
-
-"technology": [
-
-"technology",
-"tech",
-"ai",
-"artificial intelligence",
-"openai",
-"apple",
-"google",
-"microsoft",
-"tesla",
-"nvidia",
-"robot",
-"software",
-"chip",
-"cyber",
-
-"هوش مصنوعی",
-"فناوری",
-"ربات",
-"تکنولوژی"
-
-],
-
-
-
-"economy": [
-
-"economy",
-"market",
-"stock",
-"finance",
-"bitcoin",
-"crypto",
-"inflation",
-"bank",
-
-"اقتصاد",
-"بورس",
-"دلار",
-"ارز",
-"طلا"
-
-],
-
-
-
-"health": [
-
-"health",
-"medical",
-"medicine",
-"hospital",
-"virus",
-"disease",
-
-"سلامت",
-"پزشکی",
-"بیماری",
-"واکسن"
-
-],
-
-
-
-"science": [
-
-"science",
-"space",
-"nasa",
-"research",
-
-"علم",
-"فضا",
-"تحقیق"
-
-],
-
-
-
-"weather": [
-
-"weather",
-"storm",
-"rain",
-"climate",
-
-"هوا",
-"طوفان",
-"باران"
-
-],
-
-
-
-"iran": [
-
-"iran",
-"iranian",
-"tehran",
-
-"ایران",
-"ایرانی",
-"تهران"
-
-],
-
-
-
-"world": [
-
-"war",
-"attack",
-"strike",
-"missile",
-"trump",
-"biden",
-"israel",
-"russia",
-"china",
-"america",
-
-"جنگ",
-"حمله",
-"موشک",
-"ترامپ",
-"اسرائیل",
-"آمریکا",
-"روسیه",
-"چین",
-"تحریم",
-"سپاه"
-
-]
+    # Iran
+    "Tasnim": "iran",
+    "Fars": "iran",
+    "ISNA": "iran",
+    "خبر فوری": "iran",
 
 }
 
 
+SPORT = [
+
+    "football",
+    "soccer",
+    "fifa",
+    "uefa",
+    "afc",
+    "premier league",
+    "champions league",
+    "laliga",
+    "serie a",
+    "bundesliga",
+
+    "manchester united",
+    "manchester city",
+    "real madrid",
+    "barcelona",
+    "liverpool",
+    "arsenal",
+    "chelsea",
+
+    "messi",
+    "ronaldo",
+    "mbappe",
+    "yamal",
+
+    "basketball",
+    "nba",
+    "wnba",
+
+    "tennis",
+    "atp",
+    "wta",
+
+    "والیبال",
+    "بسکتبال",
+    "فوتبال",
+    "کشتی",
+    "جام جهانی",
+    "لیگ",
+    "نیمه نهایی",
+    "فینال",
+
+]
+
+TECH = [
+
+    "technology",
+    "tech",
+    "artificial intelligence",
+    "openai",
+    "google",
+    "apple",
+    "microsoft",
+    "tesla",
+    "robot",
+    "software",
+    "chip",
+
+    "هوش مصنوعی",
+    "فناوری",
+    "ربات",
+
+]
+
+ECONOMY = [
+
+    "economy",
+    "market",
+    "stock",
+    "bitcoin",
+    "crypto",
+    "bank",
+    "finance",
+
+    "اقتصاد",
+    "بورس",
+    "دلار",
+    "طلا",
+
+]
+
+HEALTH = [
+
+    "health",
+    "medicine",
+    "medical",
+    "hospital",
+    "virus",
+
+    "سلامت",
+    "پزشکی",
+    "بیماری",
+    "واکسن",
+
+]
+
+IRAN = [
+
+    "iran",
+    "tehran",
+
+    "ایران",
+    "تهران",
+
+]
+
+WORLD = [
+
+    "war",
+    "attack",
+    "missile",
+    "strike",
+    "trump",
+    "biden",
+    "israel",
+    "russia",
+    "ukraine",
+    "china",
+
+    "جنگ",
+    "حمله",
+    "موشک",
+    "سپاه",
+    "تحریم",
+    "ترامپ",
+    "آمریکا",
+    "اسرائیل",
+
+]
+
+
+def score(words, text):
+
+    s = 0
+
+    for w in words:
+
+        if w.lower() in text:
+
+            s += 1
+
+    return s
 
 
 def detect_smart_category(title="", summary="", source=""):
 
+    text = f"{title} {summary}".lower()
 
-    text = (
-        f"{title} {summary} {source}"
-    ).lower()
+    # -----------------------
+    # دسته پیش فرض منبع
+    # -----------------------
 
+    default = "world"
 
+    for name, cat in SOURCE_CATEGORY.items():
 
-    scores = {}
+        if name.lower() in source.lower():
 
+            default = cat
 
-    for category, words in CATEGORIES.items():
+            break
 
-        score = 0
+    # -----------------------
+    # امتیازها
+    # -----------------------
 
-        for word in words:
+    sport_score = score(SPORT, text)
+    tech_score = score(TECH, text)
+    eco_score = score(ECONOMY, text)
+    health_score = score(HEALTH, text)
+    iran_score = score(IRAN, text)
+    world_score = score(WORLD, text)
 
-            if word.lower() in text:
+    # -----------------------
+    # قوانین
+    # -----------------------
 
-                score += 1
-
-
-        scores[category] = score
-
-
-
-    # -------------------------
-    # اولویت‌های مهم
-    # -------------------------
-
-
-    # جنگ و سیاست
-    if scores["world"] >= 2:
-
+    # خبر جنگ همیشه جهان
+    if world_score >= 2:
         return "world"
 
-
-
-    # ورزش واقعی
-    if scores["sport"] >= 2:
-
+    # ورزش فقط اگر واقعا ورزشی باشد
+    if sport_score >= 3:
         return "sport"
 
-
-
-    # فناوری
-    if scores["technology"] >= 1:
-
+    if tech_score >= 2:
         return "technology"
 
-
-
-    # اقتصاد
-    if scores["economy"] >= 1:
-
+    if eco_score >= 2:
         return "economy"
 
-
-
-    # سلامت
-    if scores["health"] >= 1:
-
+    if health_score >= 2:
         return "health"
 
-
-
-    # علم
-    if scores["science"] >= 1:
-
-        return "science"
-
-
-
-    # هوا
-    if scores["weather"] >= 1:
-
-        return "weather"
-
-
-
-    # ایران
-    if scores["iran"] >= 1:
-
+    if iran_score >= 2 and default != "world":
         return "iran"
 
-
-
-    return "world"
+    return default
