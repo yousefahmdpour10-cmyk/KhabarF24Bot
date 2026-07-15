@@ -1,12 +1,17 @@
 from ai_processor import process_news
 
 
-title = "Manchester United defeated Chelsea in Premier League match"
+
+title = """
+Thinking Machines launches Inkling, its first public AI model
+"""
+
 
 summary = """
-Manchester United defeated Chelsea after a great performance.
-Bruno Fernandes scored the winning goal.
+Thinking Machines announced its first open AI model after months of developing artificial intelligence infrastructure.
+The company says the model will compete with other AI systems.
 """
+
 
 
 result = process_news(
@@ -15,8 +20,16 @@ result = process_news(
 )
 
 
-print("TITLE:")
-print(result["title"])
 
-print("\nSUMMARY:")
-print(result["summary"])
+print("\n========== TITLE ==========\n")
+
+print(
+    result["title"]
+)
+
+
+print("\n========== SUMMARY ==========\n")
+
+print(
+    result["summary"]
+)
