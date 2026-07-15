@@ -1,17 +1,14 @@
 from ai_processor import process_news
 
 
-
 title = """
-Thinking Machines launches Inkling, its first public AI model
+Apple announces new artificial intelligence features for iPhone
 """
 
 
 summary = """
-Thinking Machines announced its first open AI model after months of developing artificial intelligence infrastructure.
-The company says the model will compete with other AI systems.
+Apple announced new AI features for iPhone users. The company says the new system will improve Siri performance.
 """
-
 
 
 result = process_news(
@@ -20,16 +17,9 @@ result = process_news(
 )
 
 
-
-print("\n========== TITLE ==========\n")
-
-print(
-    result["title"]
-)
+print("================ TITLE ================")
+print(result["title"])
 
 
-print("\n========== SUMMARY ==========\n")
-
-print(
-    result["summary"]
-)
+print("\n================ SUMMARY ================")
+print(result["summary"])
