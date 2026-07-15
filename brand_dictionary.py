@@ -1,264 +1,195 @@
 """
-brand_dictionary.py
+KhabarF24 Brand Dictionary v4.6
 
-KhabarF24 Official Names Dictionary v4.5
-
-حفظ نام رسمی:
-- باشگاه‌ها
+نام‌های رسمی:
+- کشورها
+- مکان‌ها
+- تیم‌ها
 - بازیکنان
-- لیگ‌ها
 - برندها
-- فناوری
-- بازی‌ها
 """
 
 
 BRAND_DICTIONARY = {
 
 
-    # =========================
-    # ⚽ Football Clubs
-    # =========================
+    # 🌍 Countries
+
+    "Iran": "ایران",
+
+    "Islamic Republic of Iran":
+    "جمهوری اسلامی ایران",
+
+    "Israel":
+    "اسرائیل",
+
+    "Israeli":
+    "اسرائیلی",
+
+    "Lebanon":
+    "لبنان",
+
+    "Yemen":
+    "یمن",
+
+    "Gaza":
+    "غزه",
+
+    "Ukraine":
+    "اوکراین",
+
+    "Russia":
+    "روسیه",
+
+    "China":
+    "چین",
+
+    "United States":
+    "آمریکا",
+
+    "United Kingdom":
+    "بریتانیا",
+
+
+
+    # 👤 People
+
+    "Donald Trump":
+    "دونالد ترامپ",
+
+    "Trump":
+    "ترامپ",
+
+    "Joe Biden":
+    "جو بایدن",
+
+
+
+    # ⚽ Clubs
 
     "Manchester United":
-        "منچستر یونایتد (Manchester United)",
+    "منچستر یونایتد",
 
     "Manchester City":
-        "منچستر سیتی (Manchester City)",
+    "منچستر سیتی",
 
     "Real Madrid":
-        "رئال مادرید (Real Madrid)",
+    "رئال مادرید",
 
     "Barcelona":
-        "بارسلونا (Barcelona)",
+    "بارسلونا",
 
     "FC Barcelona":
-        "بارسلونا (FC Barcelona)",
+    "بارسلونا",
 
     "Liverpool":
-        "لیورپول (Liverpool)",
+    "لیورپول",
 
     "Arsenal":
-        "آرسنال (Arsenal)",
+    "آرسنال",
 
     "Chelsea":
-        "چلسی (Chelsea)",
+    "چلسی",
 
     "Bayern Munich":
-        "بایرن مونیخ (Bayern Munich)",
+    "بایرن مونیخ",
 
     "Paris Saint-Germain":
-        "پاری‌سن‌ژرمن (Paris Saint-Germain)",
+    "پاری‌سن‌ژرمن",
 
     "PSG":
-        "پاری‌سن‌ژرمن (PSG)",
-
-    "Inter Milan":
-        "اینتر میلان (Inter Milan)",
-
-    "AC Milan":
-        "آث میلان (AC Milan)",
+    "پاری‌سن‌ژرمن",
 
     "Juventus":
-        "یوونتوس (Juventus)",
-
-    "Borussia Dortmund":
-        "بوروسیا دورتموند (Borussia Dortmund)",
-
-    "Atletico Madrid":
-        "اتلتیکو مادرید (Atletico Madrid)",
+    "یوونتوس",
 
 
 
-    # =========================
-    # 👤 Football Players
-    # =========================
+    # ⚽ Players
 
     "Lionel Messi":
-        "لیونل مسی (Lionel Messi)",
+    "لیونل مسی",
 
     "Cristiano Ronaldo":
-        "کریستیانو رونالدو (Cristiano Ronaldo)",
+    "کریستیانو رونالدو",
 
     "Kylian Mbappe":
-        "کیلیان امباپه (Kylian Mbappe)",
-
-    "Jude Bellingham":
-        "جود بلینگهام (Jude Bellingham)",
+    "کیلیان امباپه",
 
     "Lamine Yamal":
-        "لامین یامال (Lamine Yamal)",
+    "لامین یامال",
 
-    "Erling Haaland":
-        "ارلینگ هالند (Erling Haaland)",
-
-    "Mohamed Salah":
-        "محمد صلاح (Mohamed Salah)",
-
-    "Vinicius Junior":
-        "وینیسیوس جونیور (Vinicius Junior)",
-
-    "Folarin Balogun":
-        "فولارین بالوگون (Folarin Balogun)",
+    "Jude Bellingham":
+    "جود بلینگهام",
 
 
 
-    # =========================
-    # 🏀 Basketball
-    # =========================
-
-    "NBA":
-        "NBA",
-
-    "WNBA":
-        "WNBA",
-
-    "Los Angeles Lakers":
-        "لس‌آنجلس لیکرز (Los Angeles Lakers)",
-
-    "Boston Celtics":
-        "بوستون سلتیکس (Boston Celtics)",
-
-    "Minnesota Lynx":
-        "مینه‌سوتا لینکس (Minnesota Lynx)",
-
-    "Phoenix Mercury":
-        "فینیکس مرکوری (Phoenix Mercury)",
-
-    "LeBron James":
-        "لبران جیمز (LeBron James)",
-
-
-
-    # =========================
-    # 🏆 Sports Organizations
-    # =========================
-
-    "FIFA":
-        "فیفا (FIFA)",
-
-    "UEFA":
-        "یوفا (UEFA)",
-
-    "AFC":
-        "کنفدراسیون فوتبال آسیا (AFC)",
-
-    "Premier League":
-        "لیگ برتر انگلیس (Premier League)",
-
-    "LaLiga":
-        "لالیگا (LaLiga)",
-
-    "Serie A":
-        "سری آ (Serie A)",
-
-    "Bundesliga":
-        "بوندسلیگا (Bundesliga)",
-
-    "Formula 1":
-        "فرمول یک (Formula 1)",
-
-
-
-    # =========================
     # 💻 Technology
-    # =========================
 
     "Apple":
-        "اپل (Apple)",
+    "اپل",
 
     "Google":
-        "گوگل (Google)",
+    "گوگل",
 
     "Microsoft":
-        "مایکروسافت (Microsoft)",
+    "مایکروسافت",
 
     "OpenAI":
-        "OpenAI (اوپن‌ای‌آی)",
+    "OpenAI",
 
     "ChatGPT":
-        "ChatGPT",
-
-    "Tesla":
-        "تسلا (Tesla)",
-
-    "NVIDIA":
-        "انویدیا (NVIDIA)",
-
-    "Samsung":
-        "سامسونگ (Samsung)",
-
-    "Meta":
-        "متا (Meta)",
-
-    "Netflix":
-        "نتفلیکس (Netflix)",
+    "ChatGPT",
 
     "Boston Dynamics":
-        "بوستون داینامیکس (Boston Dynamics)",
+    "بوستون داینامیکس",
 
     "RingConn":
-        "رینگ‌کان (RingConn)",
+    "رینگ‌کان",
 
     "Siri":
-        "سیری (Siri)",
+    "سیری",
 
     "iPhone":
-        "آیفون (iPhone)",
-
-    "iPad":
-        "آیپد (iPad)",
+    "آیفون",
 
     "iOS":
-        "iOS",
+    "iOS",
 
 
 
-    # =========================
     # 🎮 Gaming
-    # =========================
 
     "Assassin's Creed":
-        "اساسینز کرید (Assassin's Creed)",
-
-    "Ubisoft":
-        "یوبی‌سافت (Ubisoft)",
+    "اساسینز کرید",
 
     "PlayStation":
-        "پلی‌استیشن (PlayStation)",
+    "پلی‌استیشن",
 
     "Xbox":
-        "ایکس‌باکس (Xbox)",
-
-    "Nintendo":
-        "نینتندو (Nintendo)",
-
-    "Steam":
-        "استیم (Steam)",
+    "ایکس‌باکس",
 
 
 
-    # =========================
     # 📰 Media
-    # =========================
 
     "BBC":
-        "بی‌بی‌سی (BBC)",
+    "بی‌بی‌سی",
 
     "CNN":
-        "سی‌ان‌ان (CNN)",
+    "سی‌ان‌ان",
+
+    "Al Jazeera":
+    "الجزیره",
 
     "ESPN":
-        "ESPN",
+    "ESPN",
 
     "The Verge":
-        "د ورج (The Verge)",
+    "د ورج",
 
     "TechCrunch":
-        "تک‌کرانچ (TechCrunch)",
-
-    "New York Times":
-        "نیویورک تایمز (New York Times)",
+    "تک‌کرانچ",
 
 }
 
@@ -270,23 +201,20 @@ def replace_official_names(text):
         return ""
 
 
-    # اول موارد طولانی‌تر جایگزین شوند
-    # تا FC Barcelona قبل از Barcelona خراب نشود
+    # موارد طولانی‌تر اول جایگزین شوند
 
-    sorted_names = sorted(
+    names = sorted(
         BRAND_DICTIONARY.keys(),
         key=len,
         reverse=True
     )
 
 
-    for english in sorted_names:
-
-        persian = BRAND_DICTIONARY[english]
+    for name in names:
 
         text = text.replace(
-            english,
-            persian
+            name,
+            BRAND_DICTIONARY[name]
         )
 
 
