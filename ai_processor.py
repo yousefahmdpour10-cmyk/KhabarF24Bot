@@ -1,36 +1,30 @@
 """
-KhabarF24 AI Processor v4.2
+KhabarF24 AI Processor v4.3
 
 Pipeline:
 
-RSS News
-   ↓
-Translation
-   ↓
-Official Name Replacement
-   ↓
-Persian Style Cleanup
-   ↓
-Headline Optimization
-   ↓
-Summary Cleanup
-   ↓
-RTL/LTR Fix
-   ↓
+Translate
+↓
+Official Names
+↓
+News Rewrite
+↓
+RTL Cleaner
+↓
 Telegram
 """
 
 
-from news_rewriter import (
-    translate_text,
-    improve_persian_style,
-    create_headline,
-    summarize_text,
-)
+from deep_translator import GoogleTranslator
 
 
 from brand_dictionary import (
     replace_official_names,
+)
+
+
+from news_rewriter import (
+    rewrite_news,
 )
 
 
@@ -40,17 +34,47 @@ from rtl_cleaner import (
 
 
 
+def translate_text(text):
+
+    if not text:
+        return ""
+
+
+    try:
+
+        translated = GoogleTranslator(
+            source="auto",
+            target="fa"
+        ).translate(text)
+
+
+        return translated.strip()
+
+
+    except Exception as e:
+
+        print(
+            f"Translation Error: {e}"
+        )
+
+        return text
+
+
+
+
 
 def process_news(title, summary):
 
 
-    print("🤖 KhabarF24 AI v4.2")
+    print(
+        "🤖 KhabarF24 AI v4.3"
+    )
 
 
 
-    # =================================
+    # =====================
     # Translation
-    # =================================
+    # =====================
 
 
     fa_title = translate_text(
@@ -64,13 +88,9 @@ def process_news(title, summary):
 
 
 
-    # =================================
-    # Official names
-    # Apple
-    # Manchester United
-    # Google
-    # etc.
-    # =================================
+    # =====================
+    # Official Names
+    # =====================
 
 
     fa_title = replace_official_names(
@@ -84,60 +104,36 @@ def process_news(title, summary):
 
 
 
-    # =================================
-    # Persian style
-    # =================================
+    # =====================
+    # News Rewrite
+    # =====================
 
 
-    fa_title = improve_persian_style(
+    rewritten = rewrite_news(
+
+        fa_title,
+
+        fa_summary
+
+    )
+
+
+    fa_title = rewritten.get(
+        "title",
         fa_title
     )
 
 
-    fa_summary = improve_persian_style(
+    fa_summary = rewritten.get(
+        "summary",
         fa_summary
     )
 
 
 
-    # =================================
-    # Headline
-    # =================================
-
-
-    fa_title = create_headline(
-        fa_title
-    )
-
-
-
-    # =================================
-    # Summary
-    # =================================
-
-
-    fa_summary = summarize_text(
-        fa_summary,
-        max_length=300
-    )
-
-
-
-    if not fa_summary:
-
-        fa_summary = fa_title
-
-
-
-    # =================================
-    # RTL / LTR Fix
-    # جلوگیری از:
-    #
-    # Apple has...
-    # Iran threatens...
-    # US-ایران
-    #
-    # =================================
+    # =====================
+    # RTL Fix
+    # =====================
 
 
     fa_title = fix_rtl_text(
