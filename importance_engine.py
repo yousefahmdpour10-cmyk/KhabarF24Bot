@@ -1,12 +1,16 @@
 """
-KhabarF24 Importance Engine v1.0
+KhabarF24 Importance Engine v2
 
-هدف:
-- تشخیص اهمیت خبر
-- جلوگیری از انتشار خبرهای کم‌ارزش
-- امتیازدهی از 1 تا 10
+سیستم امتیاز اهمیت خبر:
+- سیاسی
+- امنیتی
+- ورزش
+- اقتصاد
+- فناوری
+- هواشناسی
+- سلامت
 
-بدون نیاز به API
+امتیاز: 1 تا 10
 """
 
 
@@ -14,107 +18,156 @@ import re
 
 
 
+IMPORTANCE_WORDS = {
 
 
-# =====================
-# کلیدواژه‌های مهم
-# =====================
+    # 🔴 سیاسی و امنیتی
 
+    "politics": [
 
-HIGH_IMPORTANCE = [
+        "جنگ",
+        "حمله",
+        "حمله هوایی",
+        "موشک",
+        "پهپاد",
+        "هسته‌ای",
+        "هسته ای",
+        "تحریم",
+        "مذاکرات",
+        "توافق",
+        "بحران",
+        "تهدید",
+        "اعدام",
+        "بازداشت",
+        "دستگیری",
+        "اخراج",
+        "استعفا",
+        "انتخابات",
+        "رئیس جمهور",
+        "نخست وزیر",
+        "پارلمان",
+        "کودتا",
+        "ترور",
+        "انفجار",
+        "کشته",
+        "تلفات",
+        "آتش بس",
+        "عملیات نظامی",
+        "تحقیقات رسمی",
+        "اعلام رسمی",
 
-    # جنگ و امنیت
-
-    "war",
-    "attack",
-    "missile",
-    "drone",
-    "invasion",
-    "military",
-    "strike",
-    "nuclear",
-    "terror",
-    "conflict",
-
-
-    # سیاست
-
-    "president",
-    "prime minister",
-    "election",
-    "government",
-    "parliament",
-    "sanction",
-    "treaty",
-    "agreement",
-
-
-    # اقتصاد
-
-    "crash",
-    "market",
-    "inflation",
-    "bank",
-    "oil",
-    "energy",
-
-
-    # حوادث بزرگ
-
-    "earthquake",
-    "flood",
-    "storm",
-    "disaster",
-
-
-    # فناوری مهم
-
-    "artificial intelligence",
-    "ai",
-    "chip",
-    "cyber attack",
-
-]
+    ],
 
 
 
+    # ⚽ ورزش
 
+    "sport": [
 
-MEDIUM_IMPORTANCE = [
+        "جام جهانی",
+        "فینال",
+        "نیمه نهایی",
+        "قهرمان",
+        "رکورد",
+        "انتقال",
+        "نقل و انتقالات",
+        "قرارداد",
+        "اخراج مربی",
+        "مصدومیت",
+        "بازیکن",
+        "ستاره",
+        "لیگ قهرمانان",
+        "المپیک",
+        "مسابقه مهم",
 
-    "company",
-
-    "business",
-
-    "research",
-
-    "technology",
-
-    "sports",
-
-    "match",
-
-]
+    ],
 
 
 
 
+    # 💰 اقتصاد
 
-LOW_IMPORTANCE = [
+    "economy": [
 
-    "celebrity",
+        "بیت کوین",
+        "bitcoin",
+        "ارز",
+        "دلار",
+        "یورو",
+        "طلا",
+        "نفت",
+        "بورس",
+        "سهام",
+        "تورم",
+        "بانک",
+        "ورشکستگی",
+        "سرمایه گذاری",
+        "نرخ بهره",
+        "اقتصاد",
+        "بازار",
 
-    "movie",
-
-    "entertainment",
-
-    "fashion",
-
-    "lifestyle",
-
-]
+    ],
 
 
+
+
+    # 💻 فناوری
+
+    "technology": [
+
+        "هوش مصنوعی",
+        "artificial intelligence",
+        "ai",
+        "ربات",
+        "تراشه",
+        "هک",
+        "امنیت سایبری",
+        "اپل",
+        "گوگل",
+        "مایکروسافت",
+        "openai",
+        "فناوری",
+
+    ],
+
+
+
+
+    # 🌧️ هواشناسی
+
+    "weather": [
+
+        "طوفان",
+        "سیل",
+        "زلزله",
+        "هشدار قرمز",
+        "موج گرما",
+        "سرمای شدید",
+        "بارش شدید",
+        "گرد و غبار",
+        "آب و هوا",
+        "تغییرات اقلیمی",
+
+    ],
+
+
+
+
+    # 🏥 سلامت
+
+    "health": [
+
+        "ویروس",
+        "بیماری",
+        "واکسن",
+        "همه گیری",
+        "سلامت",
+        "پزشکی",
+        "بیمارستان",
+
+    ]
+
+}
 
 
 
@@ -123,70 +176,49 @@ LOW_IMPORTANCE = [
 def calculate_importance(title="", summary=""):
 
 
-    text = f"""
-    {title}
-    {summary}
-    """.lower()
+    text = f"{title} {summary}".lower()
+
+
+    score = 3
 
 
 
-    score = 5
+    for category, words in IMPORTANCE_WORDS.items():
+
+
+        hits = 0
+
+
+        for word in words:
+
+
+            if word.lower() in text:
+
+                hits += 1
 
 
 
-    # =====================
-    # موارد مهم
-    # =====================
+        if hits:
 
 
-    for word in HIGH_IMPORTANCE:
+            # هر حوزه مهم یک امتیاز پایه می‌دهد
 
-
-        if word in text:
-
-            score += 1
+            score += hits * 0.8
 
 
 
+            # خبر سیاسی و امنیتی وزن بیشتر دارد
+
+            if category == "politics":
+
+                score += 1
 
 
-    # =====================
-    # موارد متوسط
-    # =====================
-
-
-    for word in MEDIUM_IMPORTANCE:
-
-
-        if word in text:
-
-            score += 0.3
-
-
-
-
-
-    # =====================
-    # موارد کم اهمیت
-    # =====================
-
-
-    for word in LOW_IMPORTANCE:
-
-
-        if word in text:
-
-            score -= 1
-
-
-
-
-
-    # محدود کردن
 
     if score > 10:
 
         score = 10
+
 
 
     if score < 1:
@@ -196,7 +228,6 @@ def calculate_importance(title="", summary=""):
 
 
     return round(score,1)
-
 
 
 
@@ -216,9 +247,7 @@ def is_important(title="", summary="", minimum=7):
 
 
     print(
-
         f"🔥 Importance Score: {score}/10"
-
     )
 
 
