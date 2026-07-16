@@ -1,12 +1,13 @@
 """
-KhabarF24 Sport Formatter v2.0
+KhabarF24 Sport Formatter v3.0
 
 Features:
-- Sport event detection
-- Match flags
-- Score formatting
+- Detect sport type
+- Sport emoji
+- Sport hashtag
+- Team flags
 - Remove video-only posts
-- Add sport labels to title
+- Match event detection
 """
 
 
@@ -14,37 +15,155 @@ import re
 
 
 
-TEAM_FLAGS = {
+SPORTS = {
 
-    "انگلیس": "🏴🇬🇧",
-    "england": "🏴🇬🇧",
 
-    "آرژانتین": "🇦🇷",
-    "argentina": "🇦🇷",
+    "football": {
 
-    "اسپانیا": "🇪🇸",
-    "spain": "🇪🇸",
+        "name": "فوتبال",
 
-    "فرانسه": "🇫🇷",
-    "france": "🇫🇷",
+        "emoji": "⚽",
 
-    "آلمان": "🇩🇪",
-    "germany": "🇩🇪",
+        "hashtag": "#فوتبال",
 
-    "ایتالیا": "🇮🇹",
-    "italy": "🇮🇹",
+        "keywords": [
 
-    "پرتغال": "🇵🇹",
-    "portugal": "🇵🇹",
+            "فوتبال",
+            "جام جهانی",
+            "لیگ قهرمانان",
+            "Premier League",
+            "La Liga",
+            "گل",
+            "مسی",
+            "رونالدو",
+            "بازیکن",
+            "مربی",
+            "باشگاه",
+            "VAR",
+            "فینال"
 
-    "برزیل": "🇧🇷",
-    "brazil": "🇧🇷",
+        ]
 
-    "هلند": "🇳🇱",
-    "netherlands": "🇳🇱",
+    },
 
-    "ایران": "🇮🇷",
-    "iran": "🇮🇷",
+
+    "basketball": {
+
+        "name": "بسکتبال",
+
+        "emoji": "🏀",
+
+        "hashtag": "#بسکتبال",
+
+        "keywords": [
+
+            "بسکتبال",
+            "NBA",
+            "لیکرز",
+            "سلتیکس",
+            "کری"
+
+        ]
+
+    },
+
+
+    "volleyball": {
+
+        "name": "والیبال",
+
+        "emoji": "🏐",
+
+        "hashtag": "#والیبال",
+
+        "keywords": [
+
+            "والیبال",
+            "لیگ ملت‌ها",
+            "FIVB"
+
+        ]
+
+    },
+
+
+    "tennis": {
+
+        "name": "تنیس",
+
+        "emoji": "🎾",
+
+        "hashtag": "#تنیس",
+
+        "keywords": [
+
+            "تنیس",
+            "گرند اسلم",
+            "ویمبلدون",
+            "رولان گاروس"
+
+        ]
+
+    },
+
+
+    "wrestling": {
+
+        "name": "کشتی",
+
+        "emoji": "🤼",
+
+        "hashtag": "#کشتی",
+
+        "keywords": [
+
+            "کشتی",
+            "آزاد",
+            "فرنگی",
+            "اتحادیه جهانی کشتی"
+
+        ]
+
+    },
+
+
+    "formula1": {
+
+        "name": "فرمول یک",
+
+        "emoji": "🏎️",
+
+        "hashtag": "#فرمول_یک",
+
+        "keywords": [
+
+            "فرمول یک",
+            "Formula 1",
+            "F1"
+
+        ]
+
+    },
+
+
+    "mma": {
+
+        "name": "MMA",
+
+        "emoji": "🥊",
+
+        "hashtag": "#MMA",
+
+        "keywords": [
+
+            "UFC",
+            "MMA",
+            "مبارزه"
+
+        ]
+
+    }
+
 
 }
 
@@ -52,7 +171,42 @@ TEAM_FLAGS = {
 
 
 
-# خبرهایی که ارزش انتشار ندارند
+
+
+TEAM_FLAGS = {
+
+
+    "آرژانتین": "🇦🇷",
+
+    "انگلیس": "🏴🇬🇧",
+
+    "اسپانیا": "🇪🇸",
+
+    "فرانسه": "🇫🇷",
+
+    "آلمان": "🇩🇪",
+
+    "ایتالیا": "🇮🇹",
+
+    "پرتغال": "🇵🇹",
+
+    "برزیل": "🇧🇷",
+
+    "هلند": "🇳🇱",
+
+    "ایران": "🇮🇷",
+
+    "آمریکا": "🇺🇸",
+
+    "ژاپن": "🇯🇵"
+
+}
+
+
+
+
+
+
 
 BLOCK_WORDS = [
 
@@ -76,7 +230,7 @@ BLOCK_WORDS = [
 
     "ویدیو",
 
-    "video",
+    "video"
 
 ]
 
@@ -85,17 +239,102 @@ BLOCK_WORDS = [
 
 
 
-def is_blocked_sport_news(title, summary):
+
+
+def detect_sport(title="", summary=""):
 
 
     text = f"{title} {summary}".lower()
 
 
+
+    scores = {}
+
+
+
+    for sport, data in SPORTS.items():
+
+
+        count = 0
+
+
+        for word in data["keywords"]:
+
+
+            if word.lower() in text:
+
+                count += 1
+
+
+
+        scores[sport] = count
+
+
+
+    best = max(
+
+        scores,
+
+        key=scores.get
+
+    )
+
+
+
+    if scores[best] == 0:
+
+        return {
+
+            "type": "sport",
+
+            "name": "ورزش",
+
+            "emoji": "🏅",
+
+            "hashtag": "#ورزش"
+
+        }
+
+
+
+    data = SPORTS[best]
+
+
+
+    return {
+
+        "type": best,
+
+        "name": data["name"],
+
+        "emoji": data["emoji"],
+
+        "hashtag": data["hashtag"]
+
+    }
+
+
+
+
+
+
+
+
+
+def is_blocked_sport_news(title="", summary=""):
+
+
+    text = f"{title} {summary}".lower()
+
+
+
     for word in BLOCK_WORDS:
+
 
         if word.lower() in text:
 
             return True
+
 
 
     return False
@@ -106,124 +345,7 @@ def is_blocked_sport_news(title, summary):
 
 
 
-def detect_event(title, summary):
-
-
-    text = f"{title} {summary}".lower()
-
-
-
-    if any(x in text for x in [
-
-        "ترکیب",
-
-        "lineup",
-
-        "starting xi",
-
-        "بازیکنان اصلی"
-
-    ]):
-
-        return "📋", "ترکیب رسمی"
-
-
-
-    if any(x in text for x in [
-
-        "مصاحبه",
-
-        "گفت",
-
-        "said",
-
-        "interview"
-
-    ]):
-
-        return "🎙", "مصاحبه"
-
-
-
-    if any(x in text for x in [
-
-        "انتقال",
-
-        "نقل و انتقالات",
-
-        "transfer"
-
-    ]):
-
-        return "🔄", "انتقال"
-
-
-
-    if any(x in text for x in [
-
-        "مصدوم",
-
-        "injury",
-
-        "injured"
-
-    ]):
-
-        return "🏥", "مصدومیت"
-
-
-
-    if any(x in text for x in [
-
-        "اخراج",
-
-        "red card",
-
-        "کارت قرمز"
-
-    ]):
-
-        return "🟥", "اخراج"
-
-
-
-    if any(x in text for x in [
-
-        "قهرمان",
-
-        "قهرمانی",
-
-        "champion"
-
-    ]):
-
-        return "🏆", "قهرمانی"
-
-
-
-    if re.search(
-
-        r"\d+\s*[-–]\s*\d+",
-
-        text
-
-    ):
-
-        return "🏁", "نتیجه"
-
-
-
-    return "", ""
-
-
-
-
-
-
-
-
-
-def add_flags(text):
+def add_team_flags(text):
 
 
     if not text:
@@ -243,26 +365,17 @@ def add_flags(text):
     )
 
 
-
     for team, flag in items:
 
 
-        pattern = re.compile(
+        text = text.replace(
 
-            re.escape(team),
+            team,
 
-            re.IGNORECASE
-
-        )
-
-
-        text = pattern.sub(
-
-            f"{flag}{team}",
-
-            text
+            f"{flag}{team}"
 
         )
+
 
 
     return text
@@ -276,51 +389,13 @@ def add_flags(text):
 def format_score(text):
 
 
-    pattern = r"([آ-یA-Za-z]+)\s*(\d+)\s*[-–]\s*(\d+)\s*([آ-یA-Za-z]+)"
+    if not text:
+
+        return ""
 
 
 
-    def replace(match):
-
-
-        t1 = match.group(1)
-
-        s1 = match.group(2)
-
-        s2 = match.group(3)
-
-        t2 = match.group(4)
-
-
-
-        f1 = TEAM_FLAGS.get(
-
-            t1.lower(),
-
-            ""
-
-        )
-
-
-        f2 = TEAM_FLAGS.get(
-
-            t2.lower(),
-
-            ""
-
-        )
-
-
-
-        return (
-
-            f"{f1}{t1} "
-
-            f"{s1}-{s2} "
-
-            f"{f2}{t2}"
-
-        )
+    pattern = r"(\D+)\s(\d+)\s*[-–]\s*(\d+)\s(\D+)"
 
 
 
@@ -328,7 +403,7 @@ def format_score(text):
 
         pattern,
 
-        replace,
+        r"\1 \2-\3 \4",
 
         text
 
@@ -345,19 +420,34 @@ def format_score(text):
 def format_sport_news(title, summary):
 
 
-
-    if is_blocked_sport_news(
+    sport = detect_sport(
 
         title,
 
         summary
 
-    ):
+    )
+
+
+
+    blocked = is_blocked_sport_news(
+
+        title,
+
+        summary
+
+    )
+
+
+
+    if blocked:
 
 
         return {
 
             "blocked": True,
+
+            "sport": sport,
 
             "title": title,
 
@@ -370,53 +460,15 @@ def format_sport_news(title, summary):
 
 
 
+    title = format_score(title)
 
-    icon, event = detect_event(
-
-        title,
-
-        summary
-
-    )
+    summary = format_score(summary)
 
 
 
-    title = format_score(
+    title = add_team_flags(title)
 
-        title
-
-    )
-
-
-    summary = format_score(
-
-        summary
-
-    )
-
-
-
-    title = add_flags(
-
-        title
-
-    )
-
-
-    summary = add_flags(
-
-        summary
-
-    )
-
-
-
-    if icon:
-
-
-        title = f"{icon} {title}"
-
-
+    summary = add_team_flags(summary)
 
 
 
@@ -428,7 +480,7 @@ def format_sport_news(title, summary):
         "blocked": False,
 
 
-        "event": event,
+        "sport": sport,
 
 
         "title": title,
