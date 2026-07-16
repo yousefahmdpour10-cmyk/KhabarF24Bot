@@ -1,21 +1,25 @@
 """
-KhabarF24 AI Processor v5.1
+KhabarF24 AI Processor v5.2
 
 Pipeline:
 
 Translation
 ↓
-Fact Protection
+Translation Cleanup
+↓
+Number Protection
 ↓
 Official Names
 ↓
 Safe Rewrite
 ↓
-Text Cleanup
+Official Names Again
+↓
+Title Cleanup
+↓
+Summary Cleanup
 ↓
 RTL Cleaner
-↓
-Telegram
 """
 
 
@@ -76,16 +80,14 @@ def translate_text(text):
 
 
 # =========================
-# حذف ایرادهای ترجمه
+# Clean Translation
 # =========================
 
 
 def clean_translation(text):
 
-
     if not text:
         return ""
-
 
 
     text = html.unescape(
@@ -93,8 +95,8 @@ def clean_translation(text):
     )
 
 
+    # حذف عددهای اشتباه گوگل
 
-    # حذف عددهای اضافی ترجمه گوگل
     text = re.sub(
         r"\(\d+\)",
         "",
@@ -102,31 +104,13 @@ def clean_translation(text):
     )
 
 
-    # حذف فاصله‌های خراب
+    # فاصله‌های اضافی
 
     text = re.sub(
         r"\s+",
         " ",
         text
     )
-
-
-
-    # اصلاح چسبیدن انگلیسی به فارسی
-
-    text = re.sub(
-        r"([آ-ی])([A-Za-z])",
-        r"\1 \2",
-        text
-    )
-
-
-    text = re.sub(
-        r"([A-Za-z])([آ-ی])",
-        r"\1 \2",
-        text
-    )
-
 
 
     return text.strip()
@@ -136,38 +120,29 @@ def clean_translation(text):
 
 
 
-
 # =========================
-# محافظت عددها
+# Protect Numbers
 # =========================
 
 
 def protect_numbers(original, translated):
-
 
     if not original or not translated:
 
         return translated
 
 
-
     numbers = re.findall(
-
         r"\d+",
-
         original
-
     )
-
 
 
     for number in numbers:
 
-
         if number not in translated:
 
             translated += f" {number}"
-
 
 
     return translated
@@ -178,39 +153,45 @@ def protect_numbers(original, translated):
 
 
 # =========================
-# تیتر حرفه‌ای
+# Title Cleaner
 # =========================
 
 
 def improve_title(title):
-
 
     if not title:
 
         return ""
 
 
-
-    title = clean_translation(
-        title
-    )
+    title = title.strip()
 
 
-    words = title.split()
+    # حذف عبارت‌های ترجمه‌ای
+
+    remove_words = [
+
+        "جزئیات کامل",
+
+        "آخرین اخبار",
+
+        "آنچه باید بدانید",
+
+        "در این گزارش",
+
+    ]
 
 
+    for word in remove_words:
 
-    # کوتاه سازی تیتر
-
-    if len(words) > 10:
-
-        title = " ".join(
-            words[:10]
+        title = title.replace(
+            word,
+            ""
         )
 
 
 
-    # حذف علامت‌های بد
+    # حذف دو نقطه
 
     title = title.replace(
         ":",
@@ -218,10 +199,23 @@ def improve_title(title):
     )
 
 
-    title = title.replace(
-        "؟",
-        ""
+    title = re.sub(
+        r"\s+",
+        " ",
+        title
     )
+
+
+    # کوتاه سازی امن
+
+    words = title.split()
+
+
+    if len(words) > 12:
+
+        title = " ".join(
+            words[:12]
+        )
 
 
 
@@ -232,54 +226,52 @@ def improve_title(title):
 
 
 
-
 # =========================
-# خلاصه خبری
+# Summary Cleaner
 # =========================
 
 
 def improve_summary(summary):
-
 
     if not summary:
 
         return ""
 
 
-
-    summary = clean_translation(
-        summary
-    )
+    summary = summary.strip()
 
 
 
-    bad = [
+    bad_words = [
 
         "در این گزارش",
 
-        "آخرین",
+        "آخرین اخبار",
 
-        "به شرح زیر",
+        "جزئیات کامل",
 
         "اینجا جدیدترین است",
 
-        "جزئیات کامل",
+        "به شرح زیر",
 
     ]
 
 
 
-    for word in bad:
-
+    for word in bad_words:
 
         summary = summary.replace(
-
             word,
-
             ""
-
         )
 
+
+
+    summary = re.sub(
+        r"\s+",
+        " ",
+        summary
+    )
 
 
     return summary.strip()
@@ -290,7 +282,7 @@ def improve_summary(summary):
 
 
 # =========================
-# اصلی
+# Main Processor
 # =========================
 
 
@@ -298,12 +290,12 @@ def process_news(title, summary):
 
 
     print(
-        "🤖 KhabarF24 AI v5.1"
+        "🤖 KhabarF24 AI v5.2"
     )
 
 
 
-    # ترجمه
+    # Translation
 
     fa_title = translate_text(
         title
@@ -317,72 +309,53 @@ def process_news(title, summary):
 
 
     print(
-
         "After Translation:",
-
         fa_title
-
     )
 
 
 
 
-    # عددها
-
-    fa_title = protect_numbers(
-
-        title,
-
-        fa_title
-
-    )
-
-
-    fa_summary = protect_numbers(
-
-        summary,
-
-        fa_summary
-
-    )
-
-
-
-
-
-    # پاکسازی اولیه
+    # Clean
 
     fa_title = clean_translation(
-
         fa_title
-
     )
 
 
     fa_summary = clean_translation(
-
         fa_summary
+    )
 
+
+
+
+    # Numbers
+
+    fa_title = protect_numbers(
+        title,
+        fa_title
+    )
+
+
+    fa_summary = protect_numbers(
+        summary,
+        fa_summary
     )
 
 
 
 
 
-
-    # نام رسمی
+    # Official Brands
 
     fa_title = replace_official_names(
-
         fa_title
-
     )
 
 
     fa_summary = replace_official_names(
-
         fa_summary
-
     )
 
 
@@ -390,7 +363,7 @@ def process_news(title, summary):
 
 
 
-    # بازنویسی خبری
+    # Rewrite
 
     rewritten = rewrite_news(
 
@@ -424,19 +397,15 @@ def process_news(title, summary):
 
 
 
-    # دوباره نام‌ها
+    # Brands again
 
     fa_title = replace_official_names(
-
         fa_title
-
     )
 
 
     fa_summary = replace_official_names(
-
         fa_summary
-
     )
 
 
@@ -444,19 +413,15 @@ def process_news(title, summary):
 
 
 
-    # اصلاح نهایی
+    # Final
 
     fa_title = improve_title(
-
         fa_title
-
     )
 
 
     fa_summary = improve_summary(
-
         fa_summary
-
     )
 
 
@@ -467,16 +432,12 @@ def process_news(title, summary):
     # RTL
 
     fa_title = fix_rtl_text(
-
         fa_title
-
     )
 
 
     fa_summary = fix_rtl_text(
-
         fa_summary
-
     )
 
 
