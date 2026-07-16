@@ -1,22 +1,20 @@
 """
-KhabarF24 Formatter v5.0
+KhabarF24 Formatter v6.0
 
-Telegram post formatter
+Final Post Format
 
-Rules:
-- Persian category names
-- Source before divider
-- Channel id and hashtag only after divider
-- Sport categories supported
-- Game and weather ready
+Header
+Title
+Summary
+Source
+Divider
+Channel ID
+Hashtag
 """
 
 
-from metadata import SOURCE_METADATA
-
-
-from sport_formatter import detect_sport
-
+from metadata import get_source_flag
+from sport_rules import detect_sport_type
 
 
 
@@ -26,56 +24,74 @@ CATEGORY_NAMES = {
 
 
     "world": {
+
         "title": "🌍 جهان",
         "hashtag": "#جهان"
+
     },
 
 
     "iran": {
+
         "title": "🇮🇷 ایران",
         "hashtag": "#ایران"
+
     },
 
 
     "technology": {
+
         "title": "💻 فناوری",
         "hashtag": "#تکنولوژی"
+
     },
 
 
     "economy": {
+
         "title": "💰 اقتصاد",
         "hashtag": "#اقتصاد"
+
     },
 
 
     "health": {
+
         "title": "❤️ سلامت",
         "hashtag": "#سلامت"
+
     },
 
 
     "science": {
+
         "title": "🔬 علم",
         "hashtag": "#علم"
+
     },
 
 
     "weather": {
+
         "title": "🌦️ هواشناسی",
         "hashtag": "#هواشناسی"
+
     },
 
 
-    "game": {
+    "gaming": {
+
         "title": "🎮 گیم",
         "hashtag": "#گیم"
+
     },
 
 
     "sport": {
+
         "title": "🏅 ورزش",
         "hashtag": "#ورزش"
+
     }
 
 }
@@ -84,9 +100,7 @@ CATEGORY_NAMES = {
 
 
 
-
 def get_category_data(category):
-
 
     return CATEGORY_NAMES.get(
 
@@ -101,12 +115,10 @@ def get_category_data(category):
 
 
 
+def get_sport_category(title, summary):
 
 
-def get_sport_data(title, summary):
-
-
-    sport = detect_sport(
+    sport = detect_sport_type(
 
         title,
 
@@ -115,18 +127,20 @@ def get_sport_data(title, summary):
     )
 
 
-
-    if not sport:
+    if sport:
 
 
         return {
 
-            "title": "🏅 ورزش",
 
-            "hashtag": "#ورزش"
+            "title":
+                f"{sport['emoji']} {sport['type']}",
+
+
+            "hashtag":
+                sport["hashtag"]
 
         }
-
 
 
 
@@ -134,14 +148,11 @@ def get_sport_data(title, summary):
 
 
         "title":
-
-            f"{sport['emoji']} {sport['name']}",
-
+            "🏅 ورزش",
 
 
         "hashtag":
-
-            sport["hashtag"]
+            "#ورزش"
 
     }
 
@@ -151,54 +162,29 @@ def get_sport_data(title, summary):
 
 
 
-
-
 def format_news(
 
-    title,
+        title,
 
-    summary,
+        summary,
 
-    source,
+        source,
 
-    category="world",
+        category="world",
 
-    sport=None
+        sport=None
 
 ):
 
 
-    source_data = SOURCE_METADATA.get(
 
-        source,
-
-        {
-
-            "country": "🌐"
-
-        }
-
-    )
-
-
-
-    source_flag = source_data.get(
-
-        "country",
-
-        "🌐"
-
-    )
-
-
-
-
+    # دسته‌بندی
 
 
     if category == "sport":
 
 
-        category_data = get_sport_data(
+        category_data = get_sport_category(
 
             title,
 
@@ -219,17 +205,36 @@ def format_news(
 
 
 
-
     header = category_data["title"]
+
 
     hashtag = category_data["hashtag"]
 
 
 
 
+    # منبع
 
 
-    return f"""━━━━━━━━━━━━━━━━
+    flag = get_source_flag(
+
+        source
+
+    )
+
+
+    source_line = (
+
+        f"🗞️ {flag} {source}."
+
+    )
+
+
+
+
+
+    return f"""
+━━━━━━━━━━━━━━━━
 🔴 KhabarF24 | {header}
 ━━━━━━━━━━━━━━━━
 
@@ -237,9 +242,9 @@ def format_news(
 
 ✍️ {summary}
 
-🗞️ • {source_flag} {source}
+{source_line}
 
 ━━━━━━━━━━━━
 📢 @KhabarF24
 {hashtag}
-"""
+""".strip()
