@@ -1,5 +1,5 @@
 """
-KhabarF24 Main Engine v6.1
+KhabarF24 Main Engine v6.2
 
 Pipeline:
 
@@ -8,6 +8,8 @@ RSS Fetcher
 Category Engine
       ↓
 AI Processor
+      ↓
+Sport Engine
       ↓
 Quality Engine
       ↓
@@ -23,6 +25,7 @@ import asyncio
 
 
 from news_fetcher import get_latest_news
+
 
 from telegram_bot import send_message
 
@@ -49,10 +52,13 @@ from quality_engine import is_high_quality
 from importance_engine import is_important
 
 
+from sport_formatter import format_sport_news
 
 
 
-# هر ۵ دقیقه بررسی خبر
+
+
+
 
 CHECK_INTERVAL = 300
 
@@ -72,14 +78,9 @@ async def check_news():
     if not news:
 
 
-        print(
-            "No news found."
-        )
+        print("No news found.")
 
         return
-
-
-
 
 
 
@@ -89,9 +90,7 @@ async def check_news():
 
 
 
-        link = item.get(
-            "link"
-        )
+        link = item.get("link")
 
 
 
@@ -103,8 +102,6 @@ async def check_news():
 
 
 
-        # جلوگیری از تکرار
-
         if is_published(link):
 
             continue
@@ -115,24 +112,26 @@ async def check_news():
 
 
 
-        # =====================
-        # Category
-        # =====================
+        raw_title = item.get(
+            "title",
+            ""
+        )
+
+
+        raw_summary = item.get(
+            "summary",
+            ""
+        )
+
 
 
         category = detect_smart_category(
 
 
-            title=item.get(
-                "title",
-                ""
-            ),
+            title=raw_title,
 
 
-            summary=item.get(
-                "summary",
-                ""
-            ),
+            summary=raw_summary,
 
 
             source=item.get(
@@ -155,49 +154,99 @@ async def check_news():
 
 
 
-
-        # =====================
-        # AI Processing
-        # =====================
-
-
         processed = process_news(
 
 
-            item.get(
-                "title",
-                ""
-            ),
+            raw_title,
 
 
-            item.get(
-                "summary",
-                ""
-            )
+            raw_summary
 
         )
-
-
 
 
 
         title = processed.get(
-
             "title",
-
             ""
-
         )
-
 
 
         summary = processed.get(
-
             "summary",
-
             ""
-
         )
+
+
+
+
+
+
+
+        sport_data = None
+
+
+
+
+        # =====================
+        # Sport Processing
+        # =====================
+
+
+        if category == "sport":
+
+
+
+            sport_result = format_sport_news(
+
+
+                title,
+
+                summary
+
+            )
+
+
+
+            if sport_result.get(
+                "blocked"
+            ):
+
+
+                print(
+                    "❌ Sport video-only skipped"
+                )
+
+
+                continue
+
+
+
+
+            title = sport_result.get(
+
+                "title",
+
+                title
+
+            )
+
+
+            summary = sport_result.get(
+
+                "summary",
+
+                summary
+
+            )
+
+
+
+            sport_data = sport_result.get(
+
+                "sport"
+
+            )
 
 
 
@@ -208,7 +257,7 @@ async def check_news():
 
 
         # =====================
-        # Quality Check
+        # Quality
         # =====================
 
 
@@ -219,16 +268,12 @@ async def check_news():
 
             summary
 
-
         ):
 
 
             print(
-
                 "❌ Low quality news skipped"
-
             )
-
 
             continue
 
@@ -239,11 +284,8 @@ async def check_news():
 
 
 
-
-
         # =====================
-        # Importance Check
-        # اتصال به قوانین دسته
+        # Importance
         # =====================
 
 
@@ -256,16 +298,12 @@ async def check_news():
 
             category
 
-
         ):
 
 
             print(
-
                 "❌ Low importance news skipped"
-
             )
-
 
             continue
 
@@ -275,11 +313,8 @@ async def check_news():
 
 
 
-
-
-
         # =====================
-        # Format Telegram Post
+        # Formatter
         # =====================
 
 
@@ -293,15 +328,15 @@ async def check_news():
 
 
             source=item.get(
-
                 "source",
-
                 ""
-
             ),
 
 
-            category=category
+            category=category,
+
+
+            sport=sport_data
 
 
         )
@@ -312,13 +347,6 @@ async def check_news():
 
 
 
-
-
-
-
-        # =====================
-        # Send Telegram
-        # =====================
 
 
         await send_message(
@@ -331,10 +359,6 @@ async def check_news():
 
 
 
-
-
-        # ذخیره خبر منتشر شده
-
         mark_as_published(
 
             link
@@ -343,23 +367,14 @@ async def check_news():
 
 
 
-
         print(
-
             "✅ News published"
-
         )
 
 
 
 
-
-        # فقط یک خبر در هر چرخه
-
         break
-
-
-
 
 
 
@@ -373,44 +388,32 @@ async def check_news():
 async def main():
 
 
-
     init_db()
 
 
 
     print(
-
-        "🚀 KhabarF24 Started v6.1"
-
+        "🚀 KhabarF24 Started v6.2"
     )
-
 
 
 
     while True:
 
 
-
         try:
-
 
 
             await check_news()
 
 
 
-
         except Exception as e:
 
 
-
             print(
-
                 f"Error: {e}"
-
             )
-
-
 
 
 
