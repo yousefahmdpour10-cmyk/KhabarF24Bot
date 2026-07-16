@@ -1,260 +1,297 @@
 """
-metadata.py
-KhabarF24 Metadata Center
+KhabarF24 Source Metadata v6.0
 
-نگهداری اطلاعات مربوط به:
-- پرچم کشور منبع
-- استیکر موضوع
-- هشتگ
-- اولویت منبع
+Source:
+- Flag
+- Country
+- Original source name
+
+Rule:
+Media names remain original
 """
+
+
 
 SOURCE_METADATA = {
 
-    # =========================
-    # 🌍 WORLD
-    # =========================
+
+
+    # ======================
+    # 🌍 World
+    # ======================
+
 
     "BBC": {
-        "country": "🇬🇧",
-        "sticker": "🌍",
-        "hashtag": "#جهان",
-        "priority": 10
+
+        "country": "🇬🇧"
+
     },
 
-    "Reuters": {
-        "country": "🇺🇸",
-        "sticker": "🌍",
-        "hashtag": "#جهان",
-        "priority": 10
-    },
-
-    "NYTimes": {
-        "country": "🇺🇸",
-        "sticker": "🌍",
-        "hashtag": "#جهان",
-        "priority": 10
-    },
 
     "CNN": {
-        "country": "🇺🇸",
-        "sticker": "🌍",
-        "hashtag": "#جهان",
-        "priority": 9
+
+        "country": "🇺🇸"
+
     },
+
 
     "Al Jazeera": {
-        "country": "🇶🇦",
-        "sticker": "🌍",
-        "hashtag": "#جهان",
-        "priority": 9
+
+        "country": "🇶🇦"
+
     },
 
-    # =========================
-    # 🇮🇷 IRAN
-    # =========================
+
+    "Arab News": {
+
+        "country": "🇸🇦"
+
+    },
+
+
+    "Sky News": {
+
+        "country": "🇬🇧"
+
+    },
+
+
+
+
+
+    # ======================
+    # 🇮🇷 Iran
+    # ======================
+
 
     "ISNA": {
-        "country": "🇮🇷",
-        "sticker": "🇮🇷",
-        "hashtag": "#ایران",
-        "priority": 10
+
+        "country": "🇮🇷"
+
     },
 
-    "IRNA": {
-        "country": "🇮🇷",
-        "sticker": "🇮🇷",
-        "hashtag": "#ایران",
-        "priority": 10
-    },
 
     "Tasnim": {
-        "country": "🇮🇷",
-        "sticker": "🇮🇷",
-        "hashtag": "#ایران",
-        "priority": 9
+
+        "country": "🇮🇷"
+
     },
+
 
     "Fars": {
-        "country": "🇮🇷",
-        "sticker": "🇮🇷",
-        "hashtag": "#ایران",
-        "priority": 9
+
+        "country": "🇮🇷"
+
     },
 
-    # =========================
-    # 💻 TECHNOLOGY
-    # =========================
+
+    "Iran International": {
+
+        "country": "🇬🇧"
+
+    },
+
+
+
+
+
+    # ======================
+    # 🇮🇱 Israel
+    # ======================
+
+
+    "Kan Israel": {
+
+        "country": "🇮🇱"
+
+    },
+
+
+    "Channel 12 Israel": {
+
+        "country": "🇮🇱"
+
+    },
+
+
+
+
+
+    # ======================
+    # 💻 Technology
+    # ======================
+
 
     "TechCrunch": {
-        "country": "🇺🇸",
-        "sticker": "💻",
-        "hashtag": "#تکنولوژی",
-        "priority": 10
+
+        "country": "🇺🇸"
+
     },
+
 
     "The Verge": {
-        "country": "🇺🇸",
-        "sticker": "💻",
-        "hashtag": "#تکنولوژی",
-        "priority": 9
+
+        "country": "🇺🇸"
+
     },
+
 
     "Ars Technica": {
-        "country": "🇺🇸",
-        "sticker": "💻",
-        "hashtag": "#تکنولوژی",
-        "priority": 9
+
+        "country": "🇺🇸"
+
     },
 
-    # =========================
-    # 🎮 GAMING
-    # =========================
 
-    "PlayStation": {
-        "country": "🇯🇵",
-        "sticker": "🎮",
-        "hashtag": "#گیم",
-        "priority": 10
+    "Digiato": {
+
+        "country": "🇮🇷"
+
     },
+
+
+    "Vigiato": {
+
+        "country": "🇮🇷"
+
+    },
+
+
+
+
+
+    # ======================
+    # 🎮 Gaming
+    # ======================
+
+
+    "PlayStation Blog": {
+
+        "country": "🇯🇵"
+
+    },
+
 
     "Xbox": {
-        "country": "🇺🇸",
-        "sticker": "🎮",
-        "hashtag": "#گیم",
-        "priority": 10
+
+        "country": "🇺🇸"
+
     },
 
-    "Ubisoft": {
-        "country": "🇫🇷",
-        "sticker": "🎮",
-        "hashtag": "#گیم",
-        "priority": 9
-    },
 
-    "Steam": {
-        "country": "🇺🇸",
-        "sticker": "🎮",
-        "hashtag": "#گیم",
-        "priority": 9
-    },
 
-    # =========================
-    # ⚽ SPORTS (دسته کلی)
-    # =========================
+
+
+    # ======================
+    # ⚽ Sport
+    # ======================
+
 
     "ESPN": {
-        "country": "🇺🇸",
-        "sticker": "🏅",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+        "country": "🇺🇸"
+
     },
+
+
+    "Sky Sports": {
+
+        "country": "🇬🇧"
+
+    },
+
 
     "FIFA": {
-        "country": "🇨🇭",
-        "sticker": "⚽",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+        "country": "🇨🇭"
+
     },
+
 
     "UEFA": {
-        "country": "🇨🇭",
-        "sticker": "⚽",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+        "country": "🇨🇭"
+
     },
 
-    "NBA": {
-        "country": "🇺🇸",
-        "sticker": "🏀",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+    "Premier League": {
+
+        "country": "🇬🇧"
+
     },
 
-    "FIVB": {
-        "country": "🇨🇭",
-        "sticker": "🏐",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+    "Bundesliga": {
+
+        "country": "🇩🇪"
+
     },
 
-    "United World Wrestling": {
-        "country": "🇨🇭",
-        "sticker": "🤼",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+    "LaLiga": {
+
+        "country": "🇪🇸"
+
     },
 
-    "ATP": {
-        "country": "🇬🇧",
-        "sticker": "🎾",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+    "Serie A": {
+
+        "country": "🇮🇹"
+
     },
 
-    "Formula 1": {
-        "country": "🇬🇧",
-        "sticker": "🏎️",
-        "hashtag": "#ورزش",
-        "priority": 10
+
+    "Di Marzio": {
+
+        "country": "🇮🇹"
+
     },
 
-    # =========================
-    # 💰 ECONOMY
-    # =========================
 
-    "Bloomberg": {
-        "country": "🇺🇸",
-        "sticker": "💰",
-        "hashtag": "#اقتصاد",
-        "priority": 10
+    "Mundo Deportivo": {
+
+        "country": "🇪🇸"
+
     },
 
-    "CNBC": {
-        "country": "🇺🇸",
-        "sticker": "💰",
-        "hashtag": "#اقتصاد",
-        "priority": 9
+
+
+
+
+    # ======================
+    # 🌦 Weather
+    # ======================
+
+
+    "Weather": {
+
+        "country": "🌍"
+
     },
 
-    # =========================
-    # 🌦 WEATHER
-    # =========================
-
-    "Weather.com": {
-        "country": "🇺🇸",
-        "sticker": "🌦️",
-        "hashtag": "#هواشناسی",
-        "priority": 9
-    },
-
-    # =========================
-    # ❤️ HEALTH
-    # =========================
-
-    "WHO": {
-        "country": "🇺🇳",
-        "sticker": "❤️",
-        "hashtag": "#سلامت",
-        "priority": 10
-    },
-
-    # =========================
-    # 🔬 SCIENCE
-    # =========================
-
-    "NASA": {
-        "country": "🇺🇸",
-        "sticker": "🚀",
-        "hashtag": "#فضا",
-        "priority": 10
-    },
-
-    "Nature": {
-        "country": "🇬🇧",
-        "sticker": "🔬",
-        "hashtag": "#علم",
-        "priority": 10
-    }
 
 }
+
+
+
+
+
+def get_source_flag(source):
+
+
+    data = SOURCE_METADATA.get(
+
+        source,
+
+        {
+
+            "country": "🌐"
+
+        }
+
+    )
+
+
+    return data["country"]
