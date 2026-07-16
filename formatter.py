@@ -1,5 +1,5 @@
 """
-KhabarF24 Formatter v3.0
+KhabarF24 Formatter v4.0
 
 Telegram post formatter
 
@@ -13,6 +13,9 @@ Supports:
 
 
 from metadata import SOURCE_METADATA
+
+
+from sport_rules import detect_sport_type
 
 
 
@@ -92,8 +95,8 @@ CATEGORY_NAMES = {
 
     }
 
-}
 
+}
 
 
 
@@ -120,43 +123,32 @@ def get_category_data(category):
 
 
 
-def get_sport_header(sport):
+def get_sport_data(title, summary):
+
+
+    sport = detect_sport_type(
+
+        title,
+
+        summary
+
+    )
+
 
 
     if not sport:
 
-        return None
+
+        return {
 
 
-
-    # خروجی sport_formatter v3
-
-
-    name = sport.get(
-
-        "name",
-
-        "ورزش"
-
-    )
+            "title": "🏅 ورزش",
 
 
-    emoji = sport.get(
-
-        "emoji",
-
-        "🏅"
-
-    )
+            "hashtag": "#ورزش"
 
 
-    hashtag = sport.get(
-
-        "hashtag",
-
-        "#ورزش"
-
-    )
+        }
 
 
 
@@ -165,12 +157,12 @@ def get_sport_header(sport):
 
         "title":
 
-            f"{emoji} {name}",
+            f"{sport['emoji']} {sport['type'].replace('_',' ')}",
 
 
         "hashtag":
 
-            hashtag
+            sport["hashtag"]
 
     }
 
@@ -195,7 +187,6 @@ def format_news(
     sport=None
 
 ):
-
 
 
     data = SOURCE_METADATA.get(
@@ -223,14 +214,22 @@ def format_news(
 
 
 
-    # اگر خبر ورزشی بود
-
-    if category == "sport" and sport:
 
 
-        category_data = get_sport_header(
 
-            sport
+    # =========================
+    # ورزش
+    # =========================
+
+
+    if category == "sport":
+
+
+        category_data = get_sport_data(
+
+            title,
+
+            summary
 
         )
 
@@ -254,8 +253,6 @@ def format_news(
 
 
     hashtag = category_data["hashtag"]
-
-
 
 
 
