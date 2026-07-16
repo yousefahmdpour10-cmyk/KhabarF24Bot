@@ -1,37 +1,87 @@
 """
 KhabarF24 Sources v6.0
 
-News Sources:
+RSS Sources:
 
-World
-Iran
-Technology
-Gaming
-Sport
-Economy
-Weather
+- Iran
+- World
+- Politics & Security
+- Technology
+- Gaming
+- Economy
+- Sport
+- Weather
 """
-
 
 
 RSS_SOURCES = [
 
 
-    # ==========================
-    # 🌍 World News
-    # ==========================
+
+    # =========================
+    # 🇮🇷 Iran News
+    # =========================
 
 
     {
-        "name": "BBC",
+        "name": "ایسنا",
+        "url": "https://www.isna.ir/rss",
+        "category": "iran"
+    },
+
+
+    {
+        "name": "تسنیم",
+        "url": "https://www.tasnimnews.com/fa/rss",
+        "category": "iran"
+    },
+
+
+    {
+        "name": "فارس",
+        "url": "https://www.farsnews.ir/rss",
+        "category": "iran"
+    },
+
+
+    {
+        "name": "خبر فوری",
+        "url": "https://khabarfouri.com/feed",
+        "category": "iran"
+    },
+
+
+    {
+        "name": "ایران اینترنشنال",
+        "url": "https://www.iranintl.com/feed",
+        "category": "iran"
+    },
+
+
+
+
+    # =========================
+    # 🌍 World News
+    # =========================
+
+
+    {
+        "name": "BBC World",
         "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
         "category": "world"
     },
 
 
     {
-        "name": "CNN",
-        "url": "http://rss.cnn.com/rss/edition.rss",
+        "name": "CNN World",
+        "url": "http://rss.cnn.com/rss/edition_world.rss",
+        "category": "world"
+    },
+
+
+    {
+        "name": "Reuters",
+        "url": "https://feeds.reuters.com/reuters/worldNews",
         "category": "world"
     },
 
@@ -44,63 +94,21 @@ RSS_SOURCES = [
 
 
     {
-        "name": "Arab News",
-        "url": "https://www.arabnews.com/rss.xml",
-        "category": "world"
-    },
-
-
-    {
-        "name": "Sky News",
-        "url": "https://feeds.skynews.com/feeds/rss/world.xml",
+        "name": "العربیه",
+        "url": "https://www.alarabiya.net/.mrss/ar.xml",
         "category": "world"
     },
 
 
 
 
-    # ==========================
-    # 🇮🇷 Iran News
-    # ==========================
+    # =========================
+    # 🇮🇱 Israel
+    # =========================
 
 
     {
-        "name": "ISNA",
-        "url": "https://www.isna.ir/rss",
-        "category": "iran"
-    },
-
-
-    {
-        "name": "Tasnim",
-        "url": "https://www.tasnimnews.com/fa/rss",
-        "category": "iran"
-    },
-
-
-    {
-        "name": "Fars",
-        "url": "https://www.farsnews.ir/rss",
-        "category": "iran"
-    },
-
-
-    {
-        "name": "Iran International",
-        "url": "https://www.iranintl.com/rss",
-        "category": "iran"
-    },
-
-
-
-
-    # ==========================
-    # 🇮🇱 Israel Sources
-    # ==========================
-
-
-    {
-        "name": "Kan Israel",
+        "name": "کان اسرائیل",
         "url": "https://www.kan.org.il/rss/",
         "category": "world"
     },
@@ -115,9 +123,11 @@ RSS_SOURCES = [
 
 
 
-    # ==========================
+
+
+    # =========================
     # 💻 Technology
-    # ==========================
+    # =========================
 
 
     {
@@ -142,21 +152,14 @@ RSS_SOURCES = [
 
 
     {
-        "name": "Digikala Mag",
-        "url": "https://www.digikala.com/mag/feed/",
-        "category": "technology"
-    },
-
-
-    {
-        "name": "Digiato",
+        "name": "دیجیاتو",
         "url": "https://digiato.com/feed",
         "category": "technology"
     },
 
 
     {
-        "name": "Vigiato",
+        "name": "ویجیاتو",
         "url": "https://vigiato.net/feed",
         "category": "gaming"
     },
@@ -164,9 +167,11 @@ RSS_SOURCES = [
 
 
 
-    # ==========================
+
+
+    # =========================
     # 🎮 Gaming
-    # ==========================
+    # =========================
 
 
     {
@@ -177,7 +182,7 @@ RSS_SOURCES = [
 
 
     {
-        "name": "Xbox",
+        "name": "Xbox News",
         "url": "https://news.xbox.com/en-us/feed/",
         "category": "gaming"
     },
@@ -185,14 +190,22 @@ RSS_SOURCES = [
 
 
 
-    # ==========================
+
+    # =========================
     # ⚽ Sport
-    # ==========================
+    # =========================
 
 
     {
         "name": "ESPN",
         "url": "https://www.espn.com/espn/rss/news",
+        "category": "sport"
+    },
+
+
+    {
+        "name": "BBC Sport",
+        "url": "https://feeds.bbci.co.uk/sport/rss.xml",
         "category": "sport"
     },
 
@@ -213,7 +226,7 @@ RSS_SOURCES = [
 
     {
         "name": "UEFA",
-        "url": "https://www.uefa.com/rssfeed/news",
+        "url": "https://www.uefa.com/rssfeed/news/rss.xml",
         "category": "sport"
     },
 
@@ -226,15 +239,15 @@ RSS_SOURCES = [
 
 
     {
-        "name": "Bundesliga",
-        "url": "https://www.bundesliga.com/en/bundesliga/rss",
+        "name": "La Liga",
+        "url": "https://www.laliga.com/en-GB/rss",
         "category": "sport"
     },
 
 
     {
-        "name": "LaLiga",
-        "url": "https://www.laliga.com/en-GB/rss",
+        "name": "Bundesliga",
+        "url": "https://www.bundesliga.com/en/bundesliga/rss",
         "category": "sport"
     },
 
@@ -248,28 +261,37 @@ RSS_SOURCES = [
 
     {
         "name": "Di Marzio",
-        "url": "https://gianlucadimarzio.com/en/feed",
+        "url": "https://gianlucadimarzio.com/feed",
         "category": "sport"
     },
 
 
     {
         "name": "Mundo Deportivo",
-        "url": "https://www.mundodeportivo.com/rss/home.xml",
+        "url": "https://www.mundodeportivo.com/rss/home",
         "category": "sport"
     },
 
 
 
 
-    # ==========================
+
+
+    # =========================
     # 🌦 Weather
-    # ==========================
+    # =========================
 
 
     {
-        "name": "Weather",
-        "url": "https://weather.com/rss/",
+        "name": "AccuWeather",
+        "url": "https://www.accuweather.com/en/rss",
+        "category": "weather"
+    },
+
+
+    {
+        "name": "Weather.com",
+        "url": "https://weather.com/rss",
         "category": "weather"
     },
 
