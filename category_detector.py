@@ -1,24 +1,57 @@
 """
-KhabarF24 Category Detector v2
+KhabarF24 Category Detector v3.0
 
-تشخیص:
-- جهان
-- ایران
-- ورزش
-- فناوری
-- اقتصاد
-- سلامت
+Smart Category Detection
+
+Priority:
+
+1- Sport
+2- Gaming
+3- Technology
+4- Economy
+5- Health
+6- Science
+7- Weather
+8- Iran
+9- World
 """
+
+
+def contains_any(text, words):
+
+    text = text.lower()
+
+
+    for word in words:
+
+        if word.lower() in text:
+
+            return True
+
+
+    return False
+
+
+
 
 
 def detect_category(source, title, summary=""):
 
-    text = f"{source} {title} {summary}".lower()
+
+    text = f"""
+    {source}
+    {title}
+    {summary}
+    """.lower()
+
+
+
 
 
     # ======================
-    # 🏅 ورزش
+    # ⚽ SPORT
     # ======================
+
 
     sport_words = [
 
@@ -26,196 +59,375 @@ def detect_category(source, title, summary=""):
         "uefa",
         "football",
         "soccer",
-        "premier league",
-        "laliga",
-        "serie a",
-        "bundesliga",
+
         "champions league",
+
+        "premier league",
+
+        "la liga",
+
+        "serie a",
+
+        "bundesliga",
+
         "nba",
         "wnba",
+
         "tennis",
-        "wrestling",
+
         "ufc",
 
-        "منچستر",
-        "رئال",
-        "بارسلونا",
-        "لیورپول",
-        "آرسنال",
         "فوتبال",
         "بسکتبال",
+        "تنیس",
+        "کشتی",
+
+        "مسی",
+        "رونالدو",
+
+        "منچستر یونایتد",
+        "رئال مادرید",
+        "بارسلونا",
+
         "جام جهانی",
-        "لیگ",
+
+        "گلزنی",
+        "بازیکن",
+        "مربی",
 
     ]
 
 
 
+    if contains_any(text, sport_words):
+
+        return "sport"
+
+
+
+
+
+
     # ======================
-    # 💻 فناوری
+    # 🎮 GAMING
     # ======================
+
+
+    gaming_words = [
+
+        "playstation",
+
+        "xbox",
+
+        "nintendo",
+
+        "steam",
+
+        "ubisoft",
+
+        "call of duty",
+
+        "warzone",
+
+        "minecraft",
+
+        "fortnite",
+
+        "بازی ویدیویی",
+
+        "گیم",
+
+        "بازی رایانه‌ای",
+
+        "کنسول",
+
+    ]
+
+
+
+    if contains_any(text, gaming_words):
+
+        return "gaming"
+
+
+
+
+
+
+
+    # ======================
+    # 💻 TECHNOLOGY
+    # ======================
+
 
     tech_words = [
 
-        "tech",
         "technology",
-        "ai",
+
+        "tech",
+
         "artificial intelligence",
+
         "openai",
-        "apple",
+
+        "chatgpt",
+
         "google",
+
+        "apple",
+
         "microsoft",
-        "tesla",
+
         "nvidia",
-        "iphone",
-        "android",
+
+        "tesla",
+
+        "robot",
+
+        "chip",
+
+        "software",
 
         "هوش مصنوعی",
+
         "فناوری",
-        "ربات",
+
         "تکنولوژی",
+
+        "ربات",
+
+        "تراشه",
+
+        "نرم افزار",
+
+        "امنیت سایبری",
 
     ]
 
 
 
+    if contains_any(text, tech_words):
+
+        return "technology"
+
+
+
+
+
+
+
     # ======================
-    # 💰 اقتصاد
+    # 💰 ECONOMY
     # ======================
+
 
     economy_words = [
 
         "economy",
+
         "market",
+
         "stock",
+
         "bitcoin",
+
         "crypto",
+
         "inflation",
+
         "oil",
 
         "اقتصاد",
+
         "بورس",
-        "ارز",
+
+        "سهام",
+
         "دلار",
+
+        "ارز",
+
         "طلا",
+
+        "نفت",
+
+        "تورم",
 
     ]
 
 
 
+    if contains_any(text, economy_words):
+
+        return "economy"
+
+
+
+
+
+
+
     # ======================
-    # ❤️ سلامت
+    # ❤️ HEALTH
     # ======================
+
 
     health_words = [
 
         "health",
+
         "medicine",
+
         "hospital",
+
         "virus",
-        "disease",
+
+        "vaccine",
 
         "سلامت",
+
         "پزشکی",
+
         "بیماری",
+
         "واکسن",
+
+        "بیمارستان",
 
     ]
 
 
 
+    if contains_any(text, health_words):
+
+        return "health"
+
+
+
+
+
+
+
     # ======================
-    # 🇮🇷 ایران
+    # 🔬 SCIENCE
     # ======================
+
+
+    science_words = [
+
+        "science",
+
+        "nasa",
+
+        "space",
+
+        "research",
+
+        "علم",
+
+        "فضا",
+
+        "ناسا",
+
+        "تحقیق",
+
+    ]
+
+
+
+    if contains_any(text, science_words):
+
+        return "science"
+
+
+
+
+
+
+
+    # ======================
+    # 🌦 WEATHER
+    # ======================
+
+
+    weather_words = [
+
+        "weather",
+
+        "storm",
+
+        "flood",
+
+        "earthquake",
+
+        "هواشناسی",
+
+        "طوفان",
+
+        "سیل",
+
+        "زلزله",
+
+        "باران",
+
+        "برف",
+
+        "گرما",
+
+    ]
+
+
+
+    if contains_any(text, weather_words):
+
+        return "weather"
+
+
+
+
+
+
+
+    # ======================
+    # 🇮🇷 IRAN
+    # ======================
+
 
     iran_words = [
 
         "iran",
+
         "iranian",
+
         "tehran",
 
         "ایران",
-        "تهران",
+
         "ایرانی",
 
-    ]
+        "تهران",
 
+        "مجلس ایران",
 
-
-    # ======================
-    # 🌍 جهان / سیاسی
-    # ======================
-
-    world_words = [
-
-        "war",
-        "attack",
-        "missile",
-        "strike",
-        "trump",
-        "biden",
-        "israel",
-        "ukraine",
-        "russia",
-        "china",
-        "america",
-        "united states",
-
-        "جنگ",
-        "حمله",
-        "موشک",
-        "ترامپ",
-        "آمریکا",
-        "اسرائیل",
-        "روسیه",
-        "چین",
-        "تحریم",
-        "سپاه",
+        "دولت ایران",
 
     ]
 
 
 
+    if contains_any(text, iran_words):
+
+        return "iran"
+
+
+
+
+
+
+
     # ======================
-    # اولویت بندی
+    # 🌍 WORLD
     # ======================
-
-    # ورزش و فناوری اگر واضح باشند
-    for word in sport_words:
-        if word in text:
-            return "sport"
-
-
-    for word in tech_words:
-        if word in text:
-            return "technology"
-
-
-
-    for word in economy_words:
-        if word in text:
-            return "economy"
-
-
-
-    for word in health_words:
-        if word in text:
-            return "health"
-
-
-
-    # خبرهای سیاسی و جنگی همیشه جهان
-    for word in world_words:
-        if word in text:
-            return "world"
-
-
-
-    # ایران اگر سیاسی نبود
-    for word in iran_words:
-        if word in text:
-            return "iran"
-
 
 
     return "world"
