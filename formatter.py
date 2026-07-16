@@ -1,105 +1,136 @@
 """
-KhabarF24 Formatter v5.0
+KhabarF24 Formatter v6.0
 
-Final Telegram Post Format
+Final Telegram Post Formatter
 
 Features:
-- Fixed KhabarF24 header
-- Category emoji
-- Newspaper title sticker
-- Pen summary sticker
-- Source + flag
-- Channel ID
-- Hashtag
-- Sport events support
+- Fixed KhabarF24 style
+- Category header
+- Summary sticker ✍️
+- Source newspaper 🗞️
+- Source flag
+- Sport events
+- Gaming details
+- Channel footer
+- Hashtags
 """
 
-
-# ==========================
-# دسته‌ها
-# ==========================
 
 
 CATEGORY_STYLE = {
 
 
     "politics": {
-        "name": "سیاست و امنیت",
+
+        "title": "🔴 سیاست و امنیت",
+
         "emoji": "🔴",
+
         "hashtag": "#سیاست"
+
     },
 
 
     "iran": {
-        "name": "ایران",
+
+        "title": "🇮🇷 ایران",
+
         "emoji": "🇮🇷",
+
         "hashtag": "#ایران"
+
     },
 
 
     "world": {
-        "name": "جهان",
+
+        "title": "🌍 جهان",
+
         "emoji": "🌍",
+
         "hashtag": "#جهان"
+
     },
 
 
     "sport": {
-        "name": "ورزش",
+
+        "title": "⚽ ورزش",
+
         "emoji": "⚽",
+
         "hashtag": "#ورزش"
-    },
 
-
-    "technology": {
-        "name": "فناوری",
-        "emoji": "💻",
-        "hashtag": "#فناوری"
-    },
-
-
-    "economy": {
-        "name": "اقتصاد",
-        "emoji": "💰",
-        "hashtag": "#اقتصاد"
     },
 
 
     "gaming": {
-        "name": "گیم",
+
+        "title": "🎮 گیم",
+
         "emoji": "🎮",
+
         "hashtag": "#گیم"
+
+    },
+
+
+    "technology": {
+
+        "title": "💻 فناوری",
+
+        "emoji": "💻",
+
+        "hashtag": "#فناوری"
+
+    },
+
+
+    "economy": {
+
+        "title": "💰 اقتصاد",
+
+        "emoji": "💰",
+
+        "hashtag": "#اقتصاد"
+
     },
 
 
     "health": {
-        "name": "سلامت",
+
+        "title": "🏥 سلامت",
+
         "emoji": "🏥",
+
         "hashtag": "#سلامت"
+
     },
 
 
     "science": {
-        "name": "علم",
+
+        "title": "🔬 علم",
+
         "emoji": "🔬",
+
         "hashtag": "#علم"
+
     },
 
 
     "weather": {
-        "name": "هواشناسی",
-        "emoji": "🌦",
-        "hashtag": "#هواشناسی"
-    },
 
+        "title": "🌦 هواشناسی",
+
+        "emoji": "🌦",
+
+        "hashtag": "#هواشناسی"
+
+    },
 
 }
 
-
-
-# ==========================
-# پرچم منابع
-# ==========================
 
 
 SOURCE_FLAGS = {
@@ -111,13 +142,17 @@ SOURCE_FLAGS = {
 
     "Reuters": "🇺🇸",
 
-    "ESPN": "🇺🇸",
-
     "Sky Sports": "🇬🇧",
+
+    "ESPN": "🇺🇸",
 
     "Al Jazeera": "🇶🇦",
 
     "العربیه": "🇸🇦",
+
+    "کان اسرائیل": "🇮🇱",
+
+    "کان 12": "🇮🇱",
 
     "ایسنا": "🇮🇷",
 
@@ -127,11 +162,11 @@ SOURCE_FLAGS = {
 
     "خبر فوری": "🇮🇷",
 
-    "ایران اینترنشنال": "🇬🇧",
+    "دیجیاتو": "🇮🇷",
+
+    "ویجیاتو": "🇮🇷",
 
 }
-
-
 
 
 
@@ -141,7 +176,6 @@ def get_source_flag(source):
     if not source:
 
         return "🌐"
-
 
 
     for name, flag in SOURCE_FLAGS.items():
@@ -161,17 +195,76 @@ def get_source_flag(source):
 
 
 
-# ==========================
-# پاکسازی
-# ==========================
+def format_sport_section(sport):
 
 
-def clean_text(text):
-
-
-    if not text:
+    if not sport:
 
         return ""
+
+
+
+    text = ""
+
+
+
+    if sport.get("score"):
+
+
+        text += f"""
+
+⚽ نتیجه:
+{sport.get("score")}
+
+"""
+
+
+
+    if sport.get("yellow_cards"):
+
+
+        text += f"""
+
+🟨 کارت زرد:
+{sport.get("yellow_cards")}
+
+"""
+
+
+
+    if sport.get("red_cards"):
+
+
+        text += f"""
+
+🟥 کارت قرمز:
+{sport.get("red_cards")}
+
+"""
+
+
+
+    if sport.get("lineup"):
+
+
+        text += f"""
+
+👥 ترکیب:
+{sport.get("lineup")}
+
+"""
+
+
+
+    if sport.get("interview"):
+
+
+        text += f"""
+
+🎙️ مصاحبه:
+{sport.get("interview")}
+
+"""
 
 
 
@@ -183,105 +276,67 @@ def clean_text(text):
 
 
 
-# ==========================
-# اطلاعات ورزش
-# ==========================
+def format_game_section(game):
 
 
-def format_sport_events(sport):
-
-
-    if not sport:
+    if not game:
 
         return ""
 
 
 
-    events = sport.get(
-        "events",
-        {}
-    )
+    text = ""
 
 
 
-    output = ""
+    if game.get("details"):
+
+
+        text += f"""
+
+🎮 جزئیات بازی:
+{game.get("details")}
+
+"""
 
 
 
-    if events.get("score"):
-
-        output += (
-            "\n\n"
-            + events["score"]
-        )
+    if game.get("release"):
 
 
+        text += f"""
 
-    if events.get("goals"):
+📅 انتشار:
+{game.get("release")}
 
-        output += (
-            "\n"
-            + events["goals"]
-        )
+"""
 
 
 
-    if events.get("yellow"):
-
-        output += (
-            "\n"
-            + events["yellow"]
-        )
-
-
-
-    if events.get("red"):
-
-        output += (
-            "\n"
-            + events["red"]
-        )
-
-
-
-    if events.get("lineup"):
-
-        output += (
-            "\n"
-            + events["lineup"]
-        )
-
-
-
-    if events.get("interview"):
-
-        output += (
-            "\n"
-            + events["interview"]
-        )
-
-
-
-    return output
+    return text.strip()
 
 
 
 
 
-
-
-# ==========================
-# ساخت پست
-# ==========================
 
 
 def format_news(
+
         title,
+
         summary,
+
         source,
+
         category,
-        sport=None
+
+        sport=None,
+
+        game=None
+
 ):
+
 
 
     style = CATEGORY_STYLE.get(
@@ -294,49 +349,24 @@ def format_news(
 
 
 
-    title = clean_text(title)
+    flag = get_source_flag(
 
-    summary = clean_text(summary)
-
-
-
-    header = (
-
-        f"{style['emoji']} KhabarF24 | "
-        f"{style['emoji']} {style['name']}"
+        source
 
     )
 
 
 
-    message = (
-
-        header
-
-        + "\n━━━━━━━━━━━━━━━━\n\n"
-
-        + "📰 "
-
-        + title
-
-        + "\n\n"
-
-        + "✍️ "
-
-        + summary
-
-    )
+    extra = ""
 
 
 
 
 
-    # ورزش
-
-    if category == "sport" and sport:
+    if category == "sport":
 
 
-        message += format_sport_events(
+        extra = format_sport_section(
 
             sport
 
@@ -346,47 +376,64 @@ def format_news(
 
 
 
-    # منبع
-
-    flag = get_source_flag(
-
-        source
-
-    )
+    if category == "gaming":
 
 
+        extra = format_game_section(
 
-    message += (
+            game
 
-        "\n\n"
-
-        + "🗞️ منبع: "
-
-        + source
-
-        + " "
-
-        + flag
-
-    )
+        )
 
 
 
 
 
-    # پایین پست
+    message = f"""
 
-
-    message += (
-
-        "\n\n━━━━━━━━━━━━\n"
-
-        "📢 @KhabarF24\n"
-
-        + style["hashtag"]
-
-    )
+🔴 KhabarF24 | {style['title']}
 
 
 
-    return message
+📰 {title}
+
+
+
+✍️ {summary}
+
+"""
+
+
+
+    if extra:
+
+
+        message += f"""
+
+
+
+{extra}
+
+"""
+
+
+
+    message += f"""
+
+
+
+🗞️ {source} {flag}
+
+
+
+━━━━━━━━━━━━
+
+📢 @KhabarF24
+
+{style['hashtag']}
+
+"""
+
+
+
+    return message.strip()
