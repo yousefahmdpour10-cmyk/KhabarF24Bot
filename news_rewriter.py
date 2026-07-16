@@ -1,17 +1,20 @@
 """
-KhabarF24 News Rewriter v5.3
+KhabarF24 News Rewriter v6.0
 
 وظیفه:
 - طبیعی کردن فارسی خبر
-- حذف ترجمه ماشینی خشک
-- اصلاح تیتر
+- حذف ترجمه ماشینی
+- ساخت تیتر کوتاه
 - پاکسازی RSS
 - اصلاح اصطلاحات خبری
+- آماده سازی برای تلگرام
 """
 
 
 import re
 import html
+
+
 
 
 
@@ -23,55 +26,55 @@ REWRITE_RULES = {
     # =====================
 
     "اعلام کرد که":
-    "اعلام کرد",
+        "اعلام کرد",
 
     "گفت که":
-    "گفت",
+        "گفت",
 
     "می باشد":
-    "است",
+        "است",
 
     "در حال حاضر":
-    "اکنون",
+        "اکنون",
 
     "به پایان دهد":
-    "پایان دهد",
+        "پایان دهد",
 
     "به پایان می دهد":
-    "پایان می‌دهد",
+        "پایان می‌دهد",
 
 
 
     # =====================
-    # اخبار عمومی
+    # عمومی
     # =====================
 
     "مورد حمله قرار داد":
-    "حمله کرد",
+        "حمله کرد",
 
     "مورد حمله قرار گرفت":
-    "هدف حمله قرار گرفت",
+        "هدف حمله قرار گرفت",
 
     "فیلم نشان می دهد":
-    "تصاویر نشان می‌دهد",
+        "تصاویر نشان می‌دهد",
 
     "ویدئو نشان می دهد":
-    "تصاویر نشان می‌دهد",
+        "تصاویر نشان می‌دهد",
 
     "آتش نشانان":
-    "آتش‌نشانان",
+        "آتش‌نشانان",
 
     "آتش گسترده ای":
-    "آتش‌سوزی گسترده",
+        "آتش‌سوزی گسترده",
 
     "خاموش می کنند":
-    "مهار می‌کنند",
+        "مهار می‌کنند",
 
     "به وقوع پیوست":
-    "رخ داد",
+        "رخ داد",
 
     "صورت گرفت":
-    "انجام شد",
+        "انجام شد",
 
 
 
@@ -80,19 +83,19 @@ REWRITE_RULES = {
     # =====================
 
     "رئیس جمهور":
-    "رئیس‌جمهور",
+        "رئیس‌جمهور",
 
     "رئیس جمهور آمریکا":
-    "رئیس‌جمهور آمریکا",
+        "رئیس‌جمهور آمریکا",
 
     "ایالات متحده":
-    "آمریکا",
+        "آمریکا",
 
     "به دنبال آن":
-    "پس از آن",
+        "پس از آن",
 
     "در بحبوحه":
-    "در پی",
+        "در پی",
 
 
 
@@ -101,37 +104,37 @@ REWRITE_RULES = {
     # =====================
 
     "تشدید جنگ":
-    "تشدید تنش‌ها",
+        "تشدید تنش‌ها",
 
     "مناطق آزمایشی":
-    "مناطق حائل",
+        "مناطق حائل",
 
     "طرح خروج":
-    "برنامه خروج",
+        "برنامه خروج",
 
 
 
     # =====================
-    # ترجمه‌های بد
+    # ترجمه بد
     # =====================
 
     "باعث شد":
-    "موجب شد",
+        "موجب شد",
 
     "به دلیل":
-    "به دنبال",
+        "به دنبال",
 
     "به دست آورد":
-    "کسب کرد",
+        "کسب کرد",
 
     "به دست می آورد":
-    "کسب می‌کند",
+        "کسب می‌کند",
 
     "برنده شد":
-    "پیروز شد",
+        "پیروز شد",
 
     "شکست خورد":
-    "باخت",
+        "باخت",
 
 
 
@@ -140,43 +143,45 @@ REWRITE_RULES = {
     # =====================
 
     "مدل باز":
-    "مدل متن‌باز",
+        "مدل متن‌باز",
 
     "زیرساخت های":
-    "زیرساخت‌های",
+        "زیرساخت‌های",
 
 
 
     # =====================
-    # رای گیری
+    # رای
     # =====================
-
-    "رای":
-    "رأی",
 
     "رای گیری":
-    "رأی‌گیری",
+        "رأی‌گیری",
 
     "رای موافق":
-    "رأی موافق",
+        "رأی موافق",
 
     "رای مخالف":
-    "رأی مخالف",
+        "رأی مخالف",
+
+    "رای":
+        "رأی",
 
 
 
     # =====================
-    # عبارت‌های ترجمه ماشینی خاص
+    # اصطلاحات خاص
     # =====================
 
     "کمک به مرگ":
-    "مرگ با کمک پزشکی",
+        "مرگ با کمک پزشکی",
 
     "متن را تصویب کرد":
-    "لایحه را تصویب کرد",
-
+        "لایحه را تصویب کرد",
 
 }
+
+
+
 
 
 
@@ -188,7 +193,7 @@ def apply_rules(text):
         return ""
 
 
-    for old, new in REWRITE_RULES.items():
+    for old,new in REWRITE_RULES.items():
 
         text = text.replace(
             old,
@@ -202,15 +207,17 @@ def apply_rules(text):
 
 
 
+
+
+
+
 def clean_spaces(text):
 
     if not text:
         return ""
 
 
-    text = html.unescape(
-        text
-    )
+    text = html.unescape(text)
 
 
     text = re.sub(
@@ -226,44 +233,83 @@ def clean_spaces(text):
 
 
 
-def finish_sentence(text):
-
-    if not text:
-        return ""
 
 
-    text = text.strip()
+# ==========================
+# حذف عبارت‌های ضعیف تیتر
+# ==========================
 
 
-    if text[-1] not in [
-        ".",
-        "!",
-        "؟",
-        "؛"
-    ]:
-
-        text += "."
+def clean_title_start(title):
 
 
-    return text
+    starts = [
+
+        "در پی گزارش‌هایی مبنی بر",
+
+        "در پی گزارش هایی مبنی بر",
+
+        "گزارش می دهد که",
+
+        "گزارش شده است که",
+
+        "به گفته منابع",
+
+    ]
+
+
+    for item in starts:
+
+        if title.startswith(item):
+
+            title = title.replace(
+                item,
+                "",
+                1
+            ).strip()
+
+
+    return title
 
 
 
 
 
-def shorten_title(title, limit=95):
+
+
+
+# ==========================
+# کوتاه سازی تیتر
+# ==========================
+
+
+def shorten_title(title, limit=80):
+
+
+    title = clean_spaces(title)
+
+
 
     if len(title) <= limit:
 
         return title
 
 
+
     for sep in [
+
         "؛",
+
+        "،",
+
         ",",
+
         " - ",
+
         ":"
+
     ]:
+
 
         if sep in title:
 
@@ -272,76 +318,209 @@ def shorten_title(title, limit=95):
             break
 
 
+
+    if len(title) > limit:
+
+
+        words = title.split()
+
+
+        title = " ".join(
+
+            words[:11]
+
+        )
+
+
     return title.strip()
 
 
 
 
 
+
+
+
+# ==========================
+# تیتر نهایی
+# ==========================
+
+
 def improve_title(title):
 
-    title = html.unescape(
-        title
+
+    title = html.unescape(title)
+
+
+    title = apply_rules(title)
+
+
+    title = clean_spaces(title)
+
+
+    title = clean_title_start(title)
+
+
+    title = shorten_title(title)
+
+
+
+    # حذف نقطه از تیتر
+
+    title = title.rstrip(
+        ".!؟"
     )
 
 
-    title = apply_rules(
-        title
-    )
-
-
-    title = clean_spaces(
-        title
-    )
-
-
-    title = shorten_title(
-        title
-    )
-
-
-    return finish_sentence(
-        title
-    )
+    return title
 
 
 
+
+
+
+
+# ==========================
+# خلاصه
+# ==========================
 
 
 def improve_summary(summary):
 
-    summary = html.unescape(
-        summary
+
+    summary = html.unescape(summary)
+
+
+    summary = apply_rules(summary)
+
+
+    summary = clean_spaces(summary)
+
+
+    summary = summary.replace(
+        "[...]",
+        ""
     )
 
 
-    summary = apply_rules(
-        summary
-    )
-
-
-    summary = clean_spaces(
-        summary
-    )
-
-
-    return finish_sentence(
-        summary
+    summary = summary.replace(
+        "...",
+        ""
     )
 
 
 
+    if summary and summary[-1] not in [
+
+        ".",
+        "!",
+        "؟"
+
+    ]:
+
+        summary += "."
+
+
+
+    return summary
+
+
+
+
+
+
+
+
+# ==========================
+# حذف تکرار تیتر
+# ==========================
+
+
+def remove_title_repeat(title, summary):
+
+
+    if not title or not summary:
+
+        return summary
+
+
+
+    words = title.split()
+
+
+
+    if len(words) < 4:
+
+        return summary
+
+
+
+    check = " ".join(
+
+        words[:4]
+
+    )
+
+
+
+    if check in summary:
+
+
+        summary = summary.replace(
+
+            check,
+
+            "",
+
+            1
+
+        ).strip()
+
+
+
+    return summary
+
+
+
+
+
+
+
+# ==========================
+# Main
+# ==========================
 
 
 def rewrite_news(title, summary):
 
+
+    new_title = improve_title(title)
+
+
+    new_summary = improve_summary(summary)
+
+
+
+    new_summary = remove_title_repeat(
+
+        new_title,
+
+        new_summary
+
+    )
+
+
+
     return {
 
+
         "title":
-        improve_title(title),
+
+            new_title,
 
 
         "summary":
-        improve_summary(summary)
+
+            new_summary
 
     }
