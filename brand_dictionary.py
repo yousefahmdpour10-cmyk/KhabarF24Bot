@@ -1,218 +1,131 @@
 """
-KhabarF24 Brand Dictionary v4.7
+KhabarF24 Brand Dictionary v5.0
 
-حفظ نام‌های رسمی:
-- کشورها
-- مکان‌ها
-- تیم‌ها
-- بازیکنان
-- برندها
-- شرکت‌های فناوری
-- رسانه‌ها
-- سازمان‌های ورزشی
+Official Name System
+
+Rules:
+- Companies => Persian + English
+- Organizations => Persian + English
+- People => Persian
+- Teams => Persian
+- Media => Persian + English
 """
 
 
-BRAND_DICTIONARY = {
 
+# ==================================
+# Names with English inside brackets
+# ==================================
 
-    # 🌍 Countries
 
-    "Islamic Republic of Iran": "جمهوری اسلامی ایران",
+BRAND_WITH_ENGLISH = {
 
-    "United States": "آمریکا",
 
-    "United Kingdom": "بریتانیا",
+    # 💻 Technology Companies
 
-    "Iran": "ایران",
+    "OpenAI":
+        "اوپن‌ای‌آی (OpenAI)",
 
-    "Israel": "اسرائیل",
+    "ChatGPT":
+        "چت‌جی‌پی‌تی (ChatGPT)",
 
-    "Israeli": "اسرائیلی",
+    "Google":
+        "گوگل (Google)",
 
-    "Lebanon": "لبنان",
+    "Google DeepMind":
+        "گوگل دیپ‌مایند (Google DeepMind)",
 
-    "Yemen": "یمن",
+    "DeepMind":
+        "دیپ‌مایند (DeepMind)",
 
-    "Gaza": "غزه",
+    "Microsoft":
+        "مایکروسافت (Microsoft)",
 
-    "Ukraine": "اوکراین",
+    "Apple":
+        "اپل (Apple)",
 
-    "Russia": "روسیه",
+    "Meta":
+        "متا (Meta)",
 
-    "China": "چین",
+    "NVIDIA":
+        "انویدیا (NVIDIA)",
 
-    "France": "فرانسه",
+    "Tesla":
+        "تسلا (Tesla)",
 
-    "Spain": "اسپانیا",
+    "Amazon":
+        "آمازون (Amazon)",
 
-    "Argentina": "آرژانتین",
+    "Samsung":
+        "سامسونگ (Samsung)",
 
-    "England": "انگلیس",
+    "Anthropic":
+        "آنتروپیک (Anthropic)",
 
+    "Claude":
+        "کلود (Claude)",
 
+    "Gemini":
+        "جمینای (Gemini)",
 
-    # 👤 People
+    "Grok":
+        "گروک (Grok)",
 
-    "Donald Trump": "دونالد ترامپ",
+    "xAI":
+        "ایکس‌ای‌آی (xAI)",
 
-    "Joe Biden": "جو بایدن",
-
-    "Lionel Messi": "لیونل مسی",
-
-    "Cristiano Ronaldo": "کریستیانو رونالدو",
-
-    "Kylian Mbappe": "کیلیان امباپه",
-
-    "Lamine Yamal": "لامین یامال",
-
-    "Jude Bellingham": "جود بلینگهام",
-
-    "Erling Haaland": "ارلینگ هالند",
-
-
-
-    # ⚽ Football Clubs
-
-    "Manchester United": "منچستر یونایتد",
-
-    "Manchester City": "منچستر سیتی",
-
-    "Real Madrid": "رئال مادرید",
-
-    "FC Barcelona": "بارسلونا",
-
-    "Barcelona": "بارسلونا",
-
-    "Liverpool": "لیورپول",
-
-    "Arsenal": "آرسنال",
-
-    "Chelsea": "چلسی",
-
-    "Bayern Munich": "بایرن مونیخ",
-
-    "Paris Saint-Germain": "پاری‌سن‌ژرمن",
-
-    "PSG": "پاری‌سن‌ژرمن",
-
-    "Juventus": "یوونتوس",
-
-    "Borussia Dortmund": "بوروسیا دورتموند",
-
-
-
-    # 🏆 Sports Organizations
-
-    "Premier League": "لیگ برتر انگلیس",
-
-    "Champions League": "لیگ قهرمانان اروپا",
-
-    "FIFA": "فیفا",
-
-    "UEFA": "یوفا",
-
-    "AFC": "کنفدراسیون فوتبال آسیا",
-
-    "FIVB": "فدراسیون جهانی والیبال",
-
-    "NBA": "NBA",
-
-    "WNBA": "WNBA",
-
-    "ATP": "ATP",
-
-    "WTA": "WTA",
-
-    "Formula 1": "فرمول یک",
-
-
-
-    # 💻 Technology
-
-    "Thinking Machines": "تینکینگ ماشینز",
-
-    "Inkling": "اینکلینگ",
-
-    "Anthropic": "آنتروپیک",
-
-    "Claude": "کلود",
-
-    "Google DeepMind": "گوگل دیپ‌مایند",
-
-    "DeepMind": "دیپ‌مایند",
-
-    "Gemini": "جمینای",
-
-    "Grok": "گروک",
-
-    "xAI": "xAI",
-
-    "NVIDIA": "انویدیا",
-
-    "Meta": "متا",
-
-    "Tesla": "تسلا",
-
-    "Samsung": "سامسونگ",
-
-    "Amazon": "آمازون",
-
-    "Apple": "اپل",
-
-    "Google": "گوگل",
-
-    "Microsoft": "مایکروسافت",
-
-    "OpenAI": "OpenAI",
-
-    "ChatGPT": "ChatGPT",
-
-    "Boston Dynamics": "بوستون داینامیکس",
-
-    "RingConn": "رینگ‌کان",
-
-    "Siri": "سیری",
-
-    "iPhone": "آیفون",
-
-    "iOS": "iOS",
-
-
-
-    # 🎮 Gaming
-
-    "Assassin's Creed": "اساسینز کرید",
-
-    "PlayStation": "پلی‌استیشن",
-
-    "Xbox": "ایکس‌باکس",
-
-    "Nintendo": "نینتندو",
-
-    "Steam": "استیم",
+    "Boston Dynamics":
+        "بوستون داینامیکس (Boston Dynamics)",
 
 
 
     # 📰 Media
 
-    "Al Jazeera": "الجزیره",
+    "TechCrunch":
+        "تک‌کرانچ (TechCrunch)",
 
-    "TechCrunch": "تک‌کرانچ",
+    "The Verge":
+        "د ورج (The Verge)",
 
-    "The Verge": "د ورج",
+    "BBC":
+        "بی‌بی‌سی (BBC)",
 
-    "BBC": "بی‌بی‌سی",
+    "CNN":
+        "سی‌ان‌ان (CNN)",
 
-    "CNN": "سی‌ان‌ان",
+    "Reuters":
+        "رویترز (Reuters)",
 
-    "Reuters": "رویترز",
+    "Al Jazeera":
+        "الجزیره (Al Jazeera)",
 
-    "ESPN": "ESPN",
+    "ESPN":
+        "ESPN",
 
-    "New York Times": "نیویورک تایمز",
 
-    "NYTimes": "نیویورک تایمز",
+
+    # 🏆 Organizations
+
+    "FIFA":
+        "فیفا (FIFA)",
+
+    "UEFA":
+        "یوفا (UEFA)",
+
+    "AFC":
+        "کنفدراسیون فوتبال آسیا (AFC)",
+
+    "NBA":
+        "لیگ بسکتبال آمریکا (NBA)",
+
+    "WNBA":
+        "لیگ بسکتبال زنان آمریکا (WNBA)",
+
+    "ATP":
+        "تور جهانی تنیس مردان (ATP)",
+
+    "WTA":
+        "تور جهانی تنیس زنان (WTA)",
 
 }
 
@@ -220,27 +133,205 @@ BRAND_DICTIONARY = {
 
 
 
+# ==================================
+# Persian only names
+# ==================================
+
+
+BRAND_PERSIAN = {
+
+
+    # 🌍 Countries
+
+    "United States":
+        "آمریکا",
+
+    "United Kingdom":
+        "بریتانیا",
+
+    "Iran":
+        "ایران",
+
+    "Islamic Republic of Iran":
+        "جمهوری اسلامی ایران",
+
+    "Israel":
+        "اسرائیل",
+
+    "Israeli":
+        "اسرائیلی",
+
+    "Lebanon":
+        "لبنان",
+
+    "Yemen":
+        "یمن",
+
+    "Gaza":
+        "غزه",
+
+    "Ukraine":
+        "اوکراین",
+
+    "Russia":
+        "روسیه",
+
+    "China":
+        "چین",
+
+    "France":
+        "فرانسه",
+
+    "Spain":
+        "اسپانیا",
+
+    "Argentina":
+        "آرژانتین",
+
+    "England":
+        "انگلیس",
+
+
+
+
+    # 👤 People
+
+    "Donald Trump":
+        "دونالد ترامپ",
+
+    "Joe Biden":
+        "جو بایدن",
+
+    "Lionel Messi":
+        "لیونل مسی",
+
+    "Cristiano Ronaldo":
+        "کریستیانو رونالدو",
+
+    "Kylian Mbappe":
+        "کیلیان امباپه",
+
+    "Lamine Yamal":
+        "لامین یامال",
+
+    "Jude Bellingham":
+        "جود بلینگهام",
+
+    "Erling Haaland":
+        "ارلینگ هالند",
+
+
+
+
+    # ⚽ Teams
+
+    "Manchester United":
+        "منچستر یونایتد",
+
+    "Manchester City":
+        "منچستر سیتی",
+
+    "Real Madrid":
+        "رئال مادرید",
+
+    "FC Barcelona":
+        "بارسلونا",
+
+    "Barcelona":
+        "بارسلونا",
+
+    "Liverpool":
+        "لیورپول",
+
+    "Arsenal":
+        "آرسنال",
+
+    "Chelsea":
+        "چلسی",
+
+    "Bayern Munich":
+        "بایرن مونیخ",
+
+    "Paris Saint-Germain":
+        "پاری‌سن‌ژرمن",
+
+    "PSG":
+        "پاری‌سن‌ژرمن",
+
+    "Juventus":
+        "یوونتوس",
+
+    "Borussia Dortmund":
+        "بوروسیا دورتموند",
+
+
+
+    # 🎮 Games
+
+    "Assassin's Creed":
+        "اساسینز کرید",
+
+    "PlayStation":
+        "پلی‌استیشن",
+
+    "Xbox":
+        "ایکس‌باکس",
+
+    "Nintendo":
+        "نینتندو",
+
+}
+
+
+
+
+
+# ==================================
+# Replace Engine
+# ==================================
+
+
 def replace_official_names(text):
 
+
     if not text:
+
         return ""
 
 
-    # نام‌های طولانی اول پردازش شوند
 
-    names = sorted(
-        BRAND_DICTIONARY.keys(),
-        key=len,
-        reverse=True
-    )
+    # اگر قبلاً فارسی + انگلیسی شده، دوباره تغییر نده
+
+    for english, persian in BRAND_WITH_ENGLISH.items():
 
 
-    for name in names:
+        if english in text:
 
-        text = text.replace(
-            name,
-            BRAND_DICTIONARY[name]
-        )
+
+            text = text.replace(
+
+                english,
+
+                persian
+
+            )
+
+
+
+    for english, persian in BRAND_PERSIAN.items():
+
+
+        if english in text:
+
+
+            text = text.replace(
+
+                english,
+
+                persian
+
+            )
+
 
 
     return text.strip()
