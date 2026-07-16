@@ -1,7 +1,7 @@
 """
-KhabarF24 Category Engine v6.0
+KhabarF24 Category Engine v6.1
 
-Smart News Category Detection
+Smart Category Detection
 
 Priority:
 
@@ -9,8 +9,8 @@ Priority:
 2- Iran 🇮🇷
 3- World 🌍
 4- Sport ⚽
-5- Gaming 🎮
-6- Technology 💻
+5- Technology 💻
+6- Gaming 🎮
 7- Economy 💰
 8- Health 🏥
 9- Science 🔬
@@ -18,15 +18,12 @@ Priority:
 """
 
 
-print("🔥 KhabarF24 Category Engine v6.0 Loaded")
+print("🔥 KhabarF24 Category Engine v6.1 Loaded")
 
 
 
 CATEGORIES = {
 
-
-
-    # 🔴 سیاست و امنیت
 
     "politics": [
 
@@ -34,12 +31,11 @@ CATEGORIES = {
         "حمله",
         "حمله هوایی",
         "حمله موشکی",
-
         "موشک",
         "پهپاد",
 
         "ارتش",
-        "نیروهای مسلح",
+        "نظامی",
         "عملیات نظامی",
 
         "درگیری",
@@ -49,7 +45,6 @@ CATEGORIES = {
         "تحریم",
 
         "مذاکرات",
-        "دیپلماسی",
         "توافق",
         "آتش بس",
 
@@ -63,6 +58,7 @@ CATEGORIES = {
 
         "بازداشت",
         "دستگیری",
+
         "اعدام",
 
         "ترور",
@@ -72,27 +68,21 @@ CATEGORIES = {
 
 
 
-    # 🇮🇷 ایران
-
     "iran": [
 
         "ایران",
         "ایرانی",
         "تهران",
 
-        "مجلس ایران",
         "دولت ایران",
-
-        "وزارت کشور",
+        "مجلس ایران",
 
         "سپاه",
-        "ارتش ایران",
+        "رئیس جمهور ایران",
 
     ],
 
 
-
-    # 🌍 جهان
 
     "world": [
 
@@ -105,16 +95,12 @@ CATEGORIES = {
         "آلمان",
 
         "جهان",
-
         "بین الملل",
         "بین‌الملل",
 
     ],
 
 
-
-
-    # ⚽ ورزش
 
     "sport": [
 
@@ -140,11 +126,18 @@ CATEGORIES = {
         "گل",
         "گلزنی",
 
+        "نتیجه",
+
+        "ترکیب",
+
+        "کارت زرد",
+        "کارت قرمز",
+
+        "مصدومیت",
+
         "بازیکن",
         "مربی",
         "سرمربی",
-
-        "ترکیب",
 
         "مسی",
         "رونالدو",
@@ -156,67 +149,16 @@ CATEGORIES = {
         "رئال مادرید",
         "بارسلونا",
 
-        "بسکتبال",
         "nba",
-
+        "بسکتبال",
         "والیبال",
-
         "تنیس",
-
         "کشتی",
-
         "فرمول یک",
 
-        "ufc",
-
     ],
 
 
-
-
-    # 🎮 گیم
-
-    "gaming": [
-
-        "gaming",
-        "game",
-
-        "گیم",
-        "بازی ویدیویی",
-        "بازی رایانه‌ای",
-
-        "پلی استیشن",
-        "playstation",
-
-        "ایکس باکس",
-        "xbox",
-
-        "نینتندو",
-        "nintendo",
-
-        "استیم",
-        "steam",
-
-        "یوبی سافت",
-        "ubisoft",
-
-        "الکترونیک آرتز",
-
-        "call of duty",
-        "warzone",
-
-        "minecraft",
-
-        "fortnite",
-
-        "کنسول",
-
-    ],
-
-
-
-
-    # 💻 فناوری
 
     "technology": [
 
@@ -240,9 +182,6 @@ CATEGORIES = {
         "مایکروسافت",
         "microsoft",
 
-        "متا",
-        "meta",
-
         "انویدیا",
         "nvidia",
 
@@ -255,15 +194,48 @@ CATEGORIES = {
         "چیپ",
 
         "هک",
-
         "امنیت سایبری",
 
     ],
 
 
 
+    "gaming": [
 
-    # 💰 اقتصاد
+        "گیم",
+        "gaming",
+        "game",
+
+        "بازی ویدیویی",
+        "بازی رایانه‌ای",
+
+        "playstation",
+        "پلی استیشن",
+
+        "xbox",
+        "ایکس باکس",
+
+        "nintendo",
+        "نینتندو",
+
+        "steam",
+        "استیم",
+
+        "ubisoft",
+
+        "call of duty",
+
+        "warzone",
+
+        "minecraft",
+
+        "fortnite",
+
+        "کنسول",
+
+    ],
+
+
 
     "economy": [
 
@@ -289,8 +261,6 @@ CATEGORIES = {
 
         "بانک",
 
-        "نرخ بهره",
-
         "بیت کوین",
 
         "bitcoin",
@@ -301,80 +271,51 @@ CATEGORIES = {
 
 
 
-
-    # 🏥 سلامت
-
     "health": [
 
         "سلامت",
-
         "بیماری",
-
         "ویروس",
-
         "واکسن",
-
         "پزشکی",
-
         "بیمارستان",
-
         "دارو",
 
     ],
 
 
 
-
-    # 🔬 علم
-
     "science": [
 
         "علم",
-
         "science",
-
         "تحقیق",
-
         "فضا",
-
         "ناسا",
-
         "nasa",
 
     ],
 
 
 
-
-    # 🌦 هواشناسی
-
     "weather": [
 
         "هواشناسی",
-
         "weather",
 
         "طوفان",
-
         "سیل",
-
         "زلزله",
 
         "بارندگی",
-
         "برف",
 
         "گرما",
-
         "سرمای شدید",
 
     ],
 
-
 }
-
-
-
 
 
 
@@ -389,9 +330,9 @@ CATEGORY_PRIORITY = [
 
     "sport",
 
-    "gaming",
-
     "technology",
+
+    "gaming",
 
     "economy",
 
@@ -407,9 +348,15 @@ CATEGORY_PRIORITY = [
 
 
 
+def detect_smart_category(
 
+        title="",
 
-def detect_smart_category(title="", summary="", source=""):
+        summary="",
+
+        source=""
+
+):
 
 
     text = f"""
@@ -444,6 +391,7 @@ def detect_smart_category(title="", summary="", source=""):
 
 
         scores[category] = score
+
 
 
 
