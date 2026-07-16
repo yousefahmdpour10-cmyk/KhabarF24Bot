@@ -1,5 +1,5 @@
 """
-KhabarF24 Main Engine v6.2
+KhabarF24 Main Engine v6.3
 
 Pipeline:
 
@@ -10,6 +10,8 @@ Category Engine
 AI Processor
       ↓
 Sport Engine
+      ↓
+Game Engine
       ↓
 Quality Engine
       ↓
@@ -24,36 +26,51 @@ Telegram
 import asyncio
 
 
+
 from news_fetcher import get_latest_news
 
 
 from telegram_bot import send_message
 
 
+
 from news_db import (
+
     init_db,
+
     is_published,
+
     mark_as_published,
+
 )
+
 
 
 from category_engine import detect_smart_category
 
 
+
 from formatter import format_news
+
 
 
 from ai_processor import process_news
 
 
+
 from quality_engine import is_high_quality
+
 
 
 from importance_engine import is_important
 
 
+
 from sport_formatter import format_sport_news
 
+
+
+from game_formatter import format_game_news
 
 
 
@@ -71,6 +88,7 @@ CHECK_INTERVAL = 300
 async def check_news():
 
 
+
     news = get_latest_news()
 
 
@@ -78,9 +96,12 @@ async def check_news():
     if not news:
 
 
-        print("No news found.")
+        print(
+            "No news found."
+        )
 
         return
+
 
 
 
@@ -90,14 +111,16 @@ async def check_news():
 
 
 
-        link = item.get("link")
+
+        link = item.get(
+            "link"
+        )
 
 
 
         if not link:
 
             continue
-
 
 
 
@@ -111,17 +134,20 @@ async def check_news():
 
 
 
-
         raw_title = item.get(
             "title",
             ""
         )
 
 
+
         raw_summary = item.get(
             "summary",
             ""
         )
+
+
+
 
 
 
@@ -153,7 +179,6 @@ async def check_news():
 
 
 
-
         processed = process_news(
 
 
@@ -166,18 +191,25 @@ async def check_news():
 
 
 
+
+
         title = processed.get(
+
             "title",
+
             ""
+
         )
+
 
 
         summary = processed.get(
+
             "summary",
+
             ""
+
         )
-
-
 
 
 
@@ -187,9 +219,16 @@ async def check_news():
 
 
 
+        game_data = None
+
+
+
+
+
+
 
         # =====================
-        # Sport Processing
+        # ⚽ Sport Processing
         # =====================
 
 
@@ -202,6 +241,7 @@ async def check_news():
 
                 title,
 
+
                 summary
 
             )
@@ -213,12 +253,13 @@ async def check_news():
             ):
 
 
+
                 print(
                     "❌ Sport video-only skipped"
                 )
 
-
                 continue
+
 
 
 
@@ -230,6 +271,7 @@ async def check_news():
                 title
 
             )
+
 
 
             summary = sport_result.get(
@@ -252,12 +294,74 @@ async def check_news():
 
 
 
-
-
-
-
         # =====================
-        # Quality
+        # 🎮 Gaming Processing
+        # =====================
+
+
+        if category == "gaming":
+
+
+
+            game_result = format_game_news(
+
+
+                title,
+
+
+                summary
+
+            )
+
+
+
+            if game_result.get(
+
+                "blocked"
+
+            ):
+
+
+
+                print(
+
+                    "❌ Game video-only skipped"
+
+                )
+
+
+                continue
+
+
+
+
+            title = game_result.get(
+
+                "title",
+
+                title
+
+            )
+
+
+
+            summary = game_result.get(
+
+                "summary",
+
+                summary
+
+            )
+
+
+
+            game_data = game_result.get(
+
+                "game"
+
+            )
+                      # =====================
+        # 🧪 Quality Check
         # =====================
 
 
@@ -266,14 +370,18 @@ async def check_news():
 
             title,
 
+
             summary
 
         ):
 
 
             print(
+
                 "❌ Low quality news skipped"
+
             )
+
 
             continue
 
@@ -285,7 +393,7 @@ async def check_news():
 
 
         # =====================
-        # Importance
+        # 🔥 Importance Check
         # =====================
 
 
@@ -294,7 +402,9 @@ async def check_news():
 
             title,
 
+
             summary,
+
 
             category
 
@@ -302,8 +412,11 @@ async def check_news():
 
 
             print(
+
                 "❌ Low importance news skipped"
+
             )
+
 
             continue
 
@@ -314,7 +427,7 @@ async def check_news():
 
 
         # =====================
-        # Formatter
+        # 📰 Formatter
         # =====================
 
 
@@ -328,15 +441,21 @@ async def check_news():
 
 
             source=item.get(
+
                 "source",
+
                 ""
+
             ),
 
 
             category=category,
 
 
-            sport=sport_data
+            sport=sport_data,
+
+
+            game=game_data
 
 
         )
@@ -348,8 +467,13 @@ async def check_news():
 
 
 
+        # =====================
+        # 📢 Telegram
+        # =====================
+
 
         await send_message(
+
 
             message
 
@@ -358,8 +482,8 @@ async def check_news():
 
 
 
-
         mark_as_published(
+
 
             link
 
@@ -368,8 +492,11 @@ async def check_news():
 
 
         print(
+
             "✅ News published"
+
         )
+
 
 
 
@@ -388,20 +515,26 @@ async def check_news():
 async def main():
 
 
+
     init_db()
 
 
 
     print(
-        "🚀 KhabarF24 Started v6.2"
+
+        "🚀 KhabarF24 Started v6.3"
+
     )
+
 
 
 
     while True:
 
 
+
         try:
+
 
 
             await check_news()
@@ -411,13 +544,17 @@ async def main():
         except Exception as e:
 
 
+
             print(
+
                 f"Error: {e}"
+
             )
 
 
 
         await asyncio.sleep(
+
 
             CHECK_INTERVAL
 
@@ -431,7 +568,10 @@ async def main():
 
 
 
+
+
 if __name__ == "__main__":
+
 
 
     asyncio.run(
