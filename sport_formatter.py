@@ -1,14 +1,12 @@
 """
-KhabarF24 Sport Formatter v1.0
+KhabarF24 Sport Formatter v2.0
 
-ویژه اخبار ورزشی:
-
-- پرچم کشورها
-- نتیجه بازی
-- ترکیب تیم‌ها
-- گل‌ها
-- مصاحبه
-- نوع خبر ورزشی
+Features:
+- Sport event detection
+- Match flags
+- Score formatting
+- Remove video-only posts
+- Add sport labels to title
 """
 
 
@@ -18,42 +16,35 @@ import re
 
 TEAM_FLAGS = {
 
-    "eng": "🏴🇬🇧",
-    "england": "🏴🇬🇧",
     "انگلیس": "🏴🇬🇧",
+    "england": "🏴🇬🇧",
 
-    "argentina": "🇦🇷",
     "آرژانتین": "🇦🇷",
+    "argentina": "🇦🇷",
 
-    "brazil": "🇧🇷",
-    "برزیل": "🇧🇷",
-
-    "spain": "🇪🇸",
     "اسپانیا": "🇪🇸",
+    "spain": "🇪🇸",
 
-    "france": "🇫🇷",
     "فرانسه": "🇫🇷",
+    "france": "🇫🇷",
 
-    "germany": "🇩🇪",
     "آلمان": "🇩🇪",
+    "germany": "🇩🇪",
 
-    "italy": "🇮🇹",
     "ایتالیا": "🇮🇹",
+    "italy": "🇮🇹",
 
-    "portugal": "🇵🇹",
     "پرتغال": "🇵🇹",
+    "portugal": "🇵🇹",
 
-    "netherlands": "🇳🇱",
+    "برزیل": "🇧🇷",
+    "brazil": "🇧🇷",
+
     "هلند": "🇳🇱",
+    "netherlands": "🇳🇱",
 
-    "iran": "🇮🇷",
     "ایران": "🇮🇷",
-
-    "japan": "🇯🇵",
-    "ژاپن": "🇯🇵",
-
-    "south korea": "🇰🇷",
-    "کره جنوبی": "🇰🇷",
+    "iran": "🇮🇷",
 
 }
 
@@ -61,61 +52,169 @@ TEAM_FLAGS = {
 
 
 
-def detect_sport_type(title, summary):
+# خبرهایی که ارزش انتشار ندارند
+
+BLOCK_WORDS = [
+
+    "تماشا کنید",
+
+    "watch",
+
+    "watch live",
+
+    "live stream",
+
+    "پخش زنده",
+
+    "هایلایت",
+
+    "highlights",
+
+    "preview",
+
+    "پیش نمایش",
+
+    "ویدیو",
+
+    "video",
+
+]
+
+
+
+
+
+
+def is_blocked_sport_news(title, summary):
+
+
+    text = f"{title} {summary}".lower()
+
+
+    for word in BLOCK_WORDS:
+
+        if word.lower() in text:
+
+            return True
+
+
+    return False
+
+
+
+
+
+
+
+def detect_event(title, summary):
 
 
     text = f"{title} {summary}".lower()
 
 
 
-    if any(word in text for word in [
+    if any(x in text for x in [
+
+        "ترکیب",
 
         "lineup",
+
         "starting xi",
-        "ترکیب",
+
         "بازیکنان اصلی"
 
     ]):
 
-        return "📋 ترکیب رسمی"
+        return "📋", "ترکیب رسمی"
 
 
 
-    if any(word in text for word in [
+    if any(x in text for x in [
 
-        "goal",
-        "گل",
-        "scored"
-
-    ]):
-
-        return "⚽ گل"
-
-
-
-    if any(word in text for word in [
-
-        "interview",
         "مصاحبه",
+
+        "گفت",
+
         "said",
-        "press conference"
+
+        "interview"
 
     ]):
 
-        return "🎙 مصاحبه"
+        return "🎙", "مصاحبه"
+
+
+
+    if any(x in text for x in [
+
+        "انتقال",
+
+        "نقل و انتقالات",
+
+        "transfer"
+
+    ]):
+
+        return "🔄", "انتقال"
+
+
+
+    if any(x in text for x in [
+
+        "مصدوم",
+
+        "injury",
+
+        "injured"
+
+    ]):
+
+        return "🏥", "مصدومیت"
+
+
+
+    if any(x in text for x in [
+
+        "اخراج",
+
+        "red card",
+
+        "کارت قرمز"
+
+    ]):
+
+        return "🟥", "اخراج"
+
+
+
+    if any(x in text for x in [
+
+        "قهرمان",
+
+        "قهرمانی",
+
+        "champion"
+
+    ]):
+
+        return "🏆", "قهرمانی"
 
 
 
     if re.search(
+
         r"\d+\s*[-–]\s*\d+",
+
         text
+
     ):
 
-        return "🏁 نتیجه بازی"
+        return "🏁", "نتیجه"
 
 
 
-    return "🏅 خبر ورزشی"
+    return "", ""
+
 
 
 
@@ -133,17 +232,37 @@ def add_flags(text):
 
 
 
-    for team, flag in TEAM_FLAGS.items():
+    items = sorted(
 
-        if team.lower() in text.lower():
+        TEAM_FLAGS.items(),
 
-            text = text.replace(
+        key=lambda x: len(x[0]),
 
-                team,
+        reverse=True
 
-                f"{flag}{team}"
+    )
 
-            )
+
+
+    for team, flag in items:
+
+
+        pattern = re.compile(
+
+            re.escape(team),
+
+            re.IGNORECASE
+
+        )
+
+
+        text = pattern.sub(
+
+            f"{flag}{team}",
+
+            text
+
+        )
 
 
     return text
@@ -154,40 +273,38 @@ def add_flags(text):
 
 
 
+def format_score(text):
 
 
-def format_match_score(text):
-
-
-    pattern = r"([A-Za-z]+|[\u0600-\u06FF]+)\s*(\d+)\s*[-–]\s*(\d+)\s*([A-Za-z]+|[\u0600-\u06FF]+)"
+    pattern = r"([آ-یA-Za-z]+)\s*(\d+)\s*[-–]\s*(\d+)\s*([آ-یA-Za-z]+)"
 
 
 
     def replace(match):
 
 
-        team1 = match.group(1)
+        t1 = match.group(1)
 
-        score1 = match.group(2)
+        s1 = match.group(2)
 
-        score2 = match.group(3)
+        s2 = match.group(3)
 
-        team2 = match.group(4)
+        t2 = match.group(4)
 
 
 
-        flag1 = TEAM_FLAGS.get(
+        f1 = TEAM_FLAGS.get(
 
-            team1.lower(),
+            t1.lower(),
 
             ""
 
         )
 
 
-        flag2 = TEAM_FLAGS.get(
+        f2 = TEAM_FLAGS.get(
 
-            team2.lower(),
+            t2.lower(),
 
             ""
 
@@ -197,11 +314,11 @@ def format_match_score(text):
 
         return (
 
-            f"{flag1}{team1} "
+            f"{f1}{t1} "
 
-            f"{score1} - {score2} "
+            f"{s1}-{s2} "
 
-            f"{flag2}{team2}"
+            f"{f2}{t2}"
 
         )
 
@@ -228,7 +345,33 @@ def format_match_score(text):
 def format_sport_news(title, summary):
 
 
-    sport_type = detect_sport_type(
+
+    if is_blocked_sport_news(
+
+        title,
+
+        summary
+
+    ):
+
+
+        return {
+
+            "blocked": True,
+
+            "title": title,
+
+            "summary": summary
+
+        }
+
+
+
+
+
+
+
+    icon, event = detect_event(
 
         title,
 
@@ -238,14 +381,14 @@ def format_sport_news(title, summary):
 
 
 
-    title = format_match_score(
+    title = format_score(
 
         title
 
     )
 
 
-    summary = format_match_score(
+    summary = format_score(
 
         summary
 
@@ -260,7 +403,6 @@ def format_sport_news(title, summary):
     )
 
 
-
     summary = add_flags(
 
         summary
@@ -269,10 +411,24 @@ def format_sport_news(title, summary):
 
 
 
+    if icon:
+
+
+        title = f"{icon} {title}"
+
+
+
+
+
+
+
     return {
 
 
-        "sport_type": sport_type,
+        "blocked": False,
+
+
+        "event": event,
 
 
         "title": title,
@@ -280,4 +436,4 @@ def format_sport_news(title, summary):
 
         "summary": summary
 
-}
+    }
