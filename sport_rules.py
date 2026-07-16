@@ -1,177 +1,105 @@
 """
-KhabarF24 Sport Rules v2.0
+KhabarF24 Sport Rules v3.0
 
-موتور هوشمند ورزش
+Sport Intelligence Engine
 
-قابلیت‌ها:
-- تشخیص رشته ورزشی
-- امتیاز اهمیت خبر ورزشی
-- تشخیص بازی‌های بزرگ
-- تشخیص ترکیب، نتیجه، گل، کارت، مصاحبه
-- حذف خبرهای ناقص ویدیویی
+Features:
+- Sport importance score
+- Big match detection
+- Match events
+- Goals
+- Cards
+- Lineups
+- Coach interviews
+- Video-only filtering
 """
 
 
-# =========================
-# 🏅 رشته های ورزشی
-# =========================
 
 
-SPORT_TYPES = {
 
+SPORT_EVENTS = {
 
-    "football": {
 
-        "emoji": "⚽",
+    "score": [
 
-        "hashtag": "#فوتبال",
+        "نتیجه",
 
-        "keywords": [
+        "پایان بازی",
 
-            "فوتبال",
-            "football",
-            "soccer",
+        "برنده",
 
-            "fifa",
-            "uefa",
+        "پیروز شد",
 
-            "جام جهانی",
-            "world cup",
+        "باخت",
 
-            "لیگ قهرمانان",
+        "مساوی",
 
-            "مسی",
-            "رونالدو",
-            "امباپه",
+        "۰-",
 
-            "منچستر",
-            "رئال",
-            "بارسلونا",
+        "1-",
 
-            "گل",
-            "گلزن",
-            "VAR",
+        "2-",
 
-            "کارت قرمز",
-            "کارت زرد",
+    ],
 
-        ]
 
-    },
 
+    "goal": [
 
+        "گل",
 
-    "basketball": {
+        "گلزن",
 
-        "emoji": "🏀",
+        "گلزنی",
 
-        "hashtag": "#بسکتبال",
+        "هت تریک",
 
-        "keywords": [
+        "دقیقه",
 
-            "بسکتبال",
-            "basketball",
+    ],
 
-            "nba",
-            "wnba",
 
-            "دانک",
 
-            "سه امتیازی",
+    "cards": [
 
-        ]
+        "کارت زرد",
 
-    },
+        "کارت قرمز",
 
+        "اخراج",
 
+    ],
 
-    "volleyball": {
 
-        "emoji": "🏐",
 
-        "hashtag": "#والیبال",
+    "lineup": [
 
-        "keywords": [
+        "ترکیب رسمی",
 
-            "والیبال",
-            "volleyball",
+        "ترکیب اولیه",
 
-            "fivb",
+        "lineup",
 
-            "ست",
+        "starting xi",
 
-        ]
+        "starting eleven",
 
-    },
+    ],
 
 
 
-    "tennis": {
+    "interview": [
 
-        "emoji": "🎾",
+        "مصاحبه",
 
-        "hashtag": "#تنیس",
+        "کنفرانس خبری",
 
-        "keywords": [
+        "صحبت‌های مربی",
 
-            "تنیس",
-            "tennis",
+        "اظهارات سرمربی",
 
-            "ATP",
-            "WTA",
-
-            "گرند اسلم",
-
-            "ویمبلدون",
-
-        ]
-
-    },
-
-
-
-    "wrestling": {
-
-        "emoji": "🤼",
-
-        "hashtag": "#کشتی",
-
-        "keywords": [
-
-            "کشتی",
-
-            "کشتی آزاد",
-
-            "کشتی فرنگی",
-
-            "قهرمانی جهان",
-
-        ]
-
-    },
-
-
-
-    "formula1": {
-
-        "emoji": "🏎",
-
-        "hashtag": "#فرمول_یک",
-
-        "keywords": [
-
-            "فرمول یک",
-
-            "formula 1",
-
-            "f1",
-
-            "گرندپری",
-
-        ]
-
-    },
-
+    ],
 
 }
 
@@ -179,132 +107,64 @@ SPORT_TYPES = {
 
 
 
-# =========================
-# تیم های بزرگ
-# =========================
-
 
 BIG_TEAMS = [
 
+
     "منچستر یونایتد",
-    "Manchester United",
 
-    "رئال مادرید",
-    "Real Madrid",
-
-    "بارسلونا",
-    "Barcelona",
+    "منچستر سیتی",
 
     "لیورپول",
-    "Liverpool",
 
     "آرسنال",
-    "Arsenal",
+
+    "چلسی",
+
+    "رئال مادرید",
+
+    "بارسلونا",
 
     "بایرن مونیخ",
-    "Bayern",
 
     "پاری سن ژرمن",
-    "PSG",
+
+    "اینتر",
+
+    "میلان",
+
+    "یوونتوس",
 
     "آرژانتین",
-    "Argentina",
-
-    "انگلیس",
-    "England",
 
     "برزیل",
-    "Brazil",
 
     "فرانسه",
-    "France",
+
+    "انگلیس",
 
 ]
 
 
 
-
-# =========================
-# مسابقات مهم
-# =========================
 
 
 BIG_COMPETITIONS = [
 
-    "جام جهانی",
 
-    "world cup",
+    "جام جهانی",
 
     "لیگ قهرمانان",
 
-    "champions league",
+    "لیگ اروپا",
 
     "فینال",
 
+    "دربی",
+
     "نیمه نهایی",
 
-    "semi final",
-
-]
-
-
-
-
-# =========================
-# اتفاقات مهم
-# =========================
-
-
-IMPORTANT_EVENTS = [
-
-    "نتیجه",
-
-    "پایان بازی",
-
-    "گل",
-
-    "گلزن",
-
-    "هت تریک",
-
-    "کارت قرمز",
-
-    "کارت زرد",
-
-    "اخراج",
-
-    "VAR",
-
-    "نیمه اول",
-
-    "نیمه دوم",
-
-    "مصاحبه",
-
-    "کنفرانس خبری",
-
-]
-
-
-
-
-
-# =========================
-# ترکیب
-# =========================
-
-
-LINEUP_WORDS = [
-
-    "ترکیب رسمی",
-
-    "ترکیب اولیه",
-
-    "lineup",
-
-    "starting xi",
-
-    "starting eleven",
+    "یک چهارم نهایی",
 
 ]
 
@@ -313,12 +173,8 @@ LINEUP_WORDS = [
 
 
 
-# =========================
-# خبرهای ناقص
-# =========================
+VIDEO_ONLY = [
 
-
-VIDEO_ONLY_WORDS = [
 
     "هایلایت",
 
@@ -326,9 +182,7 @@ VIDEO_ONLY_WORDS = [
 
     "watch video",
 
-    "video",
-
-    "ویدئو",
+    "ویدیو",
 
     "کلیپ",
 
@@ -340,129 +194,36 @@ VIDEO_ONLY_WORDS = [
 
 
 
-# =========================
-# ابزارها
-# =========================
-
 
 def normalize(text):
+
 
     if not text:
 
         return ""
+
 
     return text.lower()
 
 
 
 
+
+
 def contains_any(text, words):
+
 
     text = normalize(text)
 
+
     for word in words:
+
 
         if word.lower() in text:
 
             return True
 
 
-    return False
-
-
-
-
-
-# =========================
-# تشخیص رشته
-# =========================
-
-
-def detect_sport_type(title="", summary=""):
-
-
-    text = f"""
-
-    {title}
-
-    {summary}
-
-    """
-
-
-
-    for sport, data in SPORT_TYPES.items():
-
-
-        if contains_any(
-
-            text,
-
-            data["keywords"]
-
-        ):
-
-            return {
-
-                "type": sport,
-
-                "emoji": data["emoji"],
-
-                "hashtag": data["hashtag"]
-
-            }
-
-
-
-    return None
-
-
-
-
-
-# =========================
-# حذف خبر ناقص
-# =========================
-
-
-def is_incomplete_sport_news(title="", summary=""):
-
-
-    text = f"""
-
-    {title}
-
-    {summary}
-
-    """
-
-
-
-    has_video = contains_any(
-
-        text,
-
-        VIDEO_ONLY_WORDS
-
-    )
-
-
-
-    has_event = contains_any(
-
-        text,
-
-        IMPORTANT_EVENTS
-
-    )
-
-
-
-    if has_video and not has_event:
-
-        return True
-
-
 
     return False
 
@@ -470,21 +231,39 @@ def is_incomplete_sport_news(title="", summary=""):
 
 
 
-# =========================
-# بازی بزرگ
-# =========================
+
+def detect_events(title="", summary=""):
+
+
+    text = f"{title} {summary}"
+
+
+
+    result = []
+
+
+
+    for event, words in SPORT_EVENTS.items():
+
+
+        if contains_any(text, words):
+
+            result.append(event)
+
+
+
+    return result
+
+
+
+
+
 
 
 def is_big_match(title="", summary=""):
 
 
-    text = f"""
-
-    {title}
-
-    {summary}
-
-    """
+    text = f"{title} {summary}"
 
 
 
@@ -502,15 +281,48 @@ def is_big_match(title="", summary=""):
 
 
 
-# =========================
-# امتیاز ورزش
-# =========================
+
+
+
+def is_video_only(title="", summary=""):
+
+
+    text = f"{title} {summary}"
+
+
+
+    return (
+
+        contains_any(text, VIDEO_ONLY)
+
+        and
+
+        not detect_events(title, summary)
+
+    )
+
+
+
+
+
+
 
 
 def calculate_sport_score(title="", summary=""):
 
 
-    score = 0
+    score = 1
+
+
+
+    events = detect_events(
+
+        title,
+
+        summary
+
+    )
+
 
 
 
@@ -520,56 +332,45 @@ def calculate_sport_score(title="", summary=""):
 
 
 
-    if contains_any(
 
-        summary,
 
-        BIG_COMPETITIONS
-
-    ):
+    if "score" in events:
 
         score += 3
 
 
 
+    if "goal" in events:
 
-    if contains_any(
+        score += 2
 
-        summary,
 
-        IMPORTANT_EVENTS
 
-    ):
+    if "cards" in events:
+
+        score += 2
+
+
+
+    if "lineup" in events:
+
+        score += 3
+
+
+
+    if "interview" in events:
 
         score += 2
 
 
 
 
-    if contains_any(
 
-        title,
-
-        LINEUP_WORDS
-
-    ):
+    if is_video_only(title, summary):
 
 
-        score += 3
+        return 0
 
-
-
-
-
-    if is_incomplete_sport_news(
-
-        title,
-
-        summary
-
-    ):
-
-        score = 0
 
 
 
