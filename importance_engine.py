@@ -1,13 +1,14 @@
 """
-KhabarF24 Importance Engine v3.0
+KhabarF24 Importance Engine v3.1
 
-سیستم امتیازدهی هوشمند اهمیت خبر
+Smart importance scoring
 
-قوانین:
-- ورزش دارای موتور اختصاصی است
-- هر دسته وزن خودش را دارد
-- خبرهای مهم سریع‌تر منتشر می‌شوند
-- خبرهای ضعیف حذف می‌شوند
+Features:
+- Category based weights
+- Sport dedicated engine
+- Disaster detection
+- Mass casualty detection
+- Crisis detection
 """
 
 
@@ -15,15 +16,12 @@ from sport_rules import calculate_sport_score
 
 
 
-# =========================
-# کلمات مهم دسته‌ها
-# =========================
 
 
 IMPORTANCE_WORDS = {
 
 
-    # 🔴 سیاست و امنیت
+    # 🔴 Politics / Security
 
     "politics": [
 
@@ -61,7 +59,6 @@ IMPORTANCE_WORDS = {
 
         "رئیس جمهور",
         "رئیس‌جمهور",
-        "نخست وزیر",
 
         "وزیر دفاع",
         "وزیر خارجه",
@@ -71,23 +68,16 @@ IMPORTANCE_WORDS = {
         "ترور",
         "انفجار",
 
-        "کشته",
-        "تلفات",
-
-        "اعلام رسمی",
-        "تصمیم رسمی",
-
     ],
 
 
 
-    # 💰 اقتصاد
+    # 💰 Economy
 
     "economy": [
 
         "بیت کوین",
         "bitcoin",
-        "crypto",
         "کریپتو",
 
         "دلار",
@@ -103,7 +93,6 @@ IMPORTANCE_WORDS = {
         "سهام",
 
         "تورم",
-
         "اقتصاد",
 
         "بانک",
@@ -116,14 +105,12 @@ IMPORTANCE_WORDS = {
 
         "رکود",
 
-        "بازار",
-
     ],
 
 
 
 
-    # 💻 فناوری
+    # 💻 Technology
 
     "technology": [
 
@@ -144,7 +131,6 @@ IMPORTANCE_WORDS = {
         "microsoft",
 
         "تسلا",
-        "tesla",
 
         "ربات",
 
@@ -154,52 +140,46 @@ IMPORTANCE_WORDS = {
         "هک",
         "امنیت سایبری",
 
-        "فناوری",
-
     ],
 
 
 
 
-    # 🌧 هواشناسی
+
+    # 🌧 Weather / Disaster
 
     "weather": [
 
         "طوفان",
-
         "سیل",
-
         "زلزله",
 
-        "هشدار قرمز",
+        "سونامی",
 
+        "هشدار قرمز",
         "هشدار نارنجی",
 
         "موج گرما",
-
         "سرمای شدید",
 
-        "بارندگی شدید",
-
+        "بارش شدید",
         "برف سنگین",
 
         "گرد و غبار",
 
-        "تغییرات اقلیمی",
+        "فاجعه طبیعی",
 
     ],
 
 
 
 
-    # 🏥 سلامت
+    # 🏥 Health
 
     "health": [
 
         "ویروس",
-
         "بیماری",
-
         "واکسن",
 
         "همه گیری",
@@ -218,9 +198,43 @@ IMPORTANCE_WORDS = {
 
 
 
-# =========================
-# تابع محاسبه اهمیت
-# =========================
+
+# خبرهای خیلی مهم
+
+HIGH_IMPACT_WORDS = [
+
+
+    "صدها کشته",
+
+    "هزاران کشته",
+
+    "بیش از 100 کشته",
+
+    "بیش از 500 کشته",
+
+    "کشته برجای گذاشت",
+
+    "تلفات سنگین",
+
+    "فاجعه انسانی",
+
+    "فاجعه مرگبار",
+
+    "غرق شدن",
+
+    "واژگونی قایق",
+
+    "مفقود شدن",
+
+    "بحران انسانی",
+
+    "وضعیت اضطراری",
+
+]
+
+
+
+
 
 
 def calculate_importance(
@@ -230,27 +244,22 @@ def calculate_importance(
 ):
 
 
-    text = f"""
-    {title}
-    {summary}
-    """.lower()
+    text = f"{title} {summary}".lower()
 
 
-
-    # امتیاز پایه
 
     score = 2
 
 
 
-    # =====================
-    # ⚽ ورزش اختصاصی
-    # =====================
+
+
+    # ورزش جدا
 
     if category == "sport":
 
 
-        sport_score = calculate_sport_score(
+        return calculate_sport_score(
 
             title,
 
@@ -259,15 +268,23 @@ def calculate_importance(
         )
 
 
-        return sport_score
+
+
+
+    # موارد فوق مهم
+
+    for word in HIGH_IMPACT_WORDS:
+
+
+        if word.lower() in text:
+
+
+            score += 5
 
 
 
 
 
-    # =====================
-    # سایر دسته‌ها
-    # =====================
 
 
     for cat, words in IMPORTANCE_WORDS.items():
@@ -285,14 +302,13 @@ def calculate_importance(
 
 
 
-        if hits > 0:
+
+        if hits:
 
 
             score += hits
 
 
-
-            # سیاست وزن بیشتر
 
             if cat == "politics":
 
@@ -300,20 +316,25 @@ def calculate_importance(
 
 
 
-            # اقتصاد و فناوری
-
             if cat in [
+
                 "economy",
+
                 "technology"
+
             ]:
 
                 score += 1
 
 
 
+            if cat == "weather":
+
+                score += 2
 
 
-    # سقف
+
+
 
     if score > 10:
 
@@ -328,10 +349,6 @@ def calculate_importance(
 
 
 
-
-# =========================
-# تصمیم انتشار
-# =========================
 
 
 def is_important(
@@ -353,8 +370,11 @@ def is_important(
     )
 
 
+
     print(
+
         f"🔥 Importance Score: {score}/10"
+
     )
 
 
