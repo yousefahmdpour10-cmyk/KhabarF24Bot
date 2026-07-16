@@ -1,14 +1,15 @@
 """
-KhabarF24 Importance Engine v3.1
+KhabarF24 Importance Engine v4.0
 
-Smart importance scoring
+Priority:
 
-Features:
-- Category based weights
-- Sport dedicated engine
-- Disaster detection
-- Mass casualty detection
-- Crisis detection
+1 Politics / Security 🔴
+2 Iran 🇮🇷
+3 World 🌍
+4 Sport ⚽
+5 Technology 💻
+6 Gaming 🎮
+7 Others
 """
 
 
@@ -17,155 +18,197 @@ from sport_rules import calculate_sport_score
 
 
 
+CATEGORY_WEIGHTS = {
 
-IMPORTANCE_WORDS = {
+
+    "politics": 4,
+
+    "iran": 3,
+
+    "world": 2,
+
+    "sport": 0,
+
+    "technology": 1,
+
+    "gaming": 1,
+
+    "economy": 2,
+
+    "weather": 3,
+
+    "health": 2,
+
+}
 
 
-    # 🔴 Politics / Security
+
+
+
+IMPORTANT_WORDS = {
+
 
     "politics": [
 
         "جنگ",
+
         "حمله",
-        "حمله هوایی",
-        "حمله موشکی",
+
         "موشک",
+
         "پهپاد",
 
-        "هسته‌ای",
-        "هسته ای",
-        "اتمی",
-
-        "تحریم",
-        "مذاکرات",
-        "توافق",
-        "آتش بس",
-
-        "بحران",
-        "درگیری",
         "عملیات نظامی",
 
-        "اعدام",
-        "بازداشت",
-        "دستگیری",
-        "زندانی",
+        "درگیری",
 
-        "اخراج",
-        "برکناری",
-        "استعفا",
-        "کناره گیری",
+        "بحران",
+
+        "تحریم",
+
+        "مذاکرات",
+
+        "توافق",
+
+        "آتش بس",
+
+        "هسته‌ای",
+
+        "هسته ای",
+
+        "ترور",
+
+        "انفجار",
+
+        "کودتا",
 
         "انتخابات",
 
         "رئیس جمهور",
-        "رئیس‌جمهور",
 
         "وزیر دفاع",
+
         "وزیر خارجه",
-
-        "پارلمان",
-
-        "ترور",
-        "انفجار",
 
     ],
 
 
 
-    # 💰 Economy
+    "iran": [
+
+        "ایران",
+
+        "تهران",
+
+        "دولت ایران",
+
+        "مجلس",
+
+        "سپاه",
+
+    ],
+
+
+
+    "world": [
+
+        "آمریکا",
+
+        "روسیه",
+
+        "چین",
+
+        "اوکراین",
+
+        "اروپا",
+
+        "بین‌الملل",
+
+    ],
+
+
 
     "economy": [
 
-        "بیت کوین",
-        "bitcoin",
-        "کریپتو",
-
         "دلار",
+
         "ارز",
-        "یورو",
 
         "طلا",
 
         "نفت",
-        "گاز",
 
         "بورس",
-        "سهام",
 
         "تورم",
-        "اقتصاد",
 
         "بانک",
 
-        "ورشکستگی",
+        "بیت کوین",
 
-        "سرمایه گذاری",
-
-        "نرخ بهره",
-
-        "رکود",
+        "کریپتو",
 
     ],
 
 
 
-
-    # 💻 Technology
-
     "technology": [
 
         "هوش مصنوعی",
-        "artificial intelligence",
-        "ai",
 
         "openai",
+
         "chatgpt",
 
         "گوگل",
-        "google",
 
         "اپل",
-        "apple",
 
         "مایکروسافت",
-        "microsoft",
-
-        "تسلا",
-
-        "ربات",
 
         "تراشه",
+
         "چیپ",
 
         "هک",
+
         "امنیت سایبری",
 
     ],
 
 
 
+    "gaming": [
+
+        "گیم",
+
+        "بازی",
+
+        "playstation",
+
+        "xbox",
+
+        "steam",
+
+        "کنسول",
+
+        "بازی ویدیویی",
+
+    ],
 
 
-    # 🌧 Weather / Disaster
 
     "weather": [
 
-        "طوفان",
         "سیل",
+
         "زلزله",
+
+        "طوفان",
 
         "سونامی",
 
         "هشدار قرمز",
-        "هشدار نارنجی",
-
-        "موج گرما",
-        "سرمای شدید",
-
-        "بارش شدید",
-        "برف سنگین",
-
-        "گرد و غبار",
 
         "فاجعه طبیعی",
 
@@ -173,22 +216,15 @@ IMPORTANCE_WORDS = {
 
 
 
-
-    # 🏥 Health
-
     "health": [
 
         "ویروس",
+
         "بیماری",
+
         "واکسن",
 
         "همه گیری",
-
-        "سلامت",
-
-        "پزشکی",
-
-        "بیمارستان",
 
     ],
 
@@ -199,8 +235,6 @@ IMPORTANCE_WORDS = {
 
 
 
-# خبرهای خیلی مهم
-
 HIGH_IMPACT_WORDS = [
 
 
@@ -208,27 +242,21 @@ HIGH_IMPACT_WORDS = [
 
     "هزاران کشته",
 
-    "بیش از 100 کشته",
-
-    "بیش از 500 کشته",
-
-    "کشته برجای گذاشت",
-
     "تلفات سنگین",
 
     "فاجعه انسانی",
 
-    "فاجعه مرگبار",
-
-    "غرق شدن",
-
-    "واژگونی قایق",
-
-    "مفقود شدن",
-
-    "بحران انسانی",
-
     "وضعیت اضطراری",
+
+    "حمله گسترده",
+
+    "جنگ آغاز شد",
+
+    "حمله هسته‌ای",
+
+    "زلزله شدید",
+
+    "سیل مرگبار",
 
 ]
 
@@ -236,11 +264,14 @@ HIGH_IMPACT_WORDS = [
 
 
 
-
 def calculate_importance(
+
         title="",
+
         summary="",
+
         category=""
+
 ):
 
 
@@ -248,13 +279,14 @@ def calculate_importance(
 
 
 
-    score = 2
+    score = 1
 
 
 
 
 
-    # ورزش جدا
+    # ورزش اختصاصی
+
 
     if category == "sport":
 
@@ -271,23 +303,28 @@ def calculate_importance(
 
 
 
-    # موارد فوق مهم
-
-    for word in HIGH_IMPACT_WORDS:
 
 
-        if word.lower() in text:
+    # دسته
 
 
-            score += 5
+    score += CATEGORY_WEIGHTS.get(
+
+        category,
+
+        0
+
+    )
 
 
 
 
 
 
+    # کلمات مهم
 
-    for cat, words in IMPORTANCE_WORDS.items():
+
+    for cat, words in IMPORTANT_WORDS.items():
 
 
         hits = 0
@@ -310,27 +347,32 @@ def calculate_importance(
 
 
 
-            if cat == "politics":
+            score += CATEGORY_WEIGHTS.get(
 
-                score += 2
+                cat,
 
+                0
 
-
-            if cat in [
-
-                "economy",
-
-                "technology"
-
-            ]:
-
-                score += 1
+            )
 
 
 
-            if cat == "weather":
 
-                score += 2
+
+
+
+    # خبرهای بحرانی
+
+
+    for word in HIGH_IMPACT_WORDS:
+
+
+        if word.lower() in text:
+
+
+            score += 3
+
+
 
 
 
@@ -338,12 +380,18 @@ def calculate_importance(
 
     if score > 10:
 
+
         score = 10
 
 
 
-    return round(score,1)
+    return round(
 
+        score,
+
+        1
+
+    )
 
 
 
@@ -352,10 +400,15 @@ def calculate_importance(
 
 
 def is_important(
+
         title="",
+
         summary="",
+
         category="",
-        minimum=7
+
+        minimum=6
+
 ):
 
 
