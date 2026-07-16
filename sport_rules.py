@@ -1,195 +1,358 @@
 """
-KhabarF24 Sport Rules v1.0
+KhabarF24 Sport Rules v2.0
 
-قوانین هوشمند اهمیت اخبار ورزشی
+موتور هوشمند ورزش
 
-هدف:
-- تشخیص بازی‌های مهم
-- تشخیص رویدادهای مهم ورزشی
-- کمک به Importance Engine
+قابلیت‌ها:
+- تشخیص رشته ورزشی
+- امتیاز اهمیت خبر ورزشی
+- تشخیص بازی‌های بزرگ
+- تشخیص ترکیب، نتیجه، گل، کارت، مصاحبه
+- حذف خبرهای ناقص ویدیویی
 """
 
 
 # =========================
-# ⭐ تیم‌های مهم
+# 🏅 رشته های ورزشی
 # =========================
+
+
+SPORT_TYPES = {
+
+
+    "football": {
+
+        "emoji": "⚽",
+
+        "hashtag": "#فوتبال",
+
+        "keywords": [
+
+            "فوتبال",
+            "football",
+            "soccer",
+
+            "fifa",
+            "uefa",
+
+            "جام جهانی",
+            "world cup",
+
+            "لیگ قهرمانان",
+
+            "مسی",
+            "رونالدو",
+            "امباپه",
+
+            "منچستر",
+            "رئال",
+            "بارسلونا",
+
+            "گل",
+            "گلزن",
+            "VAR",
+
+            "کارت قرمز",
+            "کارت زرد",
+
+        ]
+
+    },
+
+
+
+    "basketball": {
+
+        "emoji": "🏀",
+
+        "hashtag": "#بسکتبال",
+
+        "keywords": [
+
+            "بسکتبال",
+            "basketball",
+
+            "nba",
+            "wnba",
+
+            "دانک",
+
+            "سه امتیازی",
+
+        ]
+
+    },
+
+
+
+    "volleyball": {
+
+        "emoji": "🏐",
+
+        "hashtag": "#والیبال",
+
+        "keywords": [
+
+            "والیبال",
+            "volleyball",
+
+            "fivb",
+
+            "ست",
+
+        ]
+
+    },
+
+
+
+    "tennis": {
+
+        "emoji": "🎾",
+
+        "hashtag": "#تنیس",
+
+        "keywords": [
+
+            "تنیس",
+            "tennis",
+
+            "ATP",
+            "WTA",
+
+            "گرند اسلم",
+
+            "ویمبلدون",
+
+        ]
+
+    },
+
+
+
+    "wrestling": {
+
+        "emoji": "🤼",
+
+        "hashtag": "#کشتی",
+
+        "keywords": [
+
+            "کشتی",
+
+            "کشتی آزاد",
+
+            "کشتی فرنگی",
+
+            "قهرمانی جهان",
+
+        ]
+
+    },
+
+
+
+    "formula1": {
+
+        "emoji": "🏎",
+
+        "hashtag": "#فرمول_یک",
+
+        "keywords": [
+
+            "فرمول یک",
+
+            "formula 1",
+
+            "f1",
+
+            "گرندپری",
+
+        ]
+
+    },
+
+
+}
+
+
+
+
+
+# =========================
+# تیم های بزرگ
+# =========================
+
 
 BIG_TEAMS = [
 
-    # باشگاه‌ها
+    "منچستر یونایتد",
+    "Manchester United",
 
-    "manchester united",
-    "manchester city",
-    "liverpool",
-    "arsenal",
-    "chelsea",
+    "رئال مادرید",
+    "Real Madrid",
 
-    "real madrid",
-    "barcelona",
-    "bayern munich",
+    "بارسلونا",
+    "Barcelona",
 
-    "paris saint-germain",
-    "psg",
+    "لیورپول",
+    "Liverpool",
 
-    "juventus",
-    "inter",
-    "milan",
+    "آرسنال",
+    "Arsenal",
 
-    # تیم‌های ملی
+    "بایرن مونیخ",
+    "Bayern",
 
-    "iran",
-    "england",
-    "argentina",
-    "brazil",
-    "france",
-    "spain",
-    "germany",
-    "portugal",
+    "پاری سن ژرمن",
+    "PSG",
+
+    "آرژانتین",
+    "Argentina",
+
+    "انگلیس",
+    "England",
+
+    "برزیل",
+    "Brazil",
+
+    "فرانسه",
+    "France",
 
 ]
 
 
 
+
 # =========================
-# 🏆 مسابقات مهم
+# مسابقات مهم
 # =========================
+
 
 BIG_COMPETITIONS = [
 
-    "world cup",
     "جام جهانی",
 
-    "champions league",
+    "world cup",
+
     "لیگ قهرمانان",
 
-    "premier league",
-    "لیگ برتر",
+    "champions league",
 
-    "la liga",
-    "laliga",
-
-    "serie a",
-
-    "bundesliga",
-
-    "europa league",
-
-    "final",
     "فینال",
 
-    "semi final",
     "نیمه نهایی",
 
-    "quarter final",
-    "یک چهارم نهایی",
+    "semi final",
 
 ]
 
 
 
+
 # =========================
-# ⚽ رویدادهای مهم بازی
+# اتفاقات مهم
 # =========================
+
 
 IMPORTANT_EVENTS = [
 
-    # نتیجه
-
-    "score",
-    "result",
     "نتیجه",
+
     "پایان بازی",
-    "برد",
-    "باخت",
-    "پیروز",
 
-
-    # گل
-
-    "goal",
     "گل",
+
     "گلزن",
-    "hat trick",
+
     "هت تریک",
 
-
-    # کارت
-
-    "red card",
     "کارت قرمز",
+
+    "کارت زرد",
+
     "اخراج",
 
+    "VAR",
 
-    # داوری
-
-    "var",
-    "داوری",
-    "اشتباه داوری",
-
-
-    # نیمه
-
-    "half time",
     "نیمه اول",
+
     "نیمه دوم",
 
+    "مصاحبه",
+
+    "کنفرانس خبری",
 
 ]
 
 
 
+
+
 # =========================
-# 👥 ترکیب تیم‌ها
+# ترکیب
 # =========================
+
 
 LINEUP_WORDS = [
 
+    "ترکیب رسمی",
+
+    "ترکیب اولیه",
+
     "lineup",
+
     "starting xi",
+
     "starting eleven",
 
-    "ترکیب رسمی",
-    "ترکیب تیم",
-    "یازده نفره",
+]
+
+
+
+
+
+
+# =========================
+# خبرهای ناقص
+# =========================
+
+
+VIDEO_ONLY_WORDS = [
+
+    "هایلایت",
+
+    "highlights",
+
+    "watch video",
+
+    "video",
+
+    "ویدئو",
+
+    "کلیپ",
+
+    "لحظات برتر",
 
 ]
 
 
 
-# =========================
-# 🔄 نقل و انتقالات
-# =========================
-
-TRANSFER_WORDS = [
-
-    "transfer",
-    "انتقال",
-    "نقل و انتقالات",
-
-    "contract",
-    "قرارداد",
-
-    "renew",
-    "تمدید",
-
-    "sacked",
-    "اخراج مربی",
-
-]
-
 
 
 # =========================
-# توابع کمکی
+# ابزارها
 # =========================
 
 
 def normalize(text):
 
     if not text:
+
         return ""
 
     return text.lower()
+
 
 
 
@@ -203,6 +366,7 @@ def contains_any(text, words):
 
             return True
 
+
     return False
 
 
@@ -210,7 +374,104 @@ def contains_any(text, words):
 
 
 # =========================
-# تشخیص بازی بزرگ
+# تشخیص رشته
+# =========================
+
+
+def detect_sport_type(title="", summary=""):
+
+
+    text = f"""
+
+    {title}
+
+    {summary}
+
+    """
+
+
+
+    for sport, data in SPORT_TYPES.items():
+
+
+        if contains_any(
+
+            text,
+
+            data["keywords"]
+
+        ):
+
+            return {
+
+                "type": sport,
+
+                "emoji": data["emoji"],
+
+                "hashtag": data["hashtag"]
+
+            }
+
+
+
+    return None
+
+
+
+
+
+# =========================
+# حذف خبر ناقص
+# =========================
+
+
+def is_incomplete_sport_news(title="", summary=""):
+
+
+    text = f"""
+
+    {title}
+
+    {summary}
+
+    """
+
+
+
+    has_video = contains_any(
+
+        text,
+
+        VIDEO_ONLY_WORDS
+
+    )
+
+
+
+    has_event = contains_any(
+
+        text,
+
+        IMPORTANT_EVENTS
+
+    )
+
+
+
+    if has_video and not has_event:
+
+        return True
+
+
+
+    return False
+
+
+
+
+
+# =========================
+# بازی بزرگ
 # =========================
 
 
@@ -218,118 +479,100 @@ def is_big_match(title="", summary=""):
 
 
     text = f"""
+
     {title}
+
     {summary}
+
     """
 
-
-
-    has_team = contains_any(
-        text,
-        BIG_TEAMS
-    )
-
-
-    has_competition = contains_any(
-        text,
-        BIG_COMPETITIONS
-    )
 
 
     return (
-        has_team
+
+        contains_any(text, BIG_TEAMS)
+
         or
-        has_competition
+
+        contains_any(text, BIG_COMPETITIONS)
+
     )
 
 
 
 
 
-
 # =========================
-# امتیاز ورزشی
+# امتیاز ورزش
 # =========================
 
 
-def calculate_sport_score(
-        title="",
-        summary=""
-):
-
-
-    text = f"""
-    {title}
-    {summary}
-    """
-
+def calculate_sport_score(title="", summary=""):
 
 
     score = 0
 
 
 
-    # بازی بزرگ
+    if is_big_match(title, summary):
 
-    if is_big_match(
-        title,
-        summary
-    ):
-
-        score += 3
+        score += 4
 
 
-
-    # مسابقات مهم
 
     if contains_any(
-        text,
+
+        summary,
+
         BIG_COMPETITIONS
+
     ):
 
         score += 3
 
 
 
-    # رویداد بازی
 
     if contains_any(
-        text,
+
+        summary,
+
         IMPORTANT_EVENTS
+
     ):
 
         score += 2
 
 
 
-    # ترکیب رسمی
 
     if contains_any(
-        text,
+
+        title,
+
         LINEUP_WORDS
+
     ):
 
-        if is_big_match(
-            title,
-            summary
-        ):
-
-            score += 3
-
-
-
-    # نقل و انتقال
-
-    if contains_any(
-        text,
-        TRANSFER_WORDS
-    ):
 
         score += 3
 
 
 
-    # محدود کردن امتیاز
+
+
+    if is_incomplete_sport_news(
+
+        title,
+
+        summary
+
+    ):
+
+        score = 0
+
+
+
 
     if score > 10:
 
