@@ -1,10 +1,10 @@
 """
-KhabarF24 Formatter v2.0
+KhabarF24 Formatter v2.1
 
-ویژگی‌ها:
-- اتصال موتور اختصاصی ورزش
-- هشتگ بر اساس دسته خبر
-- حفظ فرمت کانال
+Features:
+- Sport formatter connection
+- Correct hashtags by category
+- Telegram post format
 """
 
 
@@ -17,21 +17,70 @@ from sport_formatter import format_sport_news
 
 
 
+CATEGORY_NAMES = {
+
+    "world": "🌍 جهان",
+
+    "iran": "🇮🇷 ایران",
+
+    "sport": "🏅 ورزش",
+
+    "technology": "💻 فناوری",
+
+    "economy": "💰 اقتصاد",
+
+    "health": "❤️ سلامت",
+
+    "science": "🔬 علم",
+
+    "weather": "🌦️ هواشناسی",
+
+}
+
+
+
+
+
+CATEGORY_HASHTAGS = {
+
+    "world": "#جهان",
+
+    "iran": "#ایران",
+
+    "sport": "#ورزش",
+
+    "technology": "#تکنولوژی",
+
+    "economy": "#اقتصاد",
+
+    "health": "#سلامت",
+
+    "science": "#علم",
+
+    "weather": "#هواشناسی",
+
+}
+
+
+
+
+
 def format_news(title, summary, source, category="world"):
 
 
 
-    # =====================
-    # Sport Engine
-    # =====================
-
     sport_type = ""
 
+
+
+    # =====================
+    # Sport Formatter
+    # =====================
 
     if category == "sport":
 
 
-        sport_data = format_sport_news(
+        sport_result = format_sport_news(
 
             title,
 
@@ -40,7 +89,7 @@ def format_news(title, summary, source, category="world"):
         )
 
 
-        title = sport_data.get(
+        title = sport_result.get(
 
             "title",
 
@@ -49,7 +98,7 @@ def format_news(title, summary, source, category="world"):
         )
 
 
-        summary = sport_data.get(
+        summary = sport_result.get(
 
             "summary",
 
@@ -58,7 +107,7 @@ def format_news(title, summary, source, category="world"):
         )
 
 
-        sport_type = sport_data.get(
+        sport_type = sport_result.get(
 
             "sport_type",
 
@@ -73,19 +122,21 @@ def format_news(title, summary, source, category="world"):
 
 
     # =====================
-    # Source Metadata
+    # Source
     # =====================
 
 
-    data = SOURCE_METADATA.get(source, {
+    source_data = SOURCE_METADATA.get(
 
-        "country": "🌐"
+        source,
 
-    })
+        {}
+
+    )
 
 
 
-    flag = data.get(
+    source_flag = source_data.get(
 
         "country",
 
@@ -98,58 +149,8 @@ def format_news(title, summary, source, category="world"):
 
 
 
-    # =====================
-    # Category
-    # =====================
 
-
-    category_names = {
-
-
-        "world":
-
-        "🌍 جهان",
-
-
-        "iran":
-
-        "🇮🇷 ایران",
-
-
-        "sport":
-
-        "🏅 ورزش",
-
-
-        "technology":
-
-        "💻 فناوری",
-
-
-        "economy":
-
-        "💰 اقتصاد",
-
-
-        "health":
-
-        "❤️ سلامت",
-
-
-        "science":
-
-        "🔬 علم",
-
-
-        "weather":
-
-        "🌦️ هواشناسی",
-
-    }
-
-
-
-    header = category_names.get(
+    header = CATEGORY_NAMES.get(
 
         category,
 
@@ -159,62 +160,7 @@ def format_news(title, summary, source, category="world"):
 
 
 
-
-
-
-
-    # =====================
-    # Hashtag Engine
-    # =====================
-
-
-    hashtags = {
-
-
-        "world":
-
-        "#جهان",
-
-
-        "iran":
-
-        "#ایران",
-
-
-        "sport":
-
-        "#ورزش",
-
-
-        "technology":
-
-        "#تکنولوژی",
-
-
-        "economy":
-
-        "#اقتصاد",
-
-
-        "health":
-
-        "#سلامت",
-
-
-        "science":
-
-        "#علم",
-
-
-        "weather":
-
-        "#هواشناسی",
-
-    }
-
-
-
-    hashtag = hashtags.get(
+    hashtag = CATEGORY_HASHTAGS.get(
 
         category,
 
@@ -228,16 +174,13 @@ def format_news(title, summary, source, category="world"):
 
 
 
-    sport_line = ""
+    extra = ""
+
 
     if sport_type:
 
 
-        sport_line = (
-
-            f"\n{sport_type}\n"
-
-        )
+        extra = f"\n{sport_type}\n"
 
 
 
@@ -246,51 +189,21 @@ def format_news(title, summary, source, category="world"):
 
 
 
-    return f"""━━━━━━━━━━━━━━━━
+    message = f"""━━━━━━━━━━━━━━━━
 🔴 KhabarF24 | {header}
 ━━━━━━━━━━━━━━━━
-{sport_line}
+{extra}
 📰 {title}
 
 ✍️ {summary}
 
-🗞️ {flag} {source}
-
-━━━━━━━━━━━━
-📢 @KhabarF24
-{hashtag}
-"""        "technology": "💻 فناوری",
-
-        "economy": "💰 اقتصاد",
-
-        "health": "❤️ سلامت",
-
-        "science": "🔬 علم",
-
-        "weather": "🌦️ هواشناسی",
-
-    }
-
-
-
-    header = category_names.get(
-        category,
-        "🌍 جهان"
-    )
-
-
-
-    return f"""━━━━━━━━━━━━━━━━
-🔴 KhabarF24 | {header}
-━━━━━━━━━━━━━━━━
-
-📰 {title}
-
-✍️ {summary}
-
-🗞️ {flag} {source}
+🗞️ {source_flag} {source}
 
 ━━━━━━━━━━━━
 📢 @KhabarF24
 {hashtag}
 """
+
+
+
+    return message
