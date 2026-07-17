@@ -1,19 +1,18 @@
 """
-KhabarF24 Formatter v6.2
+KhabarF24 Formatter v6.3
 
 Fixed Telegram Style
 
 Changes:
-- Newspaper sticker 🗞️
+- 🗞️ Source sticker
+- English source names preserved
 - Correct source flags
-- Keep source names
-- Sport hashtag support
+- No "منبع:" text
+- Sport hashtag compatibility
 """
 
 
-
 CATEGORY_STYLE = {
-
 
     "politics": {
         "name": "سیاست و امنیت",
@@ -21,13 +20,11 @@ CATEGORY_STYLE = {
         "hashtag": "#سیاست"
     },
 
-
     "iran": {
         "name": "ایران",
         "emoji": "🇮🇷",
         "hashtag": "#ایران"
     },
-
 
     "world": {
         "name": "جهان",
@@ -35,13 +32,11 @@ CATEGORY_STYLE = {
         "hashtag": "#جهان"
     },
 
-
     "sport": {
         "name": "ورزش",
         "emoji": "⚽",
         "hashtag": "#ورزش"
     },
-
 
     "gaming": {
         "name": "گیم",
@@ -49,13 +44,11 @@ CATEGORY_STYLE = {
         "hashtag": "#گیم"
     },
 
-
     "technology": {
         "name": "فناوری",
         "emoji": "💻",
         "hashtag": "#فناوری"
     },
-
 
     "economy": {
         "name": "اقتصاد",
@@ -63,20 +56,17 @@ CATEGORY_STYLE = {
         "hashtag": "#اقتصاد"
     },
 
-
     "health": {
         "name": "سلامت",
         "emoji": "🏥",
         "hashtag": "#سلامت"
     },
 
-
     "science": {
         "name": "علم",
         "emoji": "🔬",
         "hashtag": "#علم"
     },
-
 
     "weather": {
         "name": "هواشناسی",
@@ -88,10 +78,8 @@ CATEGORY_STYLE = {
 
 
 
-
-
 # =========================
-# Sources
+# Source Flags
 # =========================
 
 
@@ -110,30 +98,31 @@ SOURCE_FLAGS = {
 
     "ESPN": "🇺🇸",
 
+
     "Al Jazeera": "🇶🇦",
 
     "العربیه": "🇸🇦",
 
 
-    "کان اسرائیل": "🇮🇱",
-
     "Channel 12 Israel": "🇮🇱",
 
-
-    "ایسنا": "🇮🇷",
-
-    "تسنیم": "🇮🇷",
-
-    "فارس": "🇮🇷",
-
-    "خبر فوری": "🇮🇷",
-
-    "ایران اینترنشنال": "🇬🇧",
+    "کان اسرائیل": "🇮🇱",
 
 
-    "دیجیاتو": "🇮🇷",
+    "ISNA": "🇮🇷",
 
-    "ویجیاتو": "🇮🇷",
+    "Tasnim": "🇮🇷",
+
+    "Fars": "🇮🇷",
+
+    "Khabar Fori": "🇮🇷",
+
+    "Iran International": "🇬🇧",
+
+
+    "Digikala": "🇮🇷",
+
+    "Digiato": "🇮🇷",
 
 
     "FIFA": "🌐",
@@ -154,25 +143,17 @@ SOURCE_FLAGS = {
 
 
 
-
-
-
 def get_source_flag(source):
 
-
     if not source:
-
         return "🌐"
-
 
 
     for name, flag in SOURCE_FLAGS.items():
 
-
         if name.lower() in source.lower():
 
             return flag
-
 
 
     return "🌐"
@@ -181,10 +162,8 @@ def get_source_flag(source):
 
 
 
-
-
 # =========================
-# Sport
+# Sport Hashtag
 # =========================
 
 
@@ -206,58 +185,46 @@ def get_sport_style(sport):
 
     styles = {
 
-
         "football": (
             "⚽",
             "#فوتبال"
         ),
-
 
         "basketball": (
             "🏀",
             "#بسکتبال"
         ),
 
-
         "volleyball": (
             "🏐",
             "#والیبال"
         ),
-
 
         "tennis": (
             "🎾",
             "#تنیس"
         ),
 
-
         "wrestling": (
             "🤼",
             "#کشتی"
         ),
 
-
         "formula1": (
-            "🏎",
+            "🏎️",
             "#فرمول_یک"
         ),
 
     }
 
 
-
     return styles.get(
-
         sport_type,
-
         (
             "⚽",
             "#ورزش"
         )
-
     )
-
-
 
 
 
@@ -266,64 +233,34 @@ def get_sport_style(sport):
 
 def format_sport_section(sport):
 
-
     if not sport:
-
         return ""
-
 
 
     text = ""
 
 
-
     if sport.get("score"):
-
-        text += f"""
-
-⚽ {sport['score']}
-"""
-
+        text += f"\n⚽ {sport['score']}\n"
 
 
     if sport.get("yellow_cards"):
-
-        text += f"""
-
-🟨 {sport['yellow_cards']}
-"""
-
+        text += f"\n🟨 {sport['yellow_cards']}\n"
 
 
     if sport.get("red_cards"):
-
-        text += f"""
-
-🟥 {sport['red_cards']}
-"""
-
+        text += f"\n🟥 {sport['red_cards']}\n"
 
 
     if sport.get("lineup"):
-
-        text += f"""
-
-👥 {sport['lineup']}
-"""
-
+        text += f"\n👥 {sport['lineup']}\n"
 
 
     if sport.get("interview"):
-
-        text += f"""
-
-🎙️ {sport['interview']}
-"""
-
+        text += f"\n🎙️ {sport['interview']}\n"
 
 
     return text.strip()
-
 
 
 
@@ -332,33 +269,19 @@ def format_sport_section(sport):
 
 def format_game_section(game):
 
-
     if not game:
-
         return ""
-
 
 
     text = ""
 
 
-
     if game.get("details"):
-
-        text += f"""
-
-🎮 {game['details']}
-"""
-
+        text += f"\n🎮 {game['details']}\n"
 
 
     if game.get("release"):
-
-        text += f"""
-
-📅 {game['release']}
-"""
-
+        text += f"\n📅 {game['release']}\n"
 
 
     return text.strip()
@@ -368,110 +291,70 @@ def format_game_section(game):
 
 
 
-
 # =========================
-# Final Formatter
+# Final Message
 # =========================
 
 
 def format_news(
-
         title,
-
         summary,
-
         source,
-
         category,
-
         sport=None,
-
         game=None
-
 ):
 
 
     style = CATEGORY_STYLE.get(
-
         category,
-
         CATEGORY_STYLE["world"]
-
     )
 
-
-
-    hashtag = style["hashtag"]
 
     emoji = style["emoji"]
 
     name = style["name"]
 
-
+    hashtag = style["hashtag"]
 
 
 
     if category == "sport":
 
 
-        sport_emoji, sport_hash = get_sport_style(
-
+        emoji, hashtag = get_sport_style(
             sport
-
         )
 
-
-        emoji = sport_emoji
-
-        name = sport_hash.replace(
-
+        name = hashtag.replace(
             "#",
-
             ""
-
         )
-
-
-        hashtag = sport_hash
-
-
 
 
 
     flag = get_source_flag(
-
         source
-
     )
-
-
 
 
 
     extra = ""
 
 
-
     if category == "sport":
 
         extra = format_sport_section(
-
             sport
-
         )
-
 
 
     if category == "gaming":
 
         extra = format_game_section(
-
             game
-
         )
-
-
-
 
 
 
@@ -489,10 +372,7 @@ def format_news(
 
 
 
-
-
     if extra:
-
 
         message += f"""
 
@@ -501,16 +381,9 @@ def format_news(
 
 
 
-
-
-
-
     message += f"""
 
-
-
 🗞️ {flag} {source}
-
 
 
 ━━━━━━━━━━━━━━━━
@@ -518,7 +391,6 @@ def format_news(
 
 {hashtag}
 """
-
 
 
     return message.strip()
