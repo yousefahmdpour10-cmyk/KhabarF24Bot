@@ -1,29 +1,28 @@
 """
 KhabarF24 Sources v6.1
 
-RSS Sources:
+RSS + Scraper Sources
 
-- Iran
-- World
-- Politics & Security
-- Technology
-- Gaming
-- Economy
-- Sport
-- Weather
+RSS:
+- منابعی که RSS پایدار دارند
 
-Update:
-- Added Fabrizio Romano
-- Improved sport sources
-- Keep unstable sources for future scraper
+SCRAPER:
+- منابع مهم بدون RSS معتبر
 """
+
+
+
+# =========================
+# RSS SOURCES
+# =========================
 
 
 RSS_SOURCES = [
 
 
+
     # =========================
-    # 🇮🇷 Iran News
+    # 🇮🇷 Iran
     # =========================
 
 
@@ -35,43 +34,17 @@ RSS_SOURCES = [
 
 
     {
-        "name": "تسنیم",
-        "url": "https://www.tasnimnews.com/fa/rss",
-        "category": "iran"
-    },
-
-
-    {
-        "name": "فارس",
-        "url": "https://www.farsnews.ir/rss",
-        "category": "iran"
-    },
-
-
-    {
-        "name": "خبر فوری",
-        "url": "https://khabarfouri.com/feed",
-        "category": "iran"
-    },
-
-
-    {
         "name": "ایران اینترنشنال",
         "url": "https://www.iranintl.com/feed",
         "category": "iran"
     },
 
 
-    {
-        "name": "هنگاو",
-        "url": "https://hengaw.net/fa/feed",
-        "category": "iran"
-    },
 
 
 
     # =========================
-    # 🌍 World News
+    # 🌍 World
     # =========================
 
 
@@ -90,44 +63,12 @@ RSS_SOURCES = [
 
 
     {
-        "name": "Reuters",
-        "url": "https://feeds.reuters.com/reuters/worldNews",
-        "category": "world"
-    },
-
-
-    {
         "name": "Al Jazeera",
         "url": "https://www.aljazeera.com/xml/rss/all.xml",
         "category": "world"
     },
 
 
-    {
-        "name": "العربیه",
-        "url": "https://www.alarabiya.net/.mrss/ar.xml",
-        "category": "world"
-    },
-
-
-
-    # =========================
-    # 🇮🇱 Israel
-    # =========================
-
-
-    {
-        "name": "کان اسرائیل",
-        "url": "https://www.kan.org.il/rss/",
-        "category": "world"
-    },
-
-
-    {
-        "name": "Channel 12 Israel",
-        "url": "https://www.mako.co.il/rss",
-        "category": "world"
-    },
 
 
 
@@ -164,11 +105,9 @@ RSS_SOURCES = [
     },
 
 
-    {
-        "name": "ویجیاتو",
-        "url": "https://vigiato.net/feed",
-        "category": "gaming"
-    },
+
+
+
     # =========================
     # 🎮 Gaming
     # =========================
@@ -189,17 +128,11 @@ RSS_SOURCES = [
 
 
     {
-        "name": "IGN Gaming",
-        "url": "https://feeds.ign.com/ignfeeds",
+        "name": "Vigiato",
+        "url": "https://vigiato.net/feed",
         "category": "gaming"
     },
 
-
-    {
-        "name": "GameSpot",
-        "url": "https://www.gamespot.com/feeds/mashup/",
-        "category": "gaming"
-    },
 
 
 
@@ -210,21 +143,7 @@ RSS_SOURCES = [
 
 
     {
-        "name": "Fabrizio Romano",
-        "url": "https://www.fabrizioromano.com/feed/",
-        "category": "sport"
-    },
-
-
-    {
-        "name": "Di Marzio",
-        "url": "https://gianlucadimarzio.com/feed",
-        "category": "sport"
-    },
-
-
-    {
-        "name": "ESPN",
+        "name": "ESPN Sport",
         "url": "https://www.espn.com/espn/rss/news",
         "category": "sport"
     },
@@ -244,75 +163,190 @@ RSS_SOURCES = [
     },
 
 
+]
+
+
+
+
+
+
+
+
+
+# =========================
+# SCRAPER SOURCES
+# =========================
+
+
+SCRAPER_SOURCES = [
+
+
+
+    # 🇮🇷 Iran
+
+
     {
-        "name": "Mundo Deportivo",
-        "url": "https://www.mundodeportivo.com/rss/home",
-        "category": "sport"
+        "name": "تسنیم",
+        "url": "https://www.tasnimnews.com",
+        "category": "iran",
+        "type": "scraper"
     },
 
 
     {
-        "name": "FIFA",
-        "url": "https://www.fifa.com/rss-feeds",
-        "category": "sport"
+        "name": "فارس",
+        "url": "https://www.farsnews.ir",
+        "category": "iran",
+        "type": "scraper"
     },
 
 
     {
-        "name": "UEFA",
-        "url": "https://www.uefa.com/rssfeed/news/rss.xml",
-        "category": "sport"
+        "name": "خبر فوری",
+        "url": "https://khabarfouri.com",
+        "category": "iran",
+        "type": "scraper"
     },
 
 
     {
-        "name": "Premier League",
-        "url": "https://www.premierleague.com/rss/news",
-        "category": "sport"
+        "name": "هنگاو",
+        "url": "https://hengaw.net",
+        "category": "iran",
+        "type": "scraper"
+    },
+
+
+
+
+
+    # 🇮🇱 Israel
+
+
+    {
+        "name": "کان اسرائیل",
+        "url": "https://www.kan.org.il",
+        "category": "world",
+        "type": "scraper"
+    },
+
+
+
+
+
+    # ⚽ Football
+
+
+    {
+        "name": "Fabrizio Romano",
+        "url": "https://www.fabrizioromano.com",
+        "category": "sport",
+        "sport": "football",
+        "type": "scraper"
     },
 
 
     {
-        "name": "La Liga",
-        "url": "https://www.laliga.com/en-GB/rss",
-        "category": "sport"
+        "name": "Di Marzio",
+        "url": "https://gianlucadimarzio.com",
+        "category": "sport",
+        "sport": "football",
+        "type": "scraper"
+    },
+
+
+
+
+
+    # 🏀 Basketball
+
+
+    {
+        "name": "NBA",
+        "url": "https://www.nba.com",
+        "category": "sport",
+        "sport": "basketball",
+        "type": "scraper"
     },
 
 
     {
-        "name": "Bundesliga",
-        "url": "https://www.bundesliga.com/en/bundesliga/rss",
-        "category": "sport"
+        "name": "FIBA",
+        "url": "https://www.fiba.basketball",
+        "category": "sport",
+        "sport": "basketball",
+        "type": "scraper"
+    },
+
+
+
+
+
+    # 🏐 Volleyball
+
+
+    {
+        "name": "FIVB",
+        "url": "https://www.fivb.com",
+        "category": "sport",
+        "sport": "volleyball",
+        "type": "scraper"
+    },
+
+
+
+
+
+    # 🤼 Wrestling
+
+
+    {
+        "name": "UWW",
+        "url": "https://uww.org",
+        "category": "sport",
+        "sport": "wrestling",
+        "type": "scraper"
+    },
+
+
+
+
+
+    # 🎾 Tennis
+
+
+    {
+        "name": "ATP",
+        "url": "https://www.atptour.com",
+        "category": "sport",
+        "sport": "tennis",
+        "type": "scraper"
     },
 
 
     {
-        "name": "Serie A",
-        "url": "https://www.legaseriea.it/en/rss",
-        "category": "sport"
+        "name": "WTA",
+        "url": "https://www.wtatennis.com",
+        "category": "sport",
+        "sport": "tennis",
+        "type": "scraper"
     },
 
 
 
 
 
-    # =========================
-    # 🌦 Weather
-    # =========================
+    # 🏎 Formula 1
 
 
     {
-        "name": "AccuWeather",
-        "url": "https://www.accuweather.com/en/rss",
-        "category": "weather"
+        "name": "Formula1",
+        "url": "https://www.formula1.com",
+        "category": "sport",
+        "sport": "formula1",
+        "type": "scraper"
     },
 
-
-    {
-        "name": "Weather.com",
-        "url": "https://weather.com/rss",
-        "category": "weather"
-    },
 
 
 ]
