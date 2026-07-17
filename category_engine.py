@@ -1,14 +1,14 @@
 """
-KhabarF24 Category Engine v6.1
+KhabarF24 Category Engine v6.2
 
 Smart Category Detection
 
 Priority:
 
-1- Politics / Security 🔴
-2- Iran 🇮🇷
-3- World 🌍
-4- Sport ⚽
+1- Sport ⚽
+2- Politics / Security 🔴
+3- Iran 🇮🇷
+4- World 🌍
 5- Technology 💻
 6- Gaming 🎮
 7- Economy 💰
@@ -18,7 +18,7 @@ Priority:
 """
 
 
-print("🔥 KhabarF24 Category Engine v6.1 Loaded")
+print("🔥 KhabarF24 Category Engine v6.2 Loaded")
 
 
 
@@ -31,6 +31,7 @@ CATEGORIES = {
         "حمله",
         "حمله هوایی",
         "حمله موشکی",
+
         "موشک",
         "پهپاد",
 
@@ -72,15 +73,19 @@ CATEGORIES = {
 
         "ایران",
         "ایرانی",
+
         "تهران",
 
         "دولت ایران",
+
         "مجلس ایران",
 
         "سپاه",
+
         "رئیس جمهور ایران",
 
     ],
+
 
 
 
@@ -88,13 +93,17 @@ CATEGORIES = {
 
         "آمریکا",
         "بریتانیا",
+
         "روسیه",
         "اوکراین",
+
         "چین",
+
         "فرانسه",
         "آلمان",
 
         "جهان",
+
         "بین الملل",
         "بین‌الملل",
 
@@ -102,7 +111,10 @@ CATEGORIES = {
 
 
 
+
     "sport": [
+
+        # فوتبال
 
         "فوتبال",
         "football",
@@ -136,8 +148,12 @@ CATEGORIES = {
         "مصدومیت",
 
         "بازیکن",
+
         "مربی",
         "سرمربی",
+
+
+        # بازیکنان معروف
 
         "مسی",
         "رونالدو",
@@ -145,87 +161,122 @@ CATEGORIES = {
         "هالند",
         "یامال",
 
+
+        # تیم ها
+
         "منچستر یونایتد",
         "رئال مادرید",
         "بارسلونا",
+        "لیورپول",
+        "آرسنال",
+
+
+        # رشته ها
 
         "nba",
+
         "بسکتبال",
+        "basketball",
+
         "والیبال",
+        "volleyball",
+
         "تنیس",
+        "tennis",
+
         "کشتی",
+
         "فرمول یک",
+        "formula 1",
+        "f1",
 
     ],
+
+
 
 
 
     "technology": [
 
         "فناوری",
+
         "تکنولوژی",
+
         "technology",
 
         "هوش مصنوعی",
+
         "artificial intelligence",
-        "ai",
 
         "openai",
+
         "chatgpt",
 
         "گوگل",
+
         "google",
 
         "اپل",
+
         "apple",
 
         "مایکروسافت",
+
         "microsoft",
 
         "انویدیا",
+
         "nvidia",
 
         "تسلا",
+
         "tesla",
 
         "ربات",
 
         "تراشه",
+
         "چیپ",
 
         "هک",
+
         "امنیت سایبری",
 
     ],
 
 
 
+
+
     "gaming": [
 
         "گیم",
+
         "gaming",
+
         "game",
 
         "بازی ویدیویی",
-        "بازی رایانه‌ای",
 
-        "playstation",
         "پلی استیشن",
 
-        "xbox",
+        "playstation",
+
         "ایکس باکس",
 
-        "nintendo",
+        "xbox",
+
         "نینتندو",
 
+        "nintendo",
+
         "steam",
+
         "استیم",
 
         "ubisoft",
 
         "call of duty",
-
-        "warzone",
 
         "minecraft",
 
@@ -234,6 +285,8 @@ CATEGORIES = {
         "کنسول",
 
     ],
+
+
 
 
 
@@ -271,46 +324,66 @@ CATEGORIES = {
 
 
 
+
     "health": [
 
         "سلامت",
+
         "بیماری",
+
         "ویروس",
+
         "واکسن",
+
         "پزشکی",
+
         "بیمارستان",
+
         "دارو",
 
     ],
 
 
 
+
     "science": [
 
         "علم",
+
         "science",
+
         "تحقیق",
+
         "فضا",
+
         "ناسا",
+
         "nasa",
 
     ],
 
 
 
+
+
     "weather": [
 
         "هواشناسی",
+
         "weather",
 
         "طوفان",
+
         "سیل",
+
         "زلزله",
 
         "بارندگی",
+
         "برف",
 
         "گرما",
+
         "سرمای شدید",
 
     ],
@@ -320,15 +393,17 @@ CATEGORIES = {
 
 
 
+
+
 CATEGORY_PRIORITY = [
+
+    "sport",
 
     "politics",
 
     "iran",
 
     "world",
-
-    "sport",
 
     "technology",
 
@@ -348,6 +423,8 @@ CATEGORY_PRIORITY = [
 
 
 
+
+
 def detect_smart_category(
 
         title="",
@@ -359,15 +436,19 @@ def detect_smart_category(
 ):
 
 
+    # فقط تیتر و خلاصه
+    # منبع حذف شد
+
     text = f"""
 
     {title}
 
     {summary}
 
-    {source}
-
     """.lower()
+
+
+
 
 
 
@@ -389,7 +470,6 @@ def detect_smart_category(
                 score += 1
 
 
-
         scores[category] = score
 
 
@@ -397,10 +477,45 @@ def detect_smart_category(
 
 
 
+    # =========================
+    # ورزش قوی
+    # =========================
+
+
+    if scores["sport"] >= 2:
+
+        return "sport"
+
+
+
+
+
+
+
+    # =========================
+    # سیاست قوی
+    # =========================
+
+
+    if scores["politics"] >= 1:
+
+        return "politics"
+
+
+
+
+
+
+
+    # =========================
+    # بقیه دسته ها
+    # =========================
+
+
     for category in CATEGORY_PRIORITY:
 
 
-        if scores.get(category, 0) > 0:
+        if scores.get(category,0) > 0:
 
             return category
 
