@@ -1,40 +1,75 @@
 """
 KhabarF24 Scraper Engine v1.0
 
-SCRAPER:
-- منابع بدون RSS
-- خروجی استاندارد مشابه RSS
-- آماده برای Telegram Formatter
-
-Output:
-
-{
-    title,
-    summary,
-    link,
-    source,
-    category,
-    sport
-}
+وظیفه:
+- دریافت خبر از سایت های بدون RSS
+- استخراج عنوان
+- استخراج لینک
+- استاندارد سازی خروجی
 """
 
 
 import requests
 from bs4 import BeautifulSoup
+import html
+import re
 
 
-from sources import SCRAPER_SOURCES
 
 
 
+# =========================
+# تنظیمات درخواست
+# =========================
 
 
 HEADERS = {
 
+
     "User-Agent":
-        "Mozilla/5.0 (KhabarF24 Bot)"
+
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 
 }
+
+
+
+
+
+# =========================
+# پاکسازی متن
+# =========================
+
+
+def clean_text(text):
+
+
+    if not text:
+
+        return ""
+
+
+
+    text = html.unescape(text)
+
+
+
+    text = re.sub(
+
+        r"\s+",
+
+        " ",
+
+        text
+
+    )
+
+
+
+    return text.strip()
+
+
+
 
 
 
@@ -45,9 +80,11 @@ HEADERS = {
 # =========================
 
 
-def fetch_page(url):
+def get_page(url):
+
 
     try:
+
 
         response = requests.get(
 
@@ -55,12 +92,14 @@ def fetch_page(url):
 
             headers=HEADERS,
 
-            timeout=10
+            timeout=15
 
         )
 
 
-        response.encoding = "utf-8"
+
+        response.raise_for_status()
+
 
 
         return response.text
@@ -88,66 +127,22 @@ def fetch_page(url):
 
 
 # =========================
-# پاکسازی متن
+# استخراج لینک ها
 # =========================
 
 
-def clean_text(text):
+def extract_links(html_page, base_url):
 
 
-    if not text:
-
-        return ""
-
-
-
-    return (
-
-        text
-
-        .replace("\n", " ")
-
-        .replace("\t", " ")
-
-        .strip()
-
-    )
-
-
-
-
-
-
-
-
-
-# =========================
-# استخراج عمومی
-# =========================
-
-
-def scrape_generic(source):
-
-
-    html = fetch_page(
-
-        source["url"]
-
-    )
-
-
-
-    if not html:
+    if not html_page:
 
         return []
 
 
 
-
-
     soup = BeautifulSoup(
 
-        html,
+        html_page,
 
         "lxml"
 
@@ -155,38 +150,30 @@ def scrape_generic(source):
 
 
 
-
-    news = []
-
+    results = []
 
 
 
-
-    # پیدا کردن لینک‌های خبری
-
-    links = soup.find_all(
+    for a in soup.find_all(
 
         "a",
 
         href=True
 
-    )
+    ):
 
-
-
-
-
-    for item in links[:10]:
 
 
         title = clean_text(
 
-            item.get_text()
+            a.get_text()
 
         )
 
 
-        link = item["href"]
+
+        link = a["href"]
+
 
 
 
@@ -196,71 +183,27 @@ def scrape_generic(source):
 
 
 
+        if not link.startswith("http"):
 
 
-        if link.startswith("/"):
-
-            link = (
-
-                source["url"].rstrip("/")
-
-                +
-
-                link
-
-            )
+            link = base_url.rstrip("/") + "/" + link.lstrip("/")
 
 
 
+        results.append({
 
 
-        news.append({
+            "title": title,
 
 
-            "title":
+            "link": link
 
-                title,
-
-
-            "summary":
-
-                "",
-
-
-            "link":
-
-                link,
-
-
-            "source":
-
-                source["name"],
-
-
-            "category":
-
-                source["category"],
-
-
-            "sport":
-
-                source.get(
-
-                    "sport",
-
-                    None
-
-                )
 
         })
 
 
 
-
-
-    return news
-
-
+    return results
 
 
 
@@ -271,84 +214,95 @@ def scrape_generic(source):
 
 
 # =========================
-# منابع ویژه
+# Scraper اصلی
 # =========================
 
 
 def scrape_source(source):
 
 
-    name = source["name"]
+    url = source.get(
+
+        "url",
+
+        ""
+
+    )
 
 
+    name = source.get(
 
+        "name",
 
-    # فعلاً موتور عمومی
-
-    # بعداً برای هر سایت parser اختصاصی می‌سازیم
-
-
-
-    return scrape_generic(
-
-        source
+        ""
 
     )
 
 
 
+    category = source.get(
+
+        "category",
+
+        "world"
+
+    )
+
+
+
+    if not url:
+
+        return []
 
 
 
 
 
+    page = get_page(
+
+        url
+
+    )
 
 
 
-# =========================
-# دریافت همه Scraper ها
-# =========================
+    articles = extract_links(
 
+        page,
 
-def fetch_scraper_news():
+        url
 
-
-    all_news = []
-
-
-
-    for source in SCRAPER_SOURCES:
-
-
-        try:
-
-
-            result = scrape_source(
-
-                source
-
-            )
-
-
-            all_news.extend(
-
-                result
-
-            )
+    )
 
 
 
-        except Exception as e:
-
-
-            print(
-
-                f"Scraper Error {source['name']}: {e}"
-
-            )
+    news = []
 
 
 
+    for item in articles[:10]:
 
 
-    return all_news
+        news.append({
+
+
+            "title": item["title"],
+
+
+            "summary": "",
+
+
+            "link": item["link"],
+
+
+            "source": name,
+
+
+            "category": category
+
+
+        })
+
+
+
+    return news
