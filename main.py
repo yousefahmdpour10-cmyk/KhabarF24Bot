@@ -1,9 +1,11 @@
 """
-KhabarF24 Main Engine v6.3
+KhabarF24 Main Engine v6.4
 
 Pipeline:
 
 RSS Fetcher
+      ↓
+News Shuffle
       ↓
 Category Engine
       ↓
@@ -24,6 +26,7 @@ Telegram
 
 
 import asyncio
+import random
 
 
 
@@ -49,29 +52,22 @@ from news_db import (
 from category_engine import detect_smart_category
 
 
-
 from formatter import format_news
-
 
 
 from ai_processor import process_news
 
 
-
 from quality_engine import is_high_quality
-
 
 
 from importance_engine import is_important
 
 
-
 from sport_formatter import format_sport_news
 
 
-
 from game_formatter import format_game_news
-
 
 
 
@@ -85,8 +81,8 @@ CHECK_INTERVAL = 300
 
 
 
-async def check_news():
 
+async def check_news():
 
 
     news = get_latest_news()
@@ -105,10 +101,18 @@ async def check_news():
 
 
 
+    # =====================
+    # جلوگیری از سلطه یک منبع
+    # =====================
+
+    random.shuffle(news)
+
+
+
+
 
 
     for item in news:
-
 
 
 
@@ -135,16 +139,23 @@ async def check_news():
 
 
         raw_title = item.get(
+
             "title",
+
             ""
+
         )
 
 
 
         raw_summary = item.get(
+
             "summary",
+
             ""
+
         )
+
 
 
 
@@ -161,8 +172,11 @@ async def check_news():
 
 
             source=item.get(
+
                 "source",
+
                 ""
+
             )
 
         )
@@ -170,8 +184,12 @@ async def check_news():
 
 
         print(
+
             f"📂 Category: {category}"
+
         )
+
+
 
 
 
@@ -215,11 +233,13 @@ async def check_news():
 
 
 
+
+
         sport_data = None
 
 
-
         game_data = None
+
 
 
 
@@ -249,14 +269,19 @@ async def check_news():
 
 
             if sport_result.get(
+
                 "blocked"
+
             ):
 
 
 
                 print(
+
                     "❌ Sport video-only skipped"
+
                 )
+
 
                 continue
 
@@ -289,6 +314,10 @@ async def check_news():
                 "sport"
 
             )
+
+
+
+
 
 
 
@@ -335,6 +364,7 @@ async def check_news():
 
 
 
+
             title = game_result.get(
 
                 "title",
@@ -360,7 +390,18 @@ async def check_news():
                 "game"
 
             )
-                      # =====================
+
+
+
+
+
+
+
+
+
+
+
+        # =====================
         # 🧪 Quality Check
         # =====================
 
@@ -376,6 +417,7 @@ async def check_news():
         ):
 
 
+
             print(
 
                 "❌ Low quality news skipped"
@@ -384,6 +426,9 @@ async def check_news():
 
 
             continue
+
+
+
 
 
 
@@ -411,6 +456,7 @@ async def check_news():
         ):
 
 
+
             print(
 
                 "❌ Low importance news skipped"
@@ -426,6 +472,9 @@ async def check_news():
 
 
 
+
+
+
         # =====================
         # 📰 Formatter
         # =====================
@@ -434,10 +483,13 @@ async def check_news():
         message = format_news(
 
 
+
             title=title,
 
 
+
             summary=summary,
+
 
 
             source=item.get(
@@ -449,16 +501,21 @@ async def check_news():
             ),
 
 
+
             category=category,
+
 
 
             sport=sport_data,
 
 
+
             game=game_data
 
 
+
         )
+
 
 
 
@@ -499,9 +556,10 @@ async def check_news():
 
 
 
-
-
         break
+
+
+
 
 
 
@@ -522,7 +580,7 @@ async def main():
 
     print(
 
-        "🚀 KhabarF24 Started v6.3"
+        "🚀 KhabarF24 Started v6.4"
 
     )
 
@@ -568,10 +626,7 @@ async def main():
 
 
 
-
-
 if __name__ == "__main__":
-
 
 
     asyncio.run(
