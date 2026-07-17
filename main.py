@@ -1,9 +1,9 @@
 """
-KhabarF24 Main Engine v6.4
+KhabarF24 Main Engine v6.5
 
 Pipeline:
 
-RSS Fetcher
+News Fetcher (RSS + Scraper)
       ↓
 News Shuffle
       ↓
@@ -82,6 +82,8 @@ CHECK_INTERVAL = 300
 
 
 
+
+
 async def check_news():
 
 
@@ -101,11 +103,14 @@ async def check_news():
 
 
 
+
     # =====================
     # جلوگیری از سلطه یک منبع
     # =====================
 
+
     random.shuffle(news)
+
 
 
 
@@ -116,15 +121,41 @@ async def check_news():
 
 
 
+        # =====================
+        # Link Protection
+        # RSS + Scraper
+        # =====================
+
+
         link = item.get(
-            "link"
+
+            "link",
+
+            ""
+
         )
 
 
 
         if not link:
 
-            continue
+
+            link = (
+
+                item.get(
+                    "title",
+                    ""
+                )
+
+                +
+
+                item.get(
+                    "source",
+                    ""
+                )
+
+            )
+
 
 
 
@@ -138,6 +169,7 @@ async def check_news():
 
 
 
+
         raw_title = item.get(
 
             "title",
@@ -145,7 +177,6 @@ async def check_news():
             ""
 
         )
-
 
 
         raw_summary = item.get(
@@ -162,24 +193,50 @@ async def check_news():
 
 
 
-        category = detect_smart_category(
 
 
-            title=raw_title,
+        # =====================
+        # Category
+        # =====================
 
 
-            summary=raw_summary,
+        source_category = item.get(
+
+            "category"
+
+        )
 
 
-            source=item.get(
 
-                "source",
+        if source_category:
 
-                ""
+
+            category = source_category
+
+
+
+        else:
+
+
+            category = detect_smart_category(
+
+
+                title=raw_title,
+
+
+                summary=raw_summary,
+
+
+                source=item.get(
+
+                    "source",
+
+                    ""
+
+                )
 
             )
 
-        )
 
 
 
@@ -190,11 +247,20 @@ async def check_news():
         )
 
 
+        print(
+
+            f"📰 Source: {item.get('source','')}"
+
+        )
 
 
 
 
 
+
+        # =====================
+        # AI Processor
+        # =====================
 
 
         processed = process_news(
@@ -210,7 +276,6 @@ async def check_news():
 
 
 
-
         title = processed.get(
 
             "title",
@@ -218,7 +283,6 @@ async def check_news():
             ""
 
         )
-
 
 
         summary = processed.get(
@@ -233,21 +297,11 @@ async def check_news():
 
 
 
-
-
         sport_data = None
 
 
         game_data = None
-
-
-
-
-
-
-
-
-        # =====================
+                  # =====================
         # ⚽ Sport Processing
         # =====================
 
@@ -433,10 +487,6 @@ async def check_news():
 
 
 
-
-
-
-
         # =====================
         # 🔥 Importance Check
         # =====================
@@ -472,11 +522,8 @@ async def check_news():
 
 
 
-
-
-
         # =====================
-        # 📰 Formatter
+        # 📰 Telegram Formatter
         # =====================
 
 
@@ -525,7 +572,7 @@ async def check_news():
 
 
         # =====================
-        # 📢 Telegram
+        # 📢 Telegram Send
         # =====================
 
 
@@ -569,7 +616,6 @@ async def check_news():
 
 
 
-
 async def main():
 
 
@@ -580,7 +626,7 @@ async def main():
 
     print(
 
-        "🚀 KhabarF24 Started v6.4"
+        "🚀 KhabarF24 Started v6.5"
 
     )
 
