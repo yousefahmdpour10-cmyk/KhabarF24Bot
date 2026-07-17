@@ -217,7 +217,7 @@ def clean_rss_breaks(text):
         return ""
 
 
-    bad endings = [
+  bad_endings = [
 
         "...",
 
@@ -232,7 +232,7 @@ def clean_rss_breaks(text):
     ]
 
 
-    for item in bad endings:
+   for item in bad_endings:
 
 
         if text.endswith(item):
