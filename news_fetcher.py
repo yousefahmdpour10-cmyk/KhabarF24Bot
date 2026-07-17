@@ -1,16 +1,26 @@
 """
-KhabarF24 News Fetcher v6.3
+KhabarF24 News Fetcher v6.4
 
 وظیفه:
-- دریافت خبر از RSS
+- دریافت RSS
+- دریافت Scraper Sources
 - استاندارد سازی خروجی
-- نگهداری نام منبع
-- آماده سازی برای Category / AI / Formatter
+- حفظ نام منبع
+- آماده سازی برای AI Engine
 """
+
 
 import feedparser
 import html
 import re
+
+
+from sources import (
+    RSS_SOURCES,
+    SCRAPER_SOURCES
+)
+
+
 
 
 
@@ -18,32 +28,51 @@ import re
 # Clean Text
 # =========================
 
+
 def clean_text(text):
 
     if not text:
+
         return ""
+
 
     text = html.unescape(text)
 
-    text = re.sub(
-        r"<.*?>",
-        "",
-        text
-    )
 
     text = re.sub(
-        r"\s+",
-        " ",
+
+        r"<.*?>",
+
+        "",
+
         text
+
     )
+
+
+    text = re.sub(
+
+        r"\s+",
+
+        " ",
+
+        text
+
+    )
+
 
     return text.strip()
+
+
+
+
 
 
 
 # =========================
 # RSS Fetch
 # =========================
+
 
 def fetch_news(source):
 
@@ -55,14 +84,21 @@ def fetch_news(source):
 
 
     url = source.get(
+
         "url",
+
         ""
+
     )
 
 
+
     name = source.get(
+
         "name",
+
         "Unknown"
+
     )
 
 
@@ -78,8 +114,11 @@ def fetch_news(source):
 
 
         feed = feedparser.parse(
+
             url
+
         )
+
 
 
         news = []
@@ -90,26 +129,39 @@ def fetch_news(source):
 
 
             title = clean_text(
+
                 item.get(
+
                     "title",
+
                     ""
+
                 )
+
             )
 
 
 
             summary = clean_text(
+
                 item.get(
+
                     "summary",
+
                     ""
+
                 )
+
             )
 
 
 
             link = item.get(
+
                 "link",
+
                 ""
+
             )
 
 
@@ -120,16 +172,27 @@ def fetch_news(source):
 
 
 
-
             news.append({
+
 
                 "title": title,
 
+
                 "summary": summary,
+
 
                 "link": link,
 
-                "source": name
+
+                "source": name,
+
+
+                "category": source.get(
+
+                    "category"
+
+                )
+
 
             })
 
@@ -144,8 +207,109 @@ def fetch_news(source):
 
 
         print(
-            f"Fetch Error {name}: {e}"
+
+            f"RSS Error {name}: {e}"
+
         )
 
 
         return []
+
+
+
+
+
+
+
+
+# =========================
+# Scraper Placeholder
+# =========================
+
+
+def fetch_scraper_news(source):
+
+
+    """
+    بعداً برای سایت‌های بدون RSS
+    مثل تسنیم، فارس، NBA و...
+    Scraper اختصاصی اضافه می‌شود.
+    """
+
+    return []
+
+
+
+
+
+
+
+
+# =========================
+# Main Collector
+# =========================
+
+
+def get_latest_news():
+
+
+    news = []
+
+
+
+    # RSS
+
+    for source in RSS_SOURCES:
+
+
+        try:
+
+
+            news.extend(
+
+                fetch_news(source)
+
+            )
+
+
+        except Exception as e:
+
+
+            print(
+
+                f"RSS Error {source.get('name','')}: {e}"
+
+            )
+
+
+
+
+
+    # Scraper
+
+    for source in SCRAPER_SOURCES:
+
+
+        try:
+
+
+            news.extend(
+
+                fetch_scraper_news(source)
+
+            )
+
+
+        except Exception as e:
+
+
+            print(
+
+                f"Scraper Error {source.get('name','')}: {e}"
+
+            )
+
+
+
+
+    return news
