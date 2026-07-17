@@ -1,5 +1,5 @@
 """
-KhabarF24 Sources v6.0
+KhabarF24 Sources v6.1
 
 RSS Sources:
 
@@ -11,11 +11,15 @@ RSS Sources:
 - Economy
 - Sport
 - Weather
+
+Update:
+- Added Fabrizio Romano
+- Improved sport sources
+- Keep unstable sources for future scraper
 """
 
 
 RSS_SOURCES = [
-
 
 
     # =========================
@@ -57,6 +61,12 @@ RSS_SOURCES = [
         "category": "iran"
     },
 
+
+    {
+        "name": "هنگاو",
+        "url": "https://hengaw.net/fa/feed",
+        "category": "iran"
+    },
 
 
 
@@ -101,7 +111,6 @@ RSS_SOURCES = [
 
 
 
-
     # =========================
     # 🇮🇱 Israel
     # =========================
@@ -119,9 +128,6 @@ RSS_SOURCES = [
         "url": "https://www.mako.co.il/rss",
         "category": "world"
     },
-
-
-
 
 
 
@@ -163,12 +169,6 @@ RSS_SOURCES = [
         "url": "https://vigiato.net/feed",
         "category": "gaming"
     },
-
-
-
-
-
-
     # =========================
     # 🎮 Gaming
     # =========================
@@ -188,12 +188,39 @@ RSS_SOURCES = [
     },
 
 
+    {
+        "name": "IGN Gaming",
+        "url": "https://feeds.ign.com/ignfeeds",
+        "category": "gaming"
+    },
+
+
+    {
+        "name": "GameSpot",
+        "url": "https://www.gamespot.com/feeds/mashup/",
+        "category": "gaming"
+    },
+
 
 
 
     # =========================
     # ⚽ Sport
     # =========================
+
+
+    {
+        "name": "Fabrizio Romano",
+        "url": "https://www.fabrizioromano.com/feed/",
+        "category": "sport"
+    },
+
+
+    {
+        "name": "Di Marzio",
+        "url": "https://gianlucadimarzio.com/feed",
+        "category": "sport"
+    },
 
 
     {
@@ -213,6 +240,13 @@ RSS_SOURCES = [
     {
         "name": "Sky Sports",
         "url": "https://www.skysports.com/rss/12040",
+        "category": "sport"
+    },
+
+
+    {
+        "name": "Mundo Deportivo",
+        "url": "https://www.mundodeportivo.com/rss/home",
         "category": "sport"
     },
 
@@ -257,21 +291,6 @@ RSS_SOURCES = [
         "url": "https://www.legaseriea.it/en/rss",
         "category": "sport"
     },
-
-
-    {
-        "name": "Di Marzio",
-        "url": "https://gianlucadimarzio.com/feed",
-        "category": "sport"
-    },
-
-
-    {
-        "name": "Mundo Deportivo",
-        "url": "https://www.mundodeportivo.com/rss/home",
-        "category": "sport"
-    },
-
 
 
 
