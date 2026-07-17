@@ -1,5 +1,5 @@
 """
-KhabarF24 AI Processor v6.0
+KhabarF24 AI Processor v6.1
 
 Pipeline:
 
@@ -48,7 +48,6 @@ import html
 
 
 
-
 # =========================
 # Translation
 # =========================
@@ -61,37 +60,24 @@ def translate_text(text):
         return ""
 
 
-
     try:
 
-
         result = GoogleTranslator(
-
             source="auto",
-
             target="fa"
-
         ).translate(text)
-
 
 
         return result.strip()
 
 
-
     except Exception as e:
 
-
         print(
-
             f"Translation Error: {e}"
-
         )
 
-
         return text
-
-
 
 
 
@@ -104,44 +90,29 @@ def translate_text(text):
 
 def clean_translation(text):
 
-
     if not text:
 
         return ""
 
 
-
     text = html.unescape(text)
 
 
-
     text = re.sub(
-
         r"\(\d+\)",
-
         "",
-
         text
-
     )
-
 
 
     text = re.sub(
-
         r"\s+",
-
         " ",
-
         text
-
     )
-
 
 
     return text.strip()
-
-
 
 
 
@@ -154,31 +125,22 @@ def clean_translation(text):
 
 def protect_numbers(original, translated):
 
-
     if not original or not translated:
 
         return translated
 
 
-
     numbers = re.findall(
-
         r"\d+",
-
         original
-
     )
-
 
 
     for number in numbers:
 
-
         if number not in translated:
 
-
             translated += f" {number}"
-
 
 
     return translated
@@ -187,10 +149,8 @@ def protect_numbers(original, translated):
 
 
 
-
-
 # =========================
-# Title Cleanup
+# Title Cleanup v6.1
 # =========================
 
 
@@ -204,7 +164,6 @@ def improve_title(title):
 
 
     remove_words = [
-
 
         "جزئیات کامل",
 
@@ -224,33 +183,33 @@ def improve_title(title):
 
 
         title = title.replace(
-
             word,
-
             ""
-
         )
 
 
 
     title = title.replace(
-
         ":",
-
         " "
-
     )
 
 
 
     title = re.sub(
-
         r"\s+",
-
         " ",
-
         title
+    ).strip()
 
+
+
+    # حذف پایان ناقص RSS
+
+    title = re.sub(
+        r"\.{2,}$",
+        "",
+        title
     )
 
 
@@ -259,14 +218,23 @@ def improve_title(title):
 
 
 
-    if len(words) > 12:
+    # کوتاه سازی بدون خراب کردن
+
+    if len(words) > 14:
 
 
         title = " ".join(
-
-            words[:12]
-
+            words[:14]
         )
+
+
+        title = title.rstrip(
+            "،,"
+        )
+
+
+
+        title += "..."
 
 
 
@@ -276,10 +244,8 @@ def improve_title(title):
 
 
 
-
-
 # =========================
-# Summary Cleanup
+# Summary Cleanup v6.1
 # =========================
 
 
@@ -313,30 +279,41 @@ def improve_summary(summary):
 
 
         summary = summary.replace(
-
             word,
-
             ""
-
         )
 
 
 
     summary = re.sub(
-
         r"\s+",
-
         " ",
-
         summary
+    ).strip()
 
+
+
+    # حذف سه نقطه ناقص
+
+    summary = re.sub(
+        r"\.{2,}",
+        "",
+        summary
     )
 
 
 
-    return summary.strip()
+    # پایان جمله
+
+    if summary and not summary.endswith(
+        (".","؟","!")
+    ):
+
+        summary += "."
 
 
+
+    return summary
 
 
 
@@ -351,129 +328,78 @@ def process_news(title, summary):
 
 
     print(
-
-        "🤖 KhabarF24 AI v6.0"
-
+        "🤖 KhabarF24 AI v6.1"
     )
 
 
 
-
-    # مرحله اول:
-    # محافظت نام‌های رسمی
-
-
     protected_title = replace_official_names(
-
         title
-
     )
 
 
     protected_summary = replace_official_names(
-
         summary
-
     )
 
 
 
 
 
-
-
-    # ترجمه
-
-
     fa_title = translate_text(
-
         protected_title
-
     )
 
 
     fa_summary = translate_text(
-
         protected_summary
-
     )
 
 
 
 
 
-
-    # پاکسازی
-
-
     fa_title = clean_translation(
-
         fa_title
-
     )
 
 
     fa_summary = clean_translation(
-
         fa_summary
-
     )
 
 
 
 
 
-
-
-    # عددها
-
-
     fa_title = protect_numbers(
-
         title,
-
         fa_title
-
     )
 
 
     fa_summary = protect_numbers(
-
         summary,
-
         fa_summary
-
     )
 
 
 
 
 
-
-
-    # نام‌های رسمی دوباره
-
-
     fa_title = replace_official_names(
-
         fa_title
-
     )
 
 
     fa_summary = replace_official_names(
-
         fa_summary
-
     )
 
 
 
 
 
-
-
-    # بازنویسی خبری
 
 
     rewritten = rewrite_news(
@@ -495,6 +421,7 @@ def process_news(title, summary):
     )
 
 
+
     fa_summary = rewritten.get(
 
         "summary",
@@ -509,14 +436,12 @@ def process_news(title, summary):
 
 
 
-    # پاکسازی نهایی
-
-
     fa_title = improve_title(
 
         fa_title
 
     )
+
 
 
     fa_summary = improve_summary(
@@ -529,9 +454,6 @@ def process_news(title, summary):
 
 
 
-
-
-    # RTL
 
 
     fa_title = fix_rtl_text(
