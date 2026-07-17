@@ -1,11 +1,19 @@
 """
-KhabarF24 Formatter v6.1
+KhabarF24 Formatter v6.2
 
 Fixed Telegram Style
+
+Changes:
+- Newspaper sticker 🗞️
+- Correct source flags
+- Keep source names
+- Sport hashtag support
 """
 
 
+
 CATEGORY_STYLE = {
+
 
     "politics": {
         "name": "سیاست و امنیت",
@@ -13,11 +21,13 @@ CATEGORY_STYLE = {
         "hashtag": "#سیاست"
     },
 
+
     "iran": {
         "name": "ایران",
         "emoji": "🇮🇷",
         "hashtag": "#ایران"
     },
+
 
     "world": {
         "name": "جهان",
@@ -25,11 +35,13 @@ CATEGORY_STYLE = {
         "hashtag": "#جهان"
     },
 
+
     "sport": {
         "name": "ورزش",
         "emoji": "⚽",
         "hashtag": "#ورزش"
     },
+
 
     "gaming": {
         "name": "گیم",
@@ -37,11 +49,13 @@ CATEGORY_STYLE = {
         "hashtag": "#گیم"
     },
 
+
     "technology": {
         "name": "فناوری",
         "emoji": "💻",
         "hashtag": "#فناوری"
     },
+
 
     "economy": {
         "name": "اقتصاد",
@@ -49,17 +63,20 @@ CATEGORY_STYLE = {
         "hashtag": "#اقتصاد"
     },
 
+
     "health": {
         "name": "سلامت",
         "emoji": "🏥",
         "hashtag": "#سلامت"
     },
 
+
     "science": {
         "name": "علم",
         "emoji": "🔬",
         "hashtag": "#علم"
     },
+
 
     "weather": {
         "name": "هواشناسی",
@@ -71,41 +88,91 @@ CATEGORY_STYLE = {
 
 
 
+
+
+# =========================
+# Sources
+# =========================
+
+
 SOURCE_FLAGS = {
 
-    "BBC": "🇬🇧",
-    "CNN": "🇺🇸",
+
+    "BBC World": "🇬🇧",
+
+    "BBC Sport": "🇬🇧",
+
+    "CNN World": "🇺🇸",
+
     "Reuters": "🇺🇸",
+
     "Sky Sports": "🇬🇧",
+
     "ESPN": "🇺🇸",
+
+    "Al Jazeera": "🇶🇦",
+
     "العربیه": "🇸🇦",
+
+
     "کان اسرائیل": "🇮🇱",
-    "کان 12": "🇮🇱",
+
+    "Channel 12 Israel": "🇮🇱",
+
 
     "ایسنا": "🇮🇷",
+
     "تسنیم": "🇮🇷",
+
     "فارس": "🇮🇷",
+
     "خبر فوری": "🇮🇷",
 
+    "ایران اینترنشنال": "🇬🇧",
+
+
     "دیجیاتو": "🇮🇷",
+
     "ویجیاتو": "🇮🇷",
+
+
+    "FIFA": "🌐",
+
+    "UEFA": "🇪🇺",
+
+    "Premier League": "🇬🇧",
+
+    "La Liga": "🇪🇸",
+
+    "Bundesliga": "🇩🇪",
+
+    "Serie A": "🇮🇹",
+
+    "Di Marzio": "🇮🇹",
 
 }
 
 
 
 
+
+
 def get_source_flag(source):
 
+
     if not source:
+
         return "🌐"
+
 
 
     for name, flag in SOURCE_FLAGS.items():
 
+
         if name.lower() in source.lower():
 
             return flag
+
 
 
     return "🌐"
@@ -115,14 +182,99 @@ def get_source_flag(source):
 
 
 
+
+# =========================
+# Sport
+# =========================
+
+
+def get_sport_style(sport):
+
+
+    if not sport:
+
+        return "⚽", "#ورزش"
+
+
+
+    sport_type = sport.get(
+        "type",
+        ""
+    )
+
+
+
+    styles = {
+
+
+        "football": (
+            "⚽",
+            "#فوتبال"
+        ),
+
+
+        "basketball": (
+            "🏀",
+            "#بسکتبال"
+        ),
+
+
+        "volleyball": (
+            "🏐",
+            "#والیبال"
+        ),
+
+
+        "tennis": (
+            "🎾",
+            "#تنیس"
+        ),
+
+
+        "wrestling": (
+            "🤼",
+            "#کشتی"
+        ),
+
+
+        "formula1": (
+            "🏎",
+            "#فرمول_یک"
+        ),
+
+    }
+
+
+
+    return styles.get(
+
+        sport_type,
+
+        (
+            "⚽",
+            "#ورزش"
+        )
+
+    )
+
+
+
+
+
+
+
+
 def format_sport_section(sport):
+
 
     if not sport:
 
         return ""
 
 
+
     text = ""
+
 
 
     if sport.get("score"):
@@ -133,12 +285,14 @@ def format_sport_section(sport):
 """
 
 
+
     if sport.get("yellow_cards"):
 
         text += f"""
 
 🟨 {sport['yellow_cards']}
 """
+
 
 
     if sport.get("red_cards"):
@@ -149,12 +303,14 @@ def format_sport_section(sport):
 """
 
 
+
     if sport.get("lineup"):
 
         text += f"""
 
 👥 {sport['lineup']}
 """
+
 
 
     if sport.get("interview"):
@@ -165,7 +321,9 @@ def format_sport_section(sport):
 """
 
 
+
     return text.strip()
+
 
 
 
@@ -174,12 +332,15 @@ def format_sport_section(sport):
 
 def format_game_section(game):
 
+
     if not game:
 
         return ""
 
 
+
     text = ""
+
 
 
     if game.get("details"):
@@ -190,6 +351,7 @@ def format_game_section(game):
 """
 
 
+
     if game.get("release"):
 
         text += f"""
@@ -198,12 +360,18 @@ def format_game_section(game):
 """
 
 
+
     return text.strip()
 
 
 
 
 
+
+
+# =========================
+# Final Formatter
+# =========================
 
 
 def format_news(
@@ -232,7 +400,51 @@ def format_news(
     )
 
 
-    flag = get_source_flag(source)
+
+    hashtag = style["hashtag"]
+
+    emoji = style["emoji"]
+
+    name = style["name"]
+
+
+
+
+
+    if category == "sport":
+
+
+        sport_emoji, sport_hash = get_sport_style(
+
+            sport
+
+        )
+
+
+        emoji = sport_emoji
+
+        name = sport_hash.replace(
+
+            "#",
+
+            ""
+
+        )
+
+
+        hashtag = sport_hash
+
+
+
+
+
+    flag = get_source_flag(
+
+        source
+
+    )
+
+
 
 
 
@@ -242,20 +454,31 @@ def format_news(
 
     if category == "sport":
 
-        extra = format_sport_section(sport)
+        extra = format_sport_section(
+
+            sport
+
+        )
 
 
 
     if category == "gaming":
 
-        extra = format_game_section(game)
+        extra = format_game_section(
+
+            game
+
+        )
+
+
+
 
 
 
 
     message = f"""
 ━━━━━━━━━━━━━━━━
-🔴 KhabarF24 | {style['emoji']} {style['name']}
+🔴 KhabarF24 | {emoji} {name}
 ━━━━━━━━━━━━━━━━
 
 📰 {title}
@@ -266,7 +489,10 @@ def format_news(
 
 
 
+
+
     if extra:
+
 
         message += f"""
 
@@ -275,15 +501,24 @@ def format_news(
 
 
 
+
+
+
+
     message += f"""
 
-📰 {source} {flag}.
+
+
+🗞️ {flag} {source}
+
+
 
 ━━━━━━━━━━━━━━━━
 📢 @KhabarF24
 
-{style['hashtag']}
+{hashtag}
 """
+
 
 
     return message.strip()
