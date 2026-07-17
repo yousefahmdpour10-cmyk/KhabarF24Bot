@@ -1,61 +1,64 @@
 """
-KhabarF24 Brand Dictionary v5.0
+KhabarF24 Brand Dictionary v5.1
 
 Rules:
-- Companies: Persian + English in parentheses
-- People/Countries/Teams: Persian only
-- Media sources remain original
+- Companies / Brands / Organizations / Teams:
+  Persian + English in parentheses
+
+- Countries:
+  Persian only
+
+- People:
+  Persian only
+
+- Media sources:
+  Keep original
 """
+
+
+import re
 
 
 BRAND_DICTIONARY = {
 
 
     # =====================
-    # 💻 Technology Companies
+    # 💻 Technology
     # =====================
 
-
     "OpenAI": "اوپن‌ای‌آی (OpenAI)",
+    "openai": "اوپن‌ای‌آی (OpenAI)",
 
     "ChatGPT": "چت‌جی‌پی‌تی (ChatGPT)",
+    "chatgpt": "چت‌جی‌پی‌تی (ChatGPT)",
+
+    "Artificial Intelligence": "هوش مصنوعی (Artificial Intelligence)",
+    "AI": "هوش مصنوعی (AI)",
 
     "Google DeepMind": "گوگل دیپ‌مایند (Google DeepMind)",
-
     "DeepMind": "دیپ‌مایند (DeepMind)",
 
-    "Anthropic": "آنتروپیک (Anthropic)",
-
-    "Claude": "کلود (Claude)",
-
-    "Gemini": "جمینای (Gemini)",
-
     "Microsoft": "مایکروسافت (Microsoft)",
-
     "Apple": "اپل (Apple)",
-
     "Google": "گوگل (Google)",
 
     "Meta": "متا (Meta)",
-
-    "Facebook": "فیس‌بوک (Facebook)",
-
-    "Instagram": "اینستاگرام (Instagram)",
-
     "Amazon": "آمازون (Amazon)",
 
     "Tesla": "تسلا (Tesla)",
+    "Tesla Inc.": "شرکت تسلا (Tesla Inc.)",
 
     "NVIDIA": "انویدیا (NVIDIA)",
+    "Nvidia": "انویدیا (NVIDIA)",
 
     "Samsung": "سامسونگ (Samsung)",
-
     "Huawei": "هواوی (Huawei)",
 
-    "TikTok": "تیک‌تاک (TikTok)",
+    "SpaceX": "اسپیس‌ایکس (SpaceX)",
+
+    "Boston Dynamics": "بوستون داینامیکس (Boston Dynamics)",
 
     "xAI": "xAI",
-
     "Grok": "گروک (Grok)",
 
 
@@ -64,11 +67,8 @@ BRAND_DICTIONARY = {
     # 🎮 Gaming
     # =====================
 
-
     "PlayStation": "پلی‌استیشن (PlayStation)",
-
     "Xbox": "ایکس‌باکس (Xbox)",
-
     "Nintendo": "نینتندو (Nintendo)",
 
     "Steam": "استیم (Steam)",
@@ -81,42 +81,115 @@ BRAND_DICTIONARY = {
 
     "Warzone": "وارزون (Warzone)",
 
+    "Minecraft": "ماینکرفت (Minecraft)",
 
-
-    # =====================
-    # 🏢 Companies
-    # =====================
-
-
-    "Tesla Inc.": "شرکت تسلا (Tesla Inc.)",
-
-    "SpaceX": "اسپیس‌ایکس (SpaceX)",
-
-    "Boston Dynamics": "بوستون داینامیکس (Boston Dynamics)",
+    "Fortnite": "فورتنایت (Fortnite)",
 
 
 
     # =====================
-    # 🌍 Countries
+    # ⚽ Sport Organizations
     # =====================
 
+    "FIFA": "فیفا (FIFA)",
+
+    "UEFA": "یوفا (UEFA)",
+
+    "World Cup": "جام جهانی (World Cup)",
+
+    "Champions League": "لیگ قهرمانان اروپا (Champions League)",
+
+    "Premier League": "لیگ برتر انگلیس (Premier League)",
+
+    "Serie A": "سری آ (Serie A)",
+
+    "La Liga": "لالیگا (La Liga)",
+
+    "Bundesliga": "بوندسلیگا (Bundesliga)",
+
+    "NBA": "ان‌بی‌ای (NBA)",
+
+    "Formula 1": "فرمول یک (Formula 1)",
+
+    "MotoGP": "موتوجی‌پی (MotoGP)",
+
+    "UFC": "یو‌اف‌سی (UFC)",
+
+
+
+    # =====================
+    # ⚽ Teams
+    # =====================
+
+    "Manchester United":
+        "منچستر یونایتد (Manchester United)",
+
+    "Manchester City":
+        "منچستر سیتی (Manchester City)",
+
+    "Real Madrid":
+        "رئال مادرید (Real Madrid)",
+
+    "Barcelona":
+        "بارسلونا (Barcelona)",
+
+    "Liverpool":
+        "لیورپول (Liverpool)",
+
+    "Arsenal":
+        "آرسنال (Arsenal)",
+
+    "Chelsea":
+        "چلسی (Chelsea)",
+
+    "Bayern Munich":
+        "بایرن مونیخ (Bayern Munich)",
+
+    "Paris Saint-Germain":
+        "پاری‌سن‌ژرمن (Paris Saint-Germain)",
+
+    "PSG":
+        "پاری‌سن‌ژرمن (PSG)",
+
+    "Juventus":
+        "یوونتوس (Juventus)",
+
+
+
+    # =====================
+    # 📰 Media / Sports Names
+    # =====================
+
+    "Fabrizio Romano":
+        "فابریتزیو رومانو (Fabrizio Romano)",
+
+    "Di Marzio":
+        "دی‌مارزیو (Di Marzio)",
+
+
+
+}
+
+
+
+# =====================
+# Countries
+# =====================
+
+COUNTRIES = {
 
     "United States": "آمریکا",
-
     "United Kingdom": "بریتانیا",
 
     "Iran": "ایران",
-
     "Israel": "اسرائیل",
 
-    "Ukraine": "اوکراین",
-
     "Russia": "روسیه",
+    "Ukraine": "اوکراین",
 
     "China": "چین",
 
     "France": "فرانسه",
-
     "Germany": "آلمان",
 
     "Spain": "اسپانیا",
@@ -125,12 +198,17 @@ BRAND_DICTIONARY = {
 
     "England": "انگلیس",
 
+}
 
 
-    # =====================
-    # 👤 People
-    # =====================
 
+
+
+# =====================
+# People
+# =====================
+
+PEOPLE = {
 
     "Donald Trump": "دونالد ترامپ",
 
@@ -144,43 +222,34 @@ BRAND_DICTIONARY = {
 
     "Lionel Messi": "لیونل مسی",
 
-    "Cristiano Ronaldo": "کریستیانو رونالدو",
+    "Cristiano Ronaldo":
+        "کریستیانو رونالدو",
 
-    "Kylian Mbappe": "کیلیان امباپه",
+    "Kylian Mbappe":
+        "کیلیان امباپه",
 
-    "Lamine Yamal": "لامین یامال",
-
-
-
-    # =====================
-    # ⚽ Teams
-    # =====================
-
-
-    "Manchester United": "منچستر یونایتد",
-
-    "Manchester City": "منچستر سیتی",
-
-    "Real Madrid": "رئال مادرید",
-
-    "Barcelona": "بارسلونا",
-
-    "Liverpool": "لیورپول",
-
-    "Arsenal": "آرسنال",
-
-    "Chelsea": "چلسی",
-
-    "Bayern Munich": "بایرن مونیخ",
-
-    "Paris Saint-Germain": "پاری‌سن‌ژرمن",
-
-    "PSG": "پاری‌سن‌ژرمن",
-
-    "Juventus": "یوونتوس",
-
+    "Lamine Yamal":
+        "لامین یامال",
 
 }
+
+
+
+
+
+def replace_case_insensitive(text, old, new):
+
+    pattern = re.compile(
+
+        re.escape(old),
+
+        re.IGNORECASE
+
+    )
+
+    return pattern.sub(new, text)
+
+
 
 
 
@@ -195,26 +264,48 @@ def replace_official_names(text):
 
 
 
-    names = sorted(
+    # جلوگیری از دوبار شدن
+    for key, value in BRAND_DICTIONARY.items():
 
-        BRAND_DICTIONARY.keys(),
+        if value not in text:
 
-        key=len,
+            text = replace_case_insensitive(
 
-        reverse=True
+                text,
 
-    )
+                key,
+
+                value
+
+            )
 
 
 
-    for name in names:
+
+    for key, value in COUNTRIES.items():
+
+        text = replace_case_insensitive(
+
+            text,
+
+            key,
+
+            value
+
+        )
 
 
-        text = text.replace(
 
-            name,
 
-            BRAND_DICTIONARY[name]
+    for key, value in PEOPLE.items():
+
+        text = replace_case_insensitive(
+
+            text,
+
+            key,
+
+            value
 
         )
 
