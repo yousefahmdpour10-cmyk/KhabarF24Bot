@@ -1,5 +1,5 @@
 """
-KhabarF24 News Rewriter v6.1
+KhabarF24 News Rewriter v6.2
 
 وظیفه:
 - طبیعی کردن فارسی خبر
@@ -107,7 +107,6 @@ REWRITE_RULES = {
     "رای":
         "رأی",
 
-
 }
 
 
@@ -117,7 +116,6 @@ REWRITE_RULES = {
 def apply_rules(text):
 
     if not text:
-
         return ""
 
 
@@ -138,7 +136,6 @@ def apply_rules(text):
 def clean_spaces(text):
 
     if not text:
-
         return ""
 
 
@@ -150,6 +147,45 @@ def clean_spaces(text):
         " ",
         text
     )
+
+
+    return text.strip()
+
+
+
+
+
+# =========================
+# حذف پایان‌های خراب RSS
+# =========================
+
+
+def clean_rss_breaks(text):
+
+    if not text:
+        return ""
+
+
+    bad_endings = [
+
+        "...",
+
+        "…",
+
+        "ادامه",
+
+        "ادامه مطلب",
+
+        "بیشتر بخوانید",
+
+    ]
+
+
+    for item in bad_endings:
+
+        if text.endswith(item):
+
+            text = text[:-len(item)]
 
 
     return text.strip()
@@ -187,7 +223,6 @@ def clean_title_start(title):
 
     for item in starts:
 
-
         if title.startswith(item):
 
             title = title.replace(
@@ -197,7 +232,6 @@ def clean_title_start(title):
             ).strip()
 
 
-
     return title
 
 
@@ -205,53 +239,7 @@ def clean_title_start(title):
 
 
 # =========================
-# حذف پایان‌های خراب RSS
-# =========================
-
-
-def clean_rss_breaks(text):
-
-
-    if not text:
-
-        return ""
-
-
-  bad_endings = [
-
-        "...",
-
-        "…",
-
-        "ادامه",
-
-        "ادامه مطلب",
-
-        "بیشتر بخوانید",
-
-    ]
-
-
-   for item in bad_endings:
-
-
-        if text.endswith(item):
-
-            text = text.replace(
-                item,
-                ""
-            )
-
-
-
-    return text.strip()
-
-
-
-
-
-# =========================
-# کوتاه سازی تیتر هوشمند
+# کوتاه سازی تیتر
 # =========================
 
 
@@ -261,11 +249,9 @@ def shorten_title(title, limit=90):
     title = clean_spaces(title)
 
 
-
     if len(title) <= limit:
 
         return title
-
 
 
 
@@ -282,12 +268,9 @@ def shorten_title(title, limit=90):
     ]
 
 
-
     for sep in separators:
 
-
         if sep in title:
-
 
             part = title.split(sep)[0].strip()
 
@@ -298,18 +281,13 @@ def shorten_title(title, limit=90):
 
 
 
-
-
     words = title.split()
-
 
 
     result = ""
 
 
-
     for word in words:
-
 
         if len(result + " " + word) > limit:
 
@@ -319,7 +297,6 @@ def shorten_title(title, limit=90):
         result += " " + word
 
 
-
     return result.strip()
 
 
@@ -327,7 +304,7 @@ def shorten_title(title, limit=90):
 
 
 # =========================
-# تیتر نهایی
+# اصلاح تیتر
 # =========================
 
 
@@ -335,9 +312,7 @@ def improve_title(title):
 
 
     if not title:
-
         return ""
-
 
 
     title = html.unescape(title)
@@ -358,11 +333,9 @@ def improve_title(title):
     title = shorten_title(title)
 
 
-
     title = title.rstrip(
         ".!؟"
     )
-
 
 
     return title.strip()
@@ -372,7 +345,7 @@ def improve_title(title):
 
 
 # =========================
-# خلاصه نهایی
+# اصلاح خلاصه
 # =========================
 
 
@@ -380,9 +353,7 @@ def improve_summary(summary):
 
 
     if not summary:
-
         return ""
-
 
 
     summary = html.unescape(summary)
@@ -404,13 +375,11 @@ def improve_summary(summary):
     )
 
 
-
     summary = re.sub(
         r"\.{2,}",
         "",
         summary
     )
-
 
 
     if summary and summary[-1] not in [
@@ -426,7 +395,6 @@ def improve_summary(summary):
         summary += "."
 
 
-
     return summary.strip()
 
 
@@ -434,7 +402,7 @@ def improve_summary(summary):
 
 
 # =========================
-# حذف تکرار تیتر
+# حذف تکرار تیتر در خلاصه
 # =========================
 
 
@@ -450,7 +418,6 @@ def remove_title_repeat(title, summary):
     words = title.split()
 
 
-
     if len(words) < 4:
 
         return summary
@@ -462,14 +429,17 @@ def remove_title_repeat(title, summary):
     )
 
 
-
     if check in summary:
 
 
         summary = summary.replace(
+
             check,
+
             "",
+
             1
+
         ).strip()
 
 
@@ -506,7 +476,6 @@ def rewrite_news(title, summary):
 
 
     return {
-
 
         "title":
 
