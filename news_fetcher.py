@@ -1,17 +1,151 @@
-from rss_fetcher import fetch_news
-from sources import RSS_SOURCES
+"""
+KhabarF24 News Fetcher v6.3
+
+وظیفه:
+- دریافت خبر از RSS
+- استاندارد سازی خروجی
+- نگهداری نام منبع
+- آماده سازی برای Category / AI / Formatter
+"""
+
+import feedparser
+import html
+import re
 
 
-def get_latest_news():
 
-    news = []
+# =========================
+# Clean Text
+# =========================
 
-    for source in RSS_SOURCES:
+def clean_text(text):
 
-        try:
-            news.extend(fetch_news(source))
+    if not text:
+        return ""
 
-        except Exception as e:
-            print(f"RSS Error {source.get('name', '')}: {e}")
+    text = html.unescape(text)
 
-    return news
+    text = re.sub(
+        r"<.*?>",
+        "",
+        text
+    )
+
+    text = re.sub(
+        r"\s+",
+        " ",
+        text
+    )
+
+    return text.strip()
+
+
+
+# =========================
+# RSS Fetch
+# =========================
+
+def fetch_news(source):
+
+
+    if not source:
+
+        return []
+
+
+
+    url = source.get(
+        "url",
+        ""
+    )
+
+
+    name = source.get(
+        "name",
+        "Unknown"
+    )
+
+
+
+    if not url:
+
+        return []
+
+
+
+
+    try:
+
+
+        feed = feedparser.parse(
+            url
+        )
+
+
+        news = []
+
+
+
+        for item in feed.entries[:10]:
+
+
+            title = clean_text(
+                item.get(
+                    "title",
+                    ""
+                )
+            )
+
+
+
+            summary = clean_text(
+                item.get(
+                    "summary",
+                    ""
+                )
+            )
+
+
+
+            link = item.get(
+                "link",
+                ""
+            )
+
+
+
+            if not title:
+
+                continue
+
+
+
+
+            news.append({
+
+                "title": title,
+
+                "summary": summary,
+
+                "link": link,
+
+                "source": name
+
+            })
+
+
+
+        return news
+
+
+
+
+    except Exception as e:
+
+
+        print(
+            f"Fetch Error {name}: {e}"
+        )
+
+
+        return []
