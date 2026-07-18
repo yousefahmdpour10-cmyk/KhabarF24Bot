@@ -1,392 +1,596 @@
 """
-KhabarF24 Category Engine v6.2
+KhabarF24 Category Engine v7.0
 
-Smart Category Detection
+Smart Category + Hashtag Engine
 
-Priority:
+Features:
 
-1- Sport ⚽
-2- Politics / Security 🔴
-3- Iran 🇮🇷
-4- World 🌍
-5- Technology 💻
-6- Gaming 🎮
-7- Economy 💰
-8- Health 🏥
-9- Science 🔬
-10- Weather 🌦
+- Weighted keywords
+- Priority detection
+- Emoji
+- Hashtag
+- Sport separation
+- Politics protection
 """
 
+print("🔥 KhabarF24 Category Engine v7.0 Loaded")
 
-print("🔥 KhabarF24 Category Engine v6.2 Loaded")
 
+
+# ==========================
+# Categories Database
+# ==========================
 
 
 CATEGORIES = {
 
 
-    "politics": [
+    "football": {
 
-        "جنگ",
-        "حمله",
-        "حمله هوایی",
-        "حمله موشکی",
+        "name": "فوتبال",
+        "emoji": "⚽",
+        "hashtag": "#فوتبال",
+        "weight": 5,
 
-        "موشک",
-        "پهپاد",
+        "keywords": [
 
-        "ارتش",
-        "نظامی",
-        "عملیات نظامی",
+            "فوتبال",
+            "football",
+            "soccer",
 
-        "درگیری",
-        "تنش",
-        "بحران",
+            "توپ فوتبال",
+            "کفش فوتبال",
+            "استوک",
+            "دروازه",
 
-        "تحریم",
+            "گل",
+            "گلزنی",
+            "گلزن",
 
-        "مذاکرات",
-        "توافق",
-        "آتش بس",
+            "بازیکن",
+            "مهاجم",
+            "مدافع",
+            "هافبک",
 
-        "انتخابات",
+            "مربی",
+            "سرمربی",
 
-        "رئیس جمهور",
-        "رئیس‌جمهور",
+            "ترکیب",
+            "lineup",
 
-        "وزیر",
-        "پارلمان",
+            "کارت زرد",
+            "کارت قرمز",
 
-        "بازداشت",
-        "دستگیری",
+            "var",
 
-        "اعدام",
+            "نقل و انتقالات",
+            "قرارداد بازیکن",
 
-        "ترور",
-        "انفجار",
+            "جام جهانی",
+            "لیگ قهرمانان",
+            "چمپیونزلیگ",
 
-    ],
+            "فیفا",
+            "یوفا",
 
+            "مسی",
+            "رونالدو",
+            "امباپه",
+            "هالند",
+            "یامال",
 
+            "منچستر یونایتد",
+            "Manchester United",
 
-    "iran": [
+            "منچستر سیتی",
 
-        "ایران",
-        "ایرانی",
+            "رئال مادرید",
+            "Real Madrid",
 
-        "تهران",
+            "بارسلونا",
+            "Barcelona",
 
-        "دولت ایران",
+            "لیورپول",
+            "Liverpool",
 
-        "مجلس ایران",
+            "آرسنال",
+            "Arsenal",
 
-        "سپاه",
+        ]
+    },
 
-        "رئیس جمهور ایران",
 
-    ],
 
 
 
+    "basketball": {
 
-    "world": [
 
-        "آمریکا",
-        "بریتانیا",
+        "name": "بسکتبال",
+        "emoji": "🏀",
+        "hashtag": "#بسکتبال",
+        "weight": 5,
 
-        "روسیه",
-        "اوکراین",
 
-        "چین",
+        "keywords": [
 
-        "فرانسه",
-        "آلمان",
+            "بسکتبال",
+            "basketball",
 
-        "جهان",
+            "nba",
+            "wnba",
 
-        "بین الملل",
-        "بین‌الملل",
+            "توپ بسکتبال",
 
-    ],
+            "دانک",
 
+            "سه امتیازی",
 
+            "ریباند",
 
+            "کوآرتر",
 
-    "sport": [
+            "زمین بسکتبال",
 
-        # فوتبال
+            "لیکرز",
 
-        "فوتبال",
-        "football",
-        "soccer",
+            "واریرز",
 
-        "فیفا",
-        "fifa",
+            "لبران",
 
-        "یوفا",
-        "uefa",
+            "کری",
 
-        "جام جهانی",
+        ]
 
-        "لیگ قهرمانان",
+    },
 
-        "premier league",
-        "la liga",
-        "serie a",
-        "bundesliga",
 
-        "گل",
-        "گلزنی",
 
-        "نتیجه",
 
-        "ترکیب",
 
-        "کارت زرد",
-        "کارت قرمز",
 
-        "مصدومیت",
+    "volleyball": {
 
-        "بازیکن",
 
-        "مربی",
-        "سرمربی",
+        "name": "والیبال",
+        "emoji": "🏐",
+        "hashtag": "#والیبال",
+        "weight": 5,
 
 
-        # بازیکنان معروف
+        "keywords": [
 
-        "مسی",
-        "رونالدو",
-        "امباپه",
-        "هالند",
-        "یامال",
+            "والیبال",
+            "volleyball",
 
+            "fivb",
 
-        # تیم ها
+            "ست",
 
-        "منچستر یونایتد",
-        "رئال مادرید",
-        "بارسلونا",
-        "لیورپول",
-        "آرسنال",
+            "تور والیبال",
 
+            "توپ والیبال",
 
-        # رشته ها
+        ]
 
-        "nba",
+    },
 
-        "بسکتبال",
-        "basketball",
 
-        "والیبال",
-        "volleyball",
 
-        "تنیس",
-        "tennis",
 
-        "کشتی",
 
-        "فرمول یک",
-        "formula 1",
-        "f1",
+    "politics": {
 
-    ],
 
+        "name": "سیاست",
+        "emoji": "🔴",
+        "hashtag": "#سیاست",
+        "weight": 5,
 
 
+        "keywords": [
 
+            "جنگ",
 
-    "technology": [
+            "حمله",
 
-        "فناوری",
+            "حمله نظامی",
 
-        "تکنولوژی",
+            "حمله موشکی",
 
-        "technology",
+            "حمله هوایی",
 
-        "هوش مصنوعی",
+            "موشک",
 
-        "artificial intelligence",
+            "پهپاد",
 
-        "openai",
+            "ارتش",
 
-        "chatgpt",
+            "نیروی نظامی",
 
-        "گوگل",
+            "عملیات نظامی",
 
-        "google",
+            "درگیری",
 
-        "اپل",
+            "تنش",
 
-        "apple",
+            "بحران",
 
-        "مایکروسافت",
+            "تحریم",
 
-        "microsoft",
+            "مذاکرات",
 
-        "انویدیا",
+            "توافق",
 
-        "nvidia",
+            "آتش بس",
 
-        "تسلا",
+            "دیپلماسی",
 
-        "tesla",
+            "انتخابات",
 
-        "ربات",
+            "رئیس جمهور",
 
-        "تراشه",
+            "رئیس‌جمهور",
 
-        "چیپ",
+            "وزیر خارجه",
 
-        "هک",
+            "وزیر دفاع",
 
-        "امنیت سایبری",
+            "پارلمان",
 
-    ],
+            "کاخ سفید",
 
+            "ناتو",
 
+            "ترور",
 
+            "انفجار",
 
+            "بازداشت",
 
-    "gaming": [
+            "کودتا",
 
-        "گیم",
+        ]
 
-        "gaming",
+    },
 
-        "game",
 
-        "بازی ویدیویی",
 
-        "پلی استیشن",
 
-        "playstation",
 
-        "ایکس باکس",
 
-        "xbox",
+    "iran": {
 
-        "نینتندو",
 
-        "nintendo",
+        "name": "ایران",
+        "emoji": "🇮🇷",
+        "hashtag": "#ایران",
+        "weight": 4,
 
-        "steam",
 
-        "استیم",
+        "keywords": [
 
-        "ubisoft",
+            "ایران",
 
-        "call of duty",
+            "ایرانی",
 
-        "minecraft",
+            "تهران",
 
-        "fortnite",
+            "دولت ایران",
 
-        "کنسول",
+            "مجلس ایران",
 
-    ],
+            "سپاه",
 
+            "وزارت کشور",
 
+        ]
 
+    },
 
 
-    "economy": [
 
-        "اقتصاد",
 
-        "دلار",
+    "world": {
 
-        "ارز",
 
-        "یورو",
+        "name": "جهان",
+        "emoji": "🌍",
+        "hashtag": "#جهان",
+        "weight": 3,
 
-        "طلا",
 
-        "نفت",
+        "keywords": [
 
-        "گاز",
+            "آمریکا",
 
-        "بورس",
+            "روسیه",
 
-        "سهام",
+            "چین",
 
-        "تورم",
+            "اروپا",
 
-        "بانک",
+            "اوکراین",
 
-        "بیت کوین",
+            "بریتانیا",
 
-        "bitcoin",
+            "فرانسه",
 
-        "کریپتو",
+            "آلمان",
 
-    ],
+            "سازمان ملل",
 
+            "بین الملل",
 
+            "بین‌الملل",
 
+        ]
 
-    "health": [
+    },
+        "technology": {
 
-        "سلامت",
 
-        "بیماری",
+        "name": "تکنولوژی",
+        "emoji": "💻",
+        "hashtag": "#تکنولوژی",
+        "weight": 4,
 
-        "ویروس",
 
-        "واکسن",
+        "keywords": [
 
-        "پزشکی",
+            "فناوری",
 
-        "بیمارستان",
+            "تکنولوژی",
 
-        "دارو",
+            "technology",
 
-    ],
+            "هوش مصنوعی",
 
+            "ai",
 
+            "artificial intelligence",
 
+            "openai",
 
-    "science": [
+            "chatgpt",
 
-        "علم",
+            "گوگل",
 
-        "science",
+            "google",
 
-        "تحقیق",
+            "اپل",
 
-        "فضا",
+            "apple",
 
-        "ناسا",
+            "مایکروسافت",
 
-        "nasa",
+            "microsoft",
 
-    ],
+            "انویدیا",
 
+            "nvidia",
 
+            "تسلا",
 
+            "tesla",
 
+            "ربات",
 
-    "weather": [
+            "تراشه",
 
-        "هواشناسی",
+            "چیپ",
 
-        "weather",
+            "پردازنده",
 
-        "طوفان",
+            "امنیت سایبری",
 
-        "سیل",
+            "هک",
 
-        "زلزله",
+        ]
 
-        "بارندگی",
+    },
 
-        "برف",
 
-        "گرما",
 
-        "سرمای شدید",
 
-    ],
+
+    "gaming": {
+
+
+        "name": "گیم",
+        "emoji": "🎮",
+        "hashtag": "#گیم",
+        "weight": 3,
+
+
+        "keywords": [
+
+            "گیم",
+
+            "gaming",
+
+            "game",
+
+            "بازی ویدیویی",
+
+            "پلی استیشن",
+
+            "playstation",
+
+            "xbox",
+
+            "ایکس باکس",
+
+            "نینتندو",
+
+            "nintendo",
+
+            "steam",
+
+            "استیم",
+
+            "کنسول",
+
+            "minecraft",
+
+            "fortnite",
+
+            "call of duty",
+
+        ]
+
+    },
+
+
+
+
+
+    "economy": {
+
+
+        "name": "اقتصاد",
+        "emoji": "💰",
+        "hashtag": "#اقتصاد",
+        "weight": 4,
+
+
+        "keywords": [
+
+            "اقتصاد",
+
+            "دلار",
+
+            "ارز",
+
+            "یورو",
+
+            "طلا",
+
+            "نفت",
+
+            "گاز",
+
+            "بورس",
+
+            "سهام",
+
+            "تورم",
+
+            "بانک",
+
+            "بیت کوین",
+
+            "bitcoin",
+
+            "کریپتو",
+
+        ]
+
+    },
+
+
+
+
+
+    "health": {
+
+
+        "name": "سلامت",
+        "emoji": "🏥",
+        "hashtag": "#سلامت",
+        "weight": 3,
+
+
+        "keywords": [
+
+            "سلامت",
+
+            "بیماری",
+
+            "ویروس",
+
+            "واکسن",
+
+            "پزشکی",
+
+            "دارو",
+
+            "بیمارستان",
+
+        ]
+
+    },
+
+
+
+
+
+    "science": {
+
+
+        "name": "علم",
+        "emoji": "🔬",
+        "hashtag": "#علم",
+        "weight": 2,
+
+
+        "keywords": [
+
+            "علم",
+
+            "science",
+
+            "تحقیق",
+
+            "آزمایش",
+
+            "فضا",
+
+            "ناسا",
+
+            "nasa",
+
+        ]
+
+    },
+
+
+
+
+
+    "weather": {
+
+
+        "name": "آب‌وهوا",
+        "emoji": "🌦",
+        "hashtag": "#آب_وهوا",
+        "weight": 3,
+
+
+        "keywords": [
+
+            "هواشناسی",
+
+            "weather",
+
+            "طوفان",
+
+            "سیل",
+
+            "زلزله",
+
+            "بارندگی",
+
+            "برف",
+
+            "گرمای شدید",
+
+            "سرمای شدید",
+
+        ]
+
+    },
+
 
 }
 
@@ -395,34 +599,10 @@ CATEGORIES = {
 
 
 
-CATEGORY_PRIORITY = [
 
-    "sport",
-
-    "politics",
-
-    "iran",
-
-    "world",
-
-    "technology",
-
-    "gaming",
-
-    "economy",
-
-    "health",
-
-    "science",
-
-    "weather",
-
-]
-
-
-
-
-
+# ==========================
+# Detection Engine
+# ==========================
 
 
 def detect_smart_category(
@@ -436,19 +616,7 @@ def detect_smart_category(
 ):
 
 
-    # فقط تیتر و خلاصه
-    # منبع حذف شد
-
-    text = f"""
-
-    {title}
-
-    {summary}
-
-    """.lower()
-
-
-
+    text = f"{title} {summary}".lower()
 
 
 
@@ -456,18 +624,20 @@ def detect_smart_category(
 
 
 
-    for category, keywords in CATEGORIES.items():
+    for category, data in CATEGORIES.items():
 
 
         score = 0
 
 
-        for word in keywords:
+
+        for word in data["keywords"]:
 
 
             if word.lower() in text:
 
-                score += 1
+                score += data["weight"]
+
 
 
         scores[category] = score
@@ -476,51 +646,112 @@ def detect_smart_category(
 
 
 
+    # ==========================
+    # حفاظت فوتبال و ورزش
+    # ==========================
 
-    # =========================
-    # ورزش قوی
-    # =========================
 
+    if scores.get("football",0) >= 5:
 
-    if scores["sport"] >= 2:
-
-        return "sport"
-
+        result = "football"
 
 
 
+    elif scores.get("basketball",0) >= 5:
+
+        result = "basketball"
 
 
 
-    # =========================
-    # سیاست قوی
-    # =========================
+    elif scores.get("volleyball",0) >= 5:
 
-
-    if scores["politics"] >= 1:
-
-        return "politics"
+        result = "volleyball"
 
 
 
 
+    # ==========================
+    # سیاست همیشه بالاتر از جهان
+    # ==========================
 
 
+    elif scores.get("politics",0) >= 5:
 
-    # =========================
-    # بقیه دسته ها
-    # =========================
-
-
-    for category in CATEGORY_PRIORITY:
-
-
-        if scores.get(category,0) > 0:
-
-            return category
+        result = "politics"
 
 
 
 
+    elif scores.get("iran",0) > 0:
 
-    return "world"
+        result = "iran"
+
+
+
+
+    elif scores.get("world",0) > 0:
+
+        result = "world"
+
+
+
+    else:
+
+
+        result = max(
+
+            scores,
+
+            key=scores.get
+
+        )
+
+
+
+        if scores[result] == 0:
+
+            result = "world"
+
+
+
+
+
+    return result
+
+
+
+
+
+# ==========================
+# Category Info
+# ==========================
+
+
+def get_category_info(category):
+
+
+    data = CATEGORIES.get(
+
+        category,
+
+        CATEGORIES["world"]
+
+    )
+
+
+    return {
+
+
+        "category": category,
+
+
+        "name": data["name"],
+
+
+        "emoji": data["emoji"],
+
+
+        "hashtag": data["hashtag"]
+
+
+    }
