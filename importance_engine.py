@@ -1,25 +1,19 @@
 """
-KhabarF24 Importance Engine v4.0
+KhabarF24 Importance Engine v4.1
 
-Priority:
+بهینه شده برای:
+- خبر فوری
+- ورزش
+- فناوری
+- تلگرام
 
-1 Politics / Security 🔴
-2 Iran 🇮🇷
-3 World 🌍
-4 Sport ⚽
-5 Technology 💻
-6 Gaming 🎮
-7 Others
 """
-
 
 from sport_rules import calculate_sport_score
 
 
 
-
 CATEGORY_WEIGHTS = {
-
 
     "politics": 4,
 
@@ -27,17 +21,19 @@ CATEGORY_WEIGHTS = {
 
     "world": 2,
 
-    "sport": 0,
+    "sport": 3,
 
-    "technology": 1,
+    "technology": 2,
 
-    "gaming": 1,
+    "gaming": 2,
 
-    "economy": 2,
+    "economy": 3,
 
     "weather": 3,
 
     "health": 2,
+
+    "science": 2,
 
 }
 
@@ -51,180 +47,98 @@ IMPORTANT_WORDS = {
     "politics": [
 
         "جنگ",
-
         "حمله",
-
         "موشک",
-
         "پهپاد",
-
         "عملیات نظامی",
-
         "درگیری",
-
         "بحران",
-
         "تحریم",
-
         "مذاکرات",
-
         "توافق",
-
         "آتش بس",
-
-        "هسته‌ای",
-
-        "هسته ای",
-
         "ترور",
-
         "انفجار",
-
-        "کودتا",
-
         "انتخابات",
 
-        "رئیس جمهور",
-
-        "وزیر دفاع",
-
-        "وزیر خارجه",
-
     ],
-
 
 
     "iran": [
 
         "ایران",
-
         "تهران",
-
-        "دولت ایران",
-
+        "دولت",
         "مجلس",
-
         "سپاه",
 
     ],
 
 
-
     "world": [
 
         "آمریکا",
-
         "روسیه",
-
         "چین",
-
         "اوکراین",
-
         "اروپا",
 
-        "بین‌الملل",
-
     ],
 
 
+    "sport": [
 
-    "economy": [
-
-        "دلار",
-
-        "ارز",
-
-        "طلا",
-
-        "نفت",
-
-        "بورس",
-
-        "تورم",
-
-        "بانک",
-
-        "بیت کوین",
-
-        "کریپتو",
+        "برد",
+        "باخت",
+        "پیروزی",
+        "قهرمانی",
+        "رکورد",
+        "گل",
+        "مصدومیت",
+        "انتقال",
+        "قرارداد",
+        "بازیکن",
+        "مربی",
+        "لیگ",
+        "فینال",
+        "جام",
 
     ],
-
 
 
     "technology": [
 
         "هوش مصنوعی",
-
         "openai",
-
         "chatgpt",
-
         "گوگل",
-
         "اپل",
-
         "مایکروسافت",
-
         "تراشه",
-
-        "چیپ",
-
         "هک",
 
-        "امنیت سایبری",
-
     ],
-
 
 
     "gaming": [
 
         "گیم",
-
         "بازی",
-
-        "playstation",
-
+        "پلی استیشن",
         "xbox",
-
-        "steam",
-
         "کنسول",
 
-        "بازی ویدیویی",
-
     ],
 
 
+    "economy": [
 
-    "weather": [
-
-        "سیل",
-
-        "زلزله",
-
-        "طوفان",
-
-        "سونامی",
-
-        "هشدار قرمز",
-
-        "فاجعه طبیعی",
-
-    ],
-
-
-
-    "health": [
-
-        "ویروس",
-
-        "بیماری",
-
-        "واکسن",
-
-        "همه گیری",
+        "دلار",
+        "ارز",
+        "طلا",
+        "نفت",
+        "تورم",
+        "بورس",
 
     ],
 
@@ -237,14 +151,11 @@ IMPORTANT_WORDS = {
 
 HIGH_IMPACT_WORDS = [
 
+    "کشته",
 
-    "صدها کشته",
+    "تلفات",
 
-    "هزاران کشته",
-
-    "تلفات سنگین",
-
-    "فاجعه انسانی",
+    "فاجعه",
 
     "وضعیت اضطراری",
 
@@ -252,11 +163,9 @@ HIGH_IMPACT_WORDS = [
 
     "جنگ آغاز شد",
 
-    "حمله هسته‌ای",
+    "رکورد تاریخی",
 
-    "زلزله شدید",
-
-    "سیل مرگبار",
+    "قهرمان شد",
 
 ]
 
@@ -264,34 +173,23 @@ HIGH_IMPACT_WORDS = [
 
 
 
-def calculate_importance(
 
-        title="",
-
-        summary="",
-
-        category=""
-
-):
+def calculate_importance(title="", summary="", category=""):
 
 
     text = f"{title} {summary}".lower()
-
 
 
     score = 1
 
 
 
-
-
-    # ورزش اختصاصی
-
+    # ورزش
 
     if category == "sport":
 
 
-        return calculate_sport_score(
+        sport_score = calculate_sport_score(
 
             title,
 
@@ -300,13 +198,21 @@ def calculate_importance(
         )
 
 
+        # حداقل ارزش برای ورزش
+
+        return max(
+
+            sport_score,
+
+            6
+
+        )
 
 
 
 
 
-    # دسته
-
+    # امتیاز دسته
 
     score += CATEGORY_WEIGHTS.get(
 
@@ -320,9 +226,7 @@ def calculate_importance(
 
 
 
-
     # کلمات مهم
-
 
     for cat, words in IMPORTANT_WORDS.items():
 
@@ -336,7 +240,6 @@ def calculate_importance(
             if word.lower() in text:
 
                 hits += 1
-
 
 
 
@@ -361,14 +264,12 @@ def calculate_importance(
 
 
 
-    # خبرهای بحرانی
-
+    # تاثیر بالا
 
     for word in HIGH_IMPACT_WORDS:
 
 
         if word.lower() in text:
-
 
             score += 3
 
@@ -377,9 +278,7 @@ def calculate_importance(
 
 
 
-
     if score > 10:
-
 
         score = 10
 
@@ -407,7 +306,7 @@ def is_important(
 
         category="",
 
-        minimum=6
+        minimum=5
 
 ):
 
@@ -423,13 +322,11 @@ def is_important(
     )
 
 
-
     print(
 
         f"🔥 Importance Score: {score}/10"
 
     )
-
 
 
     return score >= minimum
