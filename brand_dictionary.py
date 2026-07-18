@@ -312,3 +312,515 @@ def replace_official_names(text):
 
 
     return text.strip()
+  # =====================================================
+# ⚽ Teams
+# =====================================================
+
+
+TEAMS = {
+
+
+    "Manchester United":
+        "منچستر یونایتد (Manchester United)",
+
+
+    "Manchester City":
+        "منچستر سیتی (Manchester City)",
+
+
+    "Liverpool":
+        "لیورپول (Liverpool)",
+
+
+    "Arsenal":
+        "آرسنال (Arsenal)",
+
+
+    "Chelsea":
+        "چلسی (Chelsea)",
+
+
+    "Real Madrid":
+        "رئال مادرید (Real Madrid)",
+
+
+    "Barcelona":
+        "بارسلونا (Barcelona)",
+
+
+    "Bayern Munich":
+        "بایرن مونیخ (Bayern Munich)",
+
+
+    "Paris Saint-Germain":
+        "پاری‌سن‌ژرمن (Paris Saint-Germain)",
+
+
+    "PSG":
+        "پاری‌سن‌ژرمن (PSG)",
+
+
+    "Juventus":
+        "یوونتوس (Juventus)",
+
+
+    "Inter Milan":
+        "اینتر میلان (Inter Milan)",
+
+
+    "AC Milan":
+        "آث میلان (AC Milan)",
+
+
+    "Borussia Dortmund":
+        "بوروسیا دورتموند (Borussia Dortmund)",
+
+
+    "Ajax":
+        "آژاکس (Ajax)",
+
+
+}
+
+
+
+
+
+
+# =====================================================
+# 👤 People
+# =====================================================
+
+
+PEOPLE = {
+
+
+    # Politics / Technology
+
+
+    "Donald Trump":
+        "دونالد ترامپ",
+
+
+    "Joe Biden":
+        "جو بایدن",
+
+
+    "Elon Musk":
+        "ایلان ماسک",
+
+
+    "Sam Altman":
+        "سم آلتمن",
+
+
+    "Mark Zuckerberg":
+        "مارک زاکربرگ",
+
+
+
+    # Football Players
+
+
+    "Lionel Messi":
+        "لیونل مسی",
+
+
+    "Cristiano Ronaldo":
+        "کریستیانو رونالدو",
+
+
+    "Kylian Mbappe":
+        "کیلیان امباپه",
+
+
+    "Erling Haaland":
+        "ارلینگ هالند",
+
+
+    "Lamine Yamal":
+        "لامین یامال",
+
+
+    "Neymar":
+        "نیمار",
+
+
+    "Mohamed Salah":
+        "محمد صلاح",
+
+
+}
+
+
+
+
+
+
+# =====================================================
+# 🌍 Countries
+# =====================================================
+
+
+COUNTRIES = {
+
+
+    "United States":
+        "آمریکا",
+
+
+    "United Kingdom":
+        "بریتانیا",
+
+
+    "England":
+        "انگلیس",
+
+
+    "Iran":
+        "ایران",
+
+
+    "Israel":
+        "اسرائیل",
+
+
+    "Russia":
+        "روسیه",
+
+
+    "Ukraine":
+        "اوکراین",
+
+
+    "China":
+        "چین",
+
+
+    "France":
+        "فرانسه",
+
+
+    "Germany":
+        "آلمان",
+
+
+    "Spain":
+        "اسپانیا",
+
+
+    "Italy":
+        "ایتالیا",
+
+
+    "Portugal":
+        "پرتغال",
+
+
+    "Argentina":
+        "آرژانتین",
+
+
+    "Brazil":
+        "برزیل",
+
+
+    "Japan":
+        "ژاپن",
+
+
+    "South Korea":
+        "کره جنوبی",
+
+
+}
+
+
+
+
+
+
+# =====================================================
+# 🏳️ Country Flags
+# =====================================================
+
+
+COUNTRY_FLAGS = {
+
+
+    "آمریکا":
+        "🇺🇸",
+
+
+    "بریتانیا":
+        "🇬🇧",
+
+
+    "انگلیس":
+        "🏴",
+
+
+    "ایران":
+        "🇮🇷",
+
+
+    "اسرائیل":
+        "🇮🇱",
+
+
+    "روسیه":
+        "🇷🇺",
+
+
+    "اوکراین":
+        "🇺🇦",
+
+
+    "چین":
+        "🇨🇳",
+
+
+    "فرانسه":
+        "🇫🇷",
+
+
+    "آلمان":
+        "🇩🇪",
+
+
+    "اسپانیا":
+        "🇪🇸",
+
+
+    "ایتالیا":
+        "🇮🇹",
+
+
+    "پرتغال":
+        "🇵🇹",
+
+
+    "آرژانتین":
+        "🇦🇷",
+
+
+    "برزیل":
+        "🇧🇷",
+
+
+    "ژاپن":
+        "🇯🇵",
+
+
+    "کره جنوبی":
+        "🇰🇷",
+
+
+}
+
+
+
+
+
+
+# =====================================================
+# 📰 Media Sources
+# =====================================================
+
+
+MEDIA_FLAGS = {
+
+
+    "Reuters":
+        "🇬🇧",
+
+
+    "BBC":
+        "🇬🇧",
+
+
+    "CNN":
+        "🇺🇸",
+
+
+    "New York Times":
+        "🇺🇸",
+
+
+    "The Guardian":
+        "🇬🇧",
+
+
+    "Al Jazeera":
+        "🇶🇦",
+
+
+    "Iran International":
+        "🇬🇧",
+
+
+    "Tasnim":
+        "🇮🇷",
+
+
+    "Fars":
+        "🇮🇷",
+
+
+    "Khabar Fori":
+        "🇮🇷",
+
+
+    "ESPN":
+        "🇺🇸",
+
+
+    "FIBA":
+        "🌍",
+
+
+    "NBA":
+        "🇺🇸",
+
+
+    "FIFA":
+        "🌍",
+
+
+}
+
+
+
+
+
+
+# =====================================================
+# Replace Engine
+# =====================================================
+
+
+def replace_case_insensitive(text, old, new):
+
+
+    pattern = re.compile(
+
+        re.escape(old),
+
+        re.IGNORECASE
+
+    )
+
+
+    return pattern.sub(
+
+        new,
+
+        text
+
+    )
+
+
+
+
+
+
+def replace_official_names(text):
+
+
+    if not text:
+
+        return ""
+
+
+
+    dictionaries = [
+
+
+        BRANDS,
+
+        TEAMS,
+
+        COUNTRIES,
+
+        PEOPLE,
+
+    ]
+
+
+
+    for dictionary in dictionaries:
+
+
+        for key, value in dictionary.items():
+
+
+            text = replace_case_insensitive(
+
+                text,
+
+                key,
+
+                value
+
+            )
+
+
+
+    return text.strip()
+
+
+
+
+
+
+def add_country_flags(text):
+
+
+    if not text:
+
+        return ""
+
+
+
+    for country, flag in COUNTRY_FLAGS.items():
+
+
+        if country in text and not flag in text:
+
+
+            text = text.replace(
+
+                country,
+
+                f"{flag} {country}"
+
+            )
+
+
+
+    return text
+
+
+
+
+
+
+def format_media_source(source):
+
+
+    if not source:
+
+        return "🌐 Unknown"
+
+
+
+    flag = MEDIA_FLAGS.get(
+
+        source,
+
+        "🌐"
+
+    )
+
+
+    return f"{flag} {source}"
