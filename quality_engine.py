@@ -1,13 +1,21 @@
 """
-KhabarF24 Quality Engine v1.1
+KhabarF24 Quality Engine v2.0
 
-بررسی کیفیت خبر قبل از انتشار
+News Quality Control
 
-بهینه شده برای:
-- اخبار کوتاه تلگرام
-- ورزش
-- فناوری
-- منابع RSS
+هماهنگ با:
+- category_engine v7
+- category_hashtags.py
+- ai_processor v7
+- sport_formatter v5
+
+Features:
+- Quality score
+- Advertisement filtering
+- Brand English protection
+- Sport news support
+- Breaking news support
+- AI summary support
 """
 
 
@@ -15,24 +23,56 @@ import re
 
 
 
-MIN_TITLE_LENGTH = 10
-MIN_SUMMARY_LENGTH = 25
+print("🧪 KhabarF24 Quality Engine v2.0 Loaded")
+
+
+
+# =========================
+# Limits
+# =========================
+
+
+MIN_TITLE_LENGTH = 8
+
+MIN_SUMMARY_LENGTH = 20
 
 
 
 
-BAD_ENGLISH_WORDS = [
+# =========================
+# Allowed English
+# =========================
 
-    "the",
-    "is",
-    "are",
-    "has",
-    "have",
-    "with",
-    "from",
-    "and",
-    "this",
-    "that",
+
+ALLOWED_ENGLISH = [
+
+    # Technology
+
+    "OpenAI",
+    "ChatGPT",
+    "Google",
+    "Apple",
+    "Microsoft",
+    "Tesla",
+    "NVIDIA",
+    "AI",
+
+
+    # Sport
+
+    "Manchester United",
+    "Manchester City",
+    "Real Madrid",
+    "Barcelona",
+    "Liverpool",
+    "Arsenal",
+
+    "FIFA",
+    "UEFA",
+    "NBA",
+    "Formula 1",
+
+    "BBC Sport",
 
 ]
 
@@ -40,55 +80,140 @@ BAD_ENGLISH_WORDS = [
 
 
 
+
+# =========================
+# Bad Translation
+# =========================
+
+
 BAD_PHRASES = [
-
-    "مورد حمله قرار داد",
-
-    "به پایان می دهد",
-
-    "می باشد",
 
     "این متن",
 
     "یک اندازه",
 
+    "می باشد",
+
+    "به پایان می دهد",
+
+    "مورد حمله قرار داد",
+
+    "در این مقاله",
+
+    "برای اطلاعات بیشتر",
+
 ]
 
 
 
 
 
-def contains_english(text):
+# =========================
+# Advertisement
+# =========================
+
+
+ADVERTISEMENT_WORDS = [
+
+    "خرید",
+
+    "فروش",
+
+    "تخفیف",
+
+    "جایزه",
+
+    "ثبت نام",
+
+    "اسپانسر",
+
+    "تبلیغات",
+
+    "رایگان",
+
+    "کد تخفیف",
+
+    "همین حالا",
+
+    "تماس بگیرید",
+
+    "عضویت",
+
+]
+
+
+
+
+
+
+
+# =========================
+# Helpers
+# =========================
+
+
+def normalize(text):
+
+    if not text:
+
+        return ""
+
+    return text.lower()
+
+
+
+
+
+
+def remove_allowed_english(text):
+
+
+    for word in ALLOWED_ENGLISH:
+
+        text = text.replace(
+
+            word,
+
+            ""
+
+        )
+
+
+    return text
+
+
+
+
+
+
+def contains_bad_english(text):
+
 
     if not text:
 
         return False
 
 
-    words = re.findall(
 
-        r"\b[A-Za-z]{4,}\b",
+    clean = remove_allowed_english(
 
         text
 
     )
 
 
-    count = 0
+
+    english_words = re.findall(
+
+        r"[A-Za-z]{4,}",
+
+        clean
+
+    )
 
 
-    for word in words:
 
-
-        if word.lower() in BAD_ENGLISH_WORDS:
-
-            count += 1
-
-
-
-    # فقط وقتی تعداد زیاد باشد مشکل است
-
-    return count >= 2
+    return len(english_words) >= 3
 
 
 
@@ -96,11 +221,10 @@ def contains_english(text):
 
 
 
-def check_bad_phrases(text):
+def contains_bad_phrase(text):
 
-    if not text:
 
-        return False
+    text = normalize(text)
 
 
     for phrase in BAD_PHRASES:
@@ -118,43 +242,50 @@ def check_bad_phrases(text):
 
 
 
-def calculate_quality(title, summary):
+def is_advertisement(text):
+
+
+    text = normalize(text)
+
+
+    count = 0
+
+
+
+    for word in ADVERTISEMENT_WORDS:
+
+
+        if word in text:
+
+            count += 1
+
+
+
+    return count >= 2
+
+
+
+
+
+
+
+# =========================
+# Quality Score
+# =========================
+
+
+def calculate_quality(
+
+        title,
+
+        summary,
+
+        category="world"
+
+):
 
 
     score = 100
-
-
-
-    # تیتر
-
-    if not title:
-
-        score -= 50
-
-
-    elif len(title) < MIN_TITLE_LENGTH:
-
-        score -= 10
-
-
-
-
-
-
-    # خلاصه
-
-
-    if not summary:
-
-        score -= 25
-
-
-    elif len(summary) < MIN_SUMMARY_LENGTH:
-
-        score -= 10
-
-
-
 
 
 
@@ -164,9 +295,75 @@ def calculate_quality(title, summary):
 
 
 
-    # انگلیسی خراب
+    # ---------------------
+    # Title
+    # ---------------------
 
-    if contains_english(text):
+
+    if not title:
+
+
+        score -= 40
+
+
+
+    elif len(title) < MIN_TITLE_LENGTH:
+
+
+        score -= 10
+
+
+
+
+
+
+
+    # ---------------------
+    # Summary
+    # ---------------------
+
+
+    if not summary:
+
+
+        # خبر فوری می‌تواند خلاصه نداشته باشد
+
+        if category != "politics":
+
+            score -= 15
+
+
+
+    elif len(summary) < MIN_SUMMARY_LENGTH:
+
+
+        score -= 5
+
+
+
+
+
+
+    # ---------------------
+    # Advertisement
+    # ---------------------
+
+
+    if is_advertisement(text):
+
+        score -= 40
+
+
+
+
+
+
+    # ---------------------
+    # Bad AI Translation
+    # ---------------------
+
+
+    if contains_bad_phrase(text):
 
         score -= 15
 
@@ -174,25 +371,45 @@ def calculate_quality(title, summary):
 
 
 
-    # ترجمه ماشینی
 
-    if check_bad_phrases(text):
-
-        score -= 15
-
+    # ---------------------
+    # Broken English
+    # ---------------------
 
 
+    if contains_bad_english(text):
 
-
-    # خبر خیلی کوتاه
-
-    if len(text) < 50:
-
-        score -= 20
+        score -= 10
 
 
 
 
+
+
+
+    # ---------------------
+    # Too Short
+    # ---------------------
+
+
+    if len(text) < 40:
+
+
+        if category not in [
+
+            "sport",
+
+            "politics"
+
+        ]:
+
+            score -= 15
+
+
+
+
+
+    # limit
 
     if score < 0:
 
@@ -208,16 +425,34 @@ def calculate_quality(title, summary):
 
 
 
-def is_high_quality(title, summary, minimum=50):
+# =========================
+# Final Check
+# =========================
+
+
+def is_high_quality(
+
+        title,
+
+        summary,
+
+        category="world",
+
+        minimum=50
+
+):
 
 
     score = calculate_quality(
 
         title,
 
-        summary
+        summary,
+
+        category
 
     )
+
 
 
     print(
