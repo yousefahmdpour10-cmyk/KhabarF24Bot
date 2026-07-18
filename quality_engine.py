@@ -1,13 +1,13 @@
 """
-KhabarF24 Quality Engine v1.0
+KhabarF24 Quality Engine v1.1
 
-بررسی کیفیت خبر قبل از انتشار:
+بررسی کیفیت خبر قبل از انتشار
 
-- متن ناقص نباشد
-- انگلیسی باقی نمانده باشد
-- تیتر معتبر باشد
-- خلاصه کافی باشد
-- امتیاز کیفیت بدهد
+بهینه شده برای:
+- اخبار کوتاه تلگرام
+- ورزش
+- فناوری
+- منابع RSS
 """
 
 
@@ -15,14 +15,11 @@ import re
 
 
 
-# حداقل طول‌ها
-
-MIN_TITLE_LENGTH = 15
-MIN_SUMMARY_LENGTH = 40
+MIN_TITLE_LENGTH = 10
+MIN_SUMMARY_LENGTH = 25
 
 
 
-# کلمات انگلیسی که اگر در متن فارسی باقی بمانند مشکل هستند
 
 BAD_ENGLISH_WORDS = [
 
@@ -34,15 +31,14 @@ BAD_ENGLISH_WORDS = [
     "with",
     "from",
     "and",
-    "to",
-    "of",
-    "in",
+    "this",
+    "that",
 
 ]
 
 
 
-# عبارت‌های خراب ترجمه ماشینی
+
 
 BAD_PHRASES = [
 
@@ -56,8 +52,6 @@ BAD_PHRASES = [
 
     "یک اندازه",
 
-    "شرط خود را",
-
 ]
 
 
@@ -67,23 +61,36 @@ BAD_PHRASES = [
 def contains_english(text):
 
     if not text:
+
         return False
 
 
     words = re.findall(
-        r"[A-Za-z]{3,}",
+
+        r"\b[A-Za-z]{4,}\b",
+
         text
+
     )
+
+
+    count = 0
 
 
     for word in words:
 
+
         if word.lower() in BAD_ENGLISH_WORDS:
 
-            return True
+            count += 1
 
 
-    return False
+
+    # فقط وقتی تعداد زیاد باشد مشکل است
+
+    return count >= 2
+
+
 
 
 
@@ -92,6 +99,7 @@ def contains_english(text):
 def check_bad_phrases(text):
 
     if not text:
+
         return False
 
 
@@ -108,39 +116,45 @@ def check_bad_phrases(text):
 
 
 
+
+
 def calculate_quality(title, summary):
+
 
     score = 100
 
 
 
-    # =====================
     # تیتر
-    # =====================
 
     if not title:
 
-        score -= 40
+        score -= 50
 
 
     elif len(title) < MIN_TITLE_LENGTH:
 
-        score -= 20
+        score -= 10
 
 
 
-    # =====================
+
+
+
     # خلاصه
-    # =====================
+
 
     if not summary:
 
-        score -= 40
+        score -= 25
 
 
     elif len(summary) < MIN_SUMMARY_LENGTH:
 
-        score -= 20
+        score -= 10
+
+
+
 
 
 
@@ -148,19 +162,19 @@ def calculate_quality(title, summary):
 
 
 
-    # =====================
-    # انگلیسی باقی مانده
-    # =====================
+
+
+    # انگلیسی خراب
 
     if contains_english(text):
 
-        score -= 20
+        score -= 15
 
 
 
-    # =====================
-    # ترجمه بد
-    # =====================
+
+
+    # ترجمه ماشینی
 
     if check_bad_phrases(text):
 
@@ -168,11 +182,22 @@ def calculate_quality(title, summary):
 
 
 
-    # محدود کردن امتیاز
+
+
+    # خبر خیلی کوتاه
+
+    if len(text) < 50:
+
+        score -= 20
+
+
+
+
 
     if score < 0:
 
         score = 0
+
 
 
     return score
@@ -181,17 +206,26 @@ def calculate_quality(title, summary):
 
 
 
-def is_high_quality(title, summary, minimum=75):
+
+
+def is_high_quality(title, summary, minimum=50):
+
 
     score = calculate_quality(
+
         title,
+
         summary
+
     )
 
 
     print(
+
         f"🧪 Quality Score: {score}/100"
+
     )
+
 
 
     return score >= minimum
