@@ -1,516 +1,7 @@
 """
-KhabarF24 Sport Rules v4.0
-
-Sport Intelligence Engine"""
 KhabarF24 Sport Rules v4.1
 
 Sport Intelligence Engine
-
-Optimized:
-- Football
-- NBA
-- FIBA
-- Tennis
-- Wrestling
-- Formula1
-- Transfer
-- Records
-"""
-
-
-SPORT_TYPES = {
-
-    "football": {
-
-        "title": "فوتبال",
-        "emoji": "⚽",
-        "hashtag": "#فوتبال",
-
-        "keywords": [
-
-            "فوتبال",
-            "football",
-            "soccer",
-
-            "فیفا",
-            "fifa",
-
-            "یوفا",
-            "uefa",
-
-            "جام جهانی",
-            "world cup",
-
-            "لیگ قهرمانان",
-            "champions league",
-
-            "premier league",
-            "لالیگا",
-            "serie a",
-            "bundesliga",
-
-            "مسی",
-            "رونالدو",
-            "امباپه",
-            "هالند",
-            "یامال",
-
-            "منچستر",
-            "رئال",
-            "بارسلونا",
-
-        ]
-    },
-
-
-    "basketball": {
-
-        "title": "بسکتبال",
-        "emoji": "🏀",
-        "hashtag": "#بسکتبال",
-
-        "keywords": [
-
-            "بسکتبال",
-            "basketball",
-
-            "nba",
-            "wnba",
-
-            "fiba",
-
-            "دانک",
-            "سه امتیازی",
-
-        ]
-    },
-
-
-    "tennis": {
-
-        "title": "تنیس",
-        "emoji": "🎾",
-        "hashtag": "#تنیس",
-
-        "keywords": [
-
-            "تنیس",
-            "tennis",
-            "ATP",
-            "WTA",
-            "گرند اسلم",
-
-        ]
-    },
-
-
-    "wrestling": {
-
-        "title": "کشتی",
-        "emoji": "🤼",
-        "hashtag": "#کشتی",
-
-        "keywords": [
-
-            "کشتی",
-            "آزاد",
-            "فرنگی",
-
-        ]
-    },
-
-
-    "formula1": {
-
-        "title": "فرمول یک",
-        "emoji": "🏎️",
-        "hashtag": "#فرمول_یک",
-
-        "keywords": [
-
-            "فرمول یک",
-            "formula 1",
-            "f1",
-
-        ]
-    },
-
-}
-
-
-
-SPORT_EVENTS = {
-
-
-    "score": [
-
-        "نتیجه",
-        "پیروز شد",
-        "برد",
-        "باخت",
-        "مساوی",
-
-    ],
-
-
-    "goal": [
-
-        "گل",
-        "گلزن",
-        "هت تریک",
-
-    ],
-
-
-    "record": [
-
-        "رکورد",
-        "تاریخی",
-        "رکوردشکنی",
-        "best ever",
-
-    ],
-
-
-    "transfer": [
-
-        "انتقال",
-        "قرارداد",
-        "خرید",
-        "فروش",
-
-    ],
-
-
-    "injury": [
-
-        "مصدومیت",
-        "مصدوم",
-
-    ],
-
-
-    "lineup": [
-
-        "ترکیب",
-        "lineup",
-
-    ],
-
-
-    "interview": [
-
-        "مصاحبه",
-        "اظهارات",
-        "کنفرانس خبری",
-
-    ]
-
-}
-
-
-
-
-
-BIG_TEAMS = [
-
-    "منچستر",
-
-    "رئال",
-
-    "بارسلونا",
-
-    "لیورپول",
-
-    "بایرن",
-
-    "PSG",
-
-    "مسی",
-
-    "رونالدو",
-
-    "آرژانتین",
-
-    "برزیل",
-
-]
-
-
-
-
-BIG_COMPETITIONS = [
-
-    "جام جهانی",
-
-    "لیگ قهرمانان",
-
-    "champions league",
-
-    "فینال",
-
-    "نیمه نهایی",
-
-]
-
-
-
-
-VIDEO_ONLY = [
-
-    "هایلایت",
-
-    "highlights",
-
-    "watch video",
-
-    "کلیپ",
-
-    "لحظات برتر",
-
-]
-
-
-
-
-
-
-def normalize(text):
-
-    if not text:
-
-        return ""
-
-    return text.lower()
-
-
-
-
-
-
-def contains_any(text, words):
-
-    text = normalize(text)
-
-    for word in words:
-
-        if word.lower() in text:
-
-            return True
-
-    return False
-
-
-
-
-
-
-
-def detect_sport_type(title="", summary=""):
-
-
-    text = f"{title} {summary}"
-
-
-    for sport,data in SPORT_TYPES.items():
-
-
-        if contains_any(text,data["keywords"]):
-
-
-            return {
-
-                "type":sport,
-
-                "title":data["title"],
-
-                "emoji":data["emoji"],
-
-                "hashtag":data["hashtag"]
-
-            }
-
-
-    return {
-
-        "type":"sport",
-
-        "title":"ورزش",
-
-        "emoji":"🏆",
-
-        "hashtag":"#ورزش"
-
-    }
-
-
-
-
-
-
-
-def detect_events(title="",summary=""):
-
-
-    text=f"{title} {summary}"
-
-    result=[]
-
-
-    for event,words in SPORT_EVENTS.items():
-
-        if contains_any(text,words):
-
-            result.append(event)
-
-
-    return result
-
-
-
-
-
-
-def is_big_match(title="",summary=""):
-
-
-    text=f"{title} {summary}"
-
-
-    return (
-
-        contains_any(text,BIG_TEAMS)
-
-        or
-
-        contains_any(text,BIG_COMPETITIONS)
-
-    )
-
-
-
-
-
-
-
-def is_video_only(title="",summary=""):
-
-
-    text=f"{title} {summary}"
-
-
-    return (
-
-        contains_any(text,VIDEO_ONLY)
-
-        and
-
-        len(summary)<80
-
-        and
-
-        not detect_events(title,summary)
-
-    )
-
-
-
-
-
-
-
-
-def analyze_sport(title="",summary=""):
-
-
-    sport=detect_sport_type(title,summary)
-
-
-    return {
-
-
-        **sport,
-
-
-        "events":detect_events(title,summary),
-
-
-        "big_match":is_big_match(title,summary),
-
-
-        "video_only":is_video_only(title,summary)
-
-
-    }
-
-
-
-
-
-
-
-def calculate_sport_score(title="",summary=""):
-
-
-    score=3
-
-
-    data=analyze_sport(title,summary)
-
-
-
-    if data["big_match"]:
-
-        score+=3
-
-
-
-    for event in data["events"]:
-
-        if event=="score":
-
-            score+=2
-
-        elif event=="goal":
-
-            score+=2
-
-        elif event=="record":
-
-            score+=3
-
-        elif event=="transfer":
-
-            score+=3
-
-        elif event=="injury":
-
-            score+=1
-
-        elif event=="lineup":
-
-            score+=2
-
-        elif event=="interview":
-
-            score+=1
-
-
-
-
-    if data["video_only"]:
-
-        return 0
-
-
-
-    if score>10:
-
-        score=10
-
-
-
-    return score
 
 Features:
 - Detect sport type
@@ -567,6 +58,9 @@ SPORT_TYPES = {
             "منچستر یونایتد",
             "Manchester United",
 
+            "منچستر سیتی",
+            "Manchester City",
+
             "رئال مادرید",
             "Real Madrid",
 
@@ -580,6 +74,7 @@ SPORT_TYPES = {
             "Arsenal",
 
         ]
+
     },
 
 
@@ -604,6 +99,7 @@ SPORT_TYPES = {
             "لیگ NBA",
 
         ]
+
     },
 
 
@@ -623,6 +119,7 @@ SPORT_TYPES = {
             "ست",
 
         ]
+
     },
 
 
@@ -641,6 +138,7 @@ SPORT_TYPES = {
             "قهرمانی جهان",
 
         ]
+
     },
 
 
@@ -663,6 +161,7 @@ SPORT_TYPES = {
             "ویمبلدون",
 
         ]
+
     },
 
 
@@ -682,7 +181,9 @@ SPORT_TYPES = {
             "گرندپری",
 
         ]
+
     },
+
 
 }
 
@@ -748,9 +249,6 @@ SPORT_EVENTS = {
     ]
 
 }
-
-
-
 # =========================
 # Big Teams
 # =========================
@@ -810,6 +308,13 @@ BIG_COMPETITIONS = [
 
 
 
+
+
+# =========================
+# Video Only
+# =========================
+
+
 VIDEO_ONLY = [
 
     "هایلایت",
@@ -830,6 +335,8 @@ VIDEO_ONLY = [
 
 
 
+
+
 # =========================
 # Helpers
 # =========================
@@ -838,6 +345,7 @@ VIDEO_ONLY = [
 def normalize(text):
 
     if not text:
+
         return ""
 
     return text.lower()
@@ -848,13 +356,17 @@ def contains_any(text, words):
 
     text = normalize(text)
 
+
     for word in words:
 
         if word.lower() in text:
 
             return True
 
+
     return False
+
+
 
 
 
@@ -869,6 +381,7 @@ def detect_sport_type(title="", summary=""):
     text = f"{title} {summary}"
 
 
+
     for sport, data in SPORT_TYPES.items():
 
 
@@ -879,6 +392,7 @@ def detect_sport_type(title="", summary=""):
             data["keywords"]
 
         ):
+
 
             return {
 
@@ -899,6 +413,7 @@ def detect_sport_type(title="", summary=""):
 
 
 
+
     return {
 
 
@@ -913,12 +428,16 @@ def detect_sport_type(title="", summary=""):
 
         "hashtag": "#ورزش"
 
+
     }
 
 
 
+
+
+
 # =========================
-# Events
+# Detect Events
 # =========================
 
 
@@ -945,8 +464,11 @@ def detect_events(title="", summary=""):
 
 
 
+
+
+
 # =========================
-# Big Match
+# Big Match Detection
 # =========================
 
 
@@ -956,15 +478,32 @@ def is_big_match(title="", summary=""):
     text = f"{title} {summary}"
 
 
+
     return (
 
-        contains_any(text, BIG_TEAMS)
+        contains_any(
+
+            text,
+
+            BIG_TEAMS
+
+        )
 
         or
 
-        contains_any(text, BIG_COMPETITIONS)
+        contains_any(
+
+            text,
+
+            BIG_COMPETITIONS
+
+        )
 
     )
+
+
+
+
 
 
 
@@ -979,15 +518,31 @@ def is_video_only(title="", summary=""):
     text = f"{title} {summary}"
 
 
+
     return (
 
-        contains_any(text, VIDEO_ONLY)
+        contains_any(
+
+            text,
+
+            VIDEO_ONLY
+
+        )
 
         and
 
-        not detect_events(title, summary)
+        not detect_events(
+
+            title,
+
+            summary
+
+        )
 
     )
+
+
+
 
 
 
@@ -1045,6 +600,9 @@ def analyze_sport(title="", summary=""):
 
 
 
+
+
+
 # =========================
 # Importance Score
 # =========================
@@ -1056,6 +614,7 @@ def calculate_sport_score(title="", summary=""):
     score = 1
 
 
+
     data = analyze_sport(
 
         title,
@@ -1063,6 +622,7 @@ def calculate_sport_score(title="", summary=""):
         summary
 
     )
+
 
 
     if data["big_match"]:
