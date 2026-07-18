@@ -3,19 +3,31 @@ KhabarF24 News Fetcher v7.0
 
 وظیفه:
 
-- دریافت خبر از RSS
-- دریافت خبر از Scraper
-- استاندارد سازی خروجی
-- نگهداری نام منبع
-- آماده سازی برای Category Engine
-- آماده سازی برای AI Processor
-"""
+- دریافت RSS
+- دریافت Scraper بدون RSS
+- استانداردسازی خروجی
+- ارسال content کامل برای AI
+- حفظ منبع
+- آماده سازی Pipeline
 
+Pipeline:
+
+news_fetcher
+      ↓
+ai_processor
+      ↓
+category_engine
+      ↓
+quality_engine
+      ↓
+importance_engine
+      ↓
+formatter
+"""
 
 import feedparser
 import html
 import re
-
 
 
 from sources import (
@@ -30,11 +42,7 @@ from scraper_engine import (
 
 
 
-
-
 print("📰 KhabarF24 News Fetcher v7.0 Loaded")
-
-
 
 
 
@@ -45,38 +53,25 @@ print("📰 KhabarF24 News Fetcher v7.0 Loaded")
 
 def clean_text(text):
 
-
     if not text:
-
         return ""
 
 
     text = html.unescape(text)
 
 
-
     text = re.sub(
-
         r"<.*?>",
-
         "",
-
         text
-
     )
-
 
 
     text = re.sub(
-
         r"\s+",
-
         " ",
-
         text
-
     )
-
 
 
     return text.strip()
@@ -85,60 +80,44 @@ def clean_text(text):
 
 
 
-
-
 # =========================
-# RSS Fetch
+# RSS
 # =========================
 
 
 def fetch_rss_news(source):
 
 
-    if not source:
+    news = []
 
-        return []
+
+    if not source:
+        return news
 
 
 
     url = source.get(
-
         "url",
-
         ""
-
     )
 
 
     name = source.get(
-
         "name",
-
         "Unknown"
-
     )
 
 
-
-    source_category = source.get(
-
+    category = source.get(
         "category",
-
         "world"
-
     )
-
 
 
 
     if not url:
+        return news
 
-        return []
-
-
-
-
-    news = []
 
 
 
@@ -146,41 +125,132 @@ def fetch_rss_news(source):
 
 
         feed = feedparser.parse(
-
             url
-
         )
 
 
 
-        for item in feed.entries[:20]:
+        for item in feed.entries[:10]:
 
 
             title = clean_text(
-
                 item.get(
-
                     "title",
-
                     ""
-
                 )
+            )
 
+
+            summary = clean_text(
+                item.get(
+                    "summary",
+                    ""
+                )
+            )
+
+
+            link = item.get(
+                "link",
+                ""
             )
 
 
 
-            summary = clean_text(
+            if not title:
+                continue
+
+
+
+            news.append({
+
+                "title": title,
+
+                "summary": summary,
+
+                # برای RSS خالی است
+                "content": summary,
+
+
+                "link": link,
+
+
+                "source": name,
+
+
+                "category": category,
+
+
+                "type": "rss"
+
+            })
+
+
+
+    except Exception as e:
+
+
+        print(
+            f"RSS Error {name}: {e}"
+        )
+
+
+
+    return news
+
+
+
+
+
+
+
+# =========================
+# SCRAPER
+# =========================
+
+
+def fetch_scraper_news(source):
+
+
+    result = []
+
+
+    try:
+
+
+        scraped = scrape_source(
+            source
+        )
+
+
+
+        for item in scraped:
+
+
+            title = clean_text(
+                item.get(
+                    "title",
+                    ""
+                )
+            )
+
+
+            content = clean_text(
 
                 item.get(
 
-                    "summary",
+                    "content",
 
                     item.get(
 
-                        "description",
+                        "text",
 
-                        ""
+                        item.get(
+
+                            "summary",
+
+                            ""
+
+                        )
 
                     )
 
@@ -200,41 +270,51 @@ def fetch_rss_news(source):
 
 
 
-
             if not title:
 
                 continue
 
 
 
-            if not link:
-
-                continue
-
-
-
-
-
-            news.append({
+            result.append({
 
 
                 "title": title,
 
 
-                "summary": summary,
+                # فعلاً خالی
+                # AI خودش خلاصه می‌سازد
+
+                "summary": "",
+
+
+                # متن کامل سایت
+
+                "content": content,
 
 
                 "link": link,
 
 
-                "source": name,
+                "source": source.get(
+
+                    "name",
+
+                    "Unknown"
+
+                ),
 
 
-                # فقط اطلاعات منبع
-                # دسته اصلی توسط category_engine تعیین می‌شود
+                "category": source.get(
 
-                "source_category": source_category
+                    "category",
 
+                    "world"
+
+                ),
+
+
+                "type": "scraper"
 
             })
 
@@ -246,17 +326,13 @@ def fetch_rss_news(source):
 
         print(
 
-            f"❌ RSS Error {name}: {e}"
+            f"Scraper Error: {e}"
 
         )
 
 
 
-    return news
-
-
-
-
+    return result
 
 
 
@@ -265,56 +341,7 @@ def fetch_rss_news(source):
 
 
 # =========================
-# Scraper Fetch
-# =========================
-
-
-def fetch_scraper_news(source):
-
-
-    try:
-
-
-        result = scrape_source(
-
-            source
-
-        )
-
-
-
-        if not result:
-
-            return []
-
-
-
-        return result
-
-
-
-    except Exception as e:
-
-
-        print(
-
-            f"❌ Scraper Error {source.get('name','')}: {e}"
-
-        )
-
-
-        return []
-
-
-
-
-
-
-
-
-
-# =========================
-# Main Fetch Engine
+# MAIN
 # =========================
 
 
@@ -325,12 +352,7 @@ def get_latest_news():
 
 
 
-
-
-    # =====================
-    # RSS SOURCES
-    # =====================
-
+    # RSS Sources
 
     for source in RSS_SOURCES:
 
@@ -349,13 +371,12 @@ def get_latest_news():
             )
 
 
-
         except Exception as e:
 
 
             print(
 
-                f"❌ RSS Source Error: {e}"
+                f"RSS Source Error: {e}"
 
             )
 
@@ -363,11 +384,7 @@ def get_latest_news():
 
 
 
-
-
-    # =====================
-    # SCRAPER SOURCES
-    # =====================
+    # Scraper Sources
 
 
     for source in SCRAPER_SOURCES:
@@ -387,18 +404,14 @@ def get_latest_news():
             )
 
 
-
         except Exception as e:
 
 
             print(
 
-                f"❌ Scraper Source Error: {e}"
+                f"Scraper Source Error: {e}"
 
             )
-
-
-
 
 
 
