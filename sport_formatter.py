@@ -1,15 +1,14 @@
 """
-KhabarF24 Sport Formatter v4.1
+KhabarF24 Sport Formatter v5.0
 
-Sport Intelligence Engine
+Sport Processing Engine
 
-Features:
-- Detect sport type
-- Sport emoji
-- Sport hashtag
-- National team flags
-- Match events
-- Video filtering
+وظیفه:
+- تحلیل خبر ورزشی
+- افزودن پرچم تیم‌ها
+- تشخیص رویداد بازی
+- حذف ویدیوهای بدون ارزش خبری
+- آماده سازی برای Formatter اصلی
 """
 
 
@@ -17,9 +16,13 @@ import re
 
 
 
-# ==========================
-# Sports Database
-# ==========================
+print("⚽ KhabarF24 Sport Formatter v5.0 Loaded")
+
+
+
+# ==================================
+# Sports Data
+# ==================================
 
 
 SPORTS = {
@@ -37,42 +40,45 @@ SPORTS = {
             "football",
             "soccer",
 
-            "فیفا",
-            "fifa",
+            "توپ فوتبال",
+            "استوک",
+            "کفش فوتبال",
+            "دروازه",
 
-            "یوفا",
-            "uefa",
+            "گل",
+            "گلزنی",
+            "گلزن",
+
+            "بازیکن",
+            "مهاجم",
+            "مدافع",
+            "هافبک",
+
+            "مربی",
+            "سرمربی",
+
+            "var",
+
+            "کارت زرد",
+            "کارت قرمز",
 
             "جام جهانی",
-            "world cup",
-
             "لیگ قهرمانان",
-            "champions league",
 
-            "premier league",
-            "لیگ برتر انگلیس",
-
-            "la liga",
-            "لالیگا",
-
-            "serie a",
-            "سری آ",
-
-            "bundesliga",
-            "بوندسلیگا",
+            "فیفا",
+            "یوفا",
 
             "مسی",
             "رونالدو",
             "امباپه",
             "هالند",
+            "یامال",
 
-            "گلزنی",
-            "گلزن",
-
-            "VAR",
-
-            "کارت زرد",
-            "کارت قرمز",
+            "منچستر یونایتد",
+            "رئال مادرید",
+            "بارسلونا",
+            "لیورپول",
+            "آرسنال",
 
         ]
 
@@ -82,6 +88,7 @@ SPORTS = {
 
     "basketball": {
 
+
         "name": "بسکتبال",
         "emoji": "🏀",
         "hashtag": "#بسکتبال",
@@ -90,8 +97,29 @@ SPORTS = {
 
             "بسکتبال",
             "basketball",
-            "NBA",
-            "WNBA"
+
+            "nba",
+            "wnba",
+
+            "توپ بسکتبال",
+
+            "دانک",
+
+            "سه امتیازی",
+
+            "ریباند",
+
+            "کوارتر",
+
+            "زمین بسکتبال",
+
+            "لیکرز",
+
+            "واریرز",
+
+            "کری",
+
+            "لبران",
 
         ]
 
@@ -99,7 +127,9 @@ SPORTS = {
 
 
 
+
     "volleyball": {
+
 
         "name": "والیبال",
         "emoji": "🏐",
@@ -109,7 +139,18 @@ SPORTS = {
 
             "والیبال",
             "volleyball",
-            "FIVB"
+
+            "توپ والیبال",
+
+            "fivb",
+
+            "ست",
+
+            "سرویس",
+
+            "اسپک",
+
+            "دفاع روی تور",
 
         ]
 
@@ -117,7 +158,9 @@ SPORTS = {
 
 
 
+
     "tennis": {
+
 
         "name": "تنیس",
         "emoji": "🎾",
@@ -127,8 +170,24 @@ SPORTS = {
 
             "تنیس",
             "tennis",
+
+            "راکت",
+
+            "زمین تنیس",
+
+            "atp",
+
+            "wta",
+
             "گرند اسلم",
-            "ویمبلدون"
+
+            "ویمبلدون",
+
+            "رولان گاروس",
+
+            "جوکوویچ",
+
+            "آلکاراز",
 
         ]
 
@@ -136,7 +195,9 @@ SPORTS = {
 
 
 
+
     "wrestling": {
+
 
         "name": "کشتی",
         "emoji": "🤼",
@@ -145,9 +206,20 @@ SPORTS = {
         "keywords": [
 
             "کشتی",
+
             "کشتی آزاد",
+
             "کشتی فرنگی",
-            "UWW"
+
+            "تشک",
+
+            "uww",
+
+            "قهرمانی جهان",
+
+            "مدال",
+
+            "حسن یزدانی",
 
         ]
 
@@ -155,7 +227,9 @@ SPORTS = {
 
 
 
+
     "formula1": {
+
 
         "name": "فرمول یک",
         "emoji": "🏎️",
@@ -164,13 +238,113 @@ SPORTS = {
         "keywords": [
 
             "فرمول یک",
-            "Formula 1",
-            "F1"
+
+            "formula 1",
+
+            "formula1",
+
+            "f1",
+
+            "گرندپری",
+
+            "پیست",
+
+            "ردبول",
+
+            "فراری",
+
+            "ورشتپن",
+
+        ]
+
+    },
+
+
+
+
+    "combat": {
+
+
+        "name": "ورزش رزمی",
+        "emoji": "🥊",
+        "hashtag": "#ورزش_رزمی",
+
+        "keywords": [
+
+            "ufc",
+
+            "mma",
+
+            "بوکس",
+
+            "boxing",
+
+            "ناک اوت",
+
+            "کمربند قهرمانی",
 
         ]
 
     }
 
+}
+
+
+
+
+
+# ==================================
+# Sport Flags
+# فقط تیم‌ها
+# ==================================
+
+
+TEAM_FLAGS = {
+
+
+    "منچستر یونایتد":
+        "🔴 منچستر یونایتد",
+
+
+    "رئال مادرید":
+        "🇪🇸 رئال مادرید",
+
+
+    "بارسلونا":
+        "🇪🇸 بارسلونا",
+
+
+    "لیورپول":
+        "🔴 لیورپول",
+
+
+    "آرسنال":
+        "🔴 آرسنال",
+
+
+    "منچستر سیتی":
+        "🔵 منچستر سیتی",
+
+
+    "بایرن مونیخ":
+        "🇩🇪 بایرن مونیخ",
+
+
+    "پاری سن ژرمن":
+        "🇫🇷 پاری سن ژرمن",
+
+
+    "آرژانتین":
+        "🇦🇷 آرژانتین",
+
+
+    "برزیل":
+        "🇧🇷 برزیل",
+
+
+    "فرانسه":
+        "🇫🇷 فرانسه",
+
 
 }
 
@@ -178,62 +352,25 @@ SPORTS = {
 
 
 
-# ==========================
-# National Flags Only
-# ==========================
-
-
-NATIONAL_FLAGS = {
-
-
-    "آرژانتین": "🇦🇷",
-
-    "برزیل": "🇧🇷",
-
-    "فرانسه": "🇫🇷",
-
-    "انگلیس": "🇬🇧",
-
-    "آلمان": "🇩🇪",
-
-    "اسپانیا": "🇪🇸",
-
-    "ایتالیا": "🇮🇹",
-
-    "پرتغال": "🇵🇹",
-
-    "هلند": "🇳🇱",
-
-    "بلژیک": "🇧🇪",
-
-    "آمریکا": "🇺🇸",
-
-}
-
-
-
-
-
-# ==========================
+# ==================================
 # Video Filter
-# ==========================
+# ==================================
 
 
-VIDEO_ONLY_WORDS = [
+VIDEO_WORDS = [
 
-    "تماشا کنید",
-
-    "watch video",
-
-    "watch live",
-
-    "live stream",
-
-    "پخش زنده",
 
     "هایلایت",
 
     "highlights",
+
+    "کلیپ",
+
+    "ویدیو",
+
+    "ویدئو",
+
+    "watch video",
 
 ]
 
@@ -241,17 +378,24 @@ VIDEO_ONLY_WORDS = [
 
 
 
+NEWS_WORDS = [
 
 
-def normalize(text):
+    "اعلام",
 
-    if not text:
+    "قرارداد",
 
-        return ""
+    "نتیجه",
 
-    return text.lower()
+    "مصدومیت",
 
+    "انتقال",
 
+    "ترکیب",
+
+    "گزارش",
+
+]
 
 
 
@@ -259,7 +403,9 @@ def normalize(text):
 
 def contains_any(text, words):
 
-    text = normalize(text)
+
+    text = text.lower()
+
 
     for word in words:
 
@@ -267,24 +413,22 @@ def contains_any(text, words):
 
             return True
 
+
     return False
 
 
 
 
 
-
-
-# ==========================
-# Detect Sport
-# ==========================
+# ==================================
+# Detect sport
+# ==================================
 
 
 def detect_sport(title="", summary=""):
 
 
-    text = f"{title} {summary}"
-
+    text = f"{title} {summary}".lower()
 
 
     scores = {}
@@ -300,13 +444,13 @@ def detect_sport(title="", summary=""):
         for word in data["keywords"]:
 
 
-            if word.lower() in text.lower():
+            if word.lower() in text:
 
                 score += 1
 
 
-        scores[sport] = score
 
+        scores[sport] = score
 
 
 
@@ -321,37 +465,33 @@ def detect_sport(title="", summary=""):
 
 
 
-
-
     if scores[best] == 0:
 
 
         return {
 
-            "type": "sport",
+            "type":"sport",
 
-            "name": "ورزش",
+            "name":"ورزش",
 
-            "emoji": "🏅",
+            "emoji":"🏆",
 
-            "hashtag": "#ورزش"
+            "hashtag":"#ورزش"
 
         }
-
-
 
 
 
     return {
 
 
-        "type": best,
+        "type":best,
 
-        "name": SPORTS[best]["name"],
+        "name":SPORTS[best]["name"],
 
-        "emoji": SPORTS[best]["emoji"],
+        "emoji":SPORTS[best]["emoji"],
 
-        "hashtag": SPORTS[best]["hashtag"]
+        "hashtag":SPORTS[best]["hashtag"]
 
     }
 
@@ -360,12 +500,9 @@ def detect_sport(title="", summary=""):
 
 
 
-
-
-
-# ==========================
-# Add National Flags
-# ==========================
+# ==================================
+# Add Team Flags
+# ==================================
 
 
 def add_team_flags(text):
@@ -376,17 +513,16 @@ def add_team_flags(text):
         return ""
 
 
+    for team, flag in TEAM_FLAGS.items():
 
-    for team, flag in NATIONAL_FLAGS.items():
 
         text = text.replace(
 
             team,
 
-            f"{flag} {team}"
+            flag
 
         )
-
 
 
     return text
@@ -396,71 +532,42 @@ def add_team_flags(text):
 
 
 
+# ==================================
+# Video Only
+# ==================================
 
-# ==========================
-# Video Detection
-# ==========================
 
-
-def is_blocked_sport_news(title="", summary=""):
+def is_video_only(title, summary):
 
 
     text = f"{title} {summary}"
 
 
+    return (
 
-    has_video_word = contains_any(
+        contains_any(text, VIDEO_WORDS)
 
-        text,
+        and
 
-        VIDEO_ONLY_WORDS
-
-    )
-
-
-
-    has_news_word = contains_any(
-
-        text,
-
-        [
-
-            "اعلام کرد",
-
-            "گزارش",
-
-            "نتیجه",
-
-            "قرارداد",
-
-            "مصدومیت",
-
-            "ترکیب",
-
-        ]
+        not contains_any(text, NEWS_WORDS)
 
     )
 
 
 
-    return has_video_word and not has_news_word
 
 
 
 
+# ==================================
+# Match Result
+# ==================================
 
 
-
-# ==========================
-# Match Events
-# ==========================
-
-
-def detect_match_events(text):
+def detect_match_result(text):
 
 
     result = {}
-
 
 
     score = re.search(
@@ -472,11 +579,14 @@ def detect_match_events(text):
     )
 
 
-
     if score:
 
-        result["score"] = f"⚽ نتیجه: {score.group()}"
 
+        result["score"] = (
+
+            f"⚽ نتیجه: {score.group()}"
+
+        )
 
 
     return result
@@ -487,9 +597,9 @@ def detect_match_events(text):
 
 
 
-# ==========================
-# Final Formatter
-# ==========================
+# ==================================
+# Main Function
+# ==================================
 
 
 def format_sport_news(title, summary):
@@ -505,24 +615,19 @@ def format_sport_news(title, summary):
 
 
 
-    if is_blocked_sport_news(
-
-        title,
-
-        summary
-
-    ):
+    if is_video_only(title, summary):
 
 
         return {
 
-            "blocked": True,
 
-            "sport": sport,
+            "blocked":True,
 
-            "title": title,
+            "sport":sport,
 
-            "summary": summary
+            "title":title,
+
+            "summary":summary
 
         }
 
@@ -531,11 +636,12 @@ def format_sport_news(title, summary):
 
     title = add_team_flags(title)
 
+
     summary = add_team_flags(summary)
 
 
 
-    events = detect_match_events(
+    events = detect_match_result(
 
         f"{title} {summary}"
 
@@ -543,17 +649,22 @@ def format_sport_news(title, summary):
 
 
 
+
     return {
 
 
-        "blocked": False,
+        "blocked":False,
 
-        "sport": sport,
 
-        "title": title,
+        "sport":sport,
 
-        "summary": summary,
 
-        "events": events
+        "title":title,
+
+
+        "summary":summary,
+
+
+        "events":events
 
     }
