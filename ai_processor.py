@@ -1,40 +1,24 @@
 """
-KhabarF24 AI Processor v6.2
+KhabarF24 AI Processor v7.0
 
 Pipeline:
 
-Official Names Protection
-↓
+News Fetcher v7
+        ↓
+Brand Protection
+        ↓
 Translation
-↓
-Translation Cleanup
-↓
-Number Protection
-↓
+        ↓
+Cleanup
+        ↓
+Summary Generator
+        ↓
 Official Names Restore
-↓
-News Rewrite
-↓
+        ↓
 RTL Cleaner
+        ↓
+Formatter Ready
 """
-
-
-from deep_translator import GoogleTranslator
-
-
-from brand_dictionary import (
-    replace_official_names,
-)
-
-
-from news_rewriter import (
-    rewrite_news,
-)
-
-
-from rtl_cleaner import (
-    fix_rtl_text,
-)
 
 
 import re
@@ -42,21 +26,43 @@ import html
 
 
 
+from deep_translator import GoogleTranslator
 
 
-# =========================
-# Translation
-# =========================
+
+from brand_dictionary import (
+    replace_official_names
+)
+
+
+from rtl_cleaner import (
+    fix_rtl_text
+)
+
+
+
+print("🤖 KhabarF24 AI Processor v7.0 Loaded")
+
+
+
+
+
+# =====================================================
+# Translator
+# =====================================================
 
 
 def translate_text(text):
+
 
     if not text:
 
         return ""
 
 
+
     try:
+
 
         result = GoogleTranslator(
 
@@ -67,14 +73,18 @@ def translate_text(text):
         ).translate(text)
 
 
+
         return result.strip()
+
 
 
     except Exception as e:
 
 
         print(
+
             f"Translation Error: {e}"
+
         )
 
 
@@ -86,12 +96,31 @@ def translate_text(text):
 
 
 
-# =========================
-# Clean Translation
-# =========================
+# =====================================================
+# Cleanup
+# =====================================================
 
 
-def clean_translation(text):
+BAD_TRANSLATIONS = [
+
+
+    "این متن",
+
+    "به پایان می دهد",
+
+    "مورد حمله قرار داد",
+
+    "می باشد",
+
+    "یک اندازه",
+
+]
+
+
+
+
+
+def clean_text(text):
 
 
     if not text:
@@ -99,21 +128,22 @@ def clean_translation(text):
         return ""
 
 
+
     text = html.unescape(text)
 
 
 
-    # حذف شماره های ترجمه‌ای اضافی
+    for bad in BAD_TRANSLATIONS:
 
-    text = re.sub(
 
-        r"\(\d+\)",
+        text = text.replace(
 
-        "",
+            bad,
 
-        text
+            ""
 
-    )
+        )
+
 
 
     text = re.sub(
@@ -127,6 +157,7 @@ def clean_translation(text):
     )
 
 
+
     return text.strip()
 
 
@@ -135,15 +166,15 @@ def clean_translation(text):
 
 
 
-# =========================
+# =====================================================
 # Protect Numbers
-# =========================
+# =====================================================
 
 
 def protect_numbers(original, translated):
 
 
-    if not original or not translated:
+    if not original:
 
         return translated
 
@@ -158,13 +189,14 @@ def protect_numbers(original, translated):
     )
 
 
-    for number in numbers:
+
+    for num in numbers:
 
 
-        if number not in translated:
+        if num not in translated:
 
 
-            translated = translated + " " + number
+            translated += f" {num}"
 
 
 
@@ -176,36 +208,185 @@ def protect_numbers(original, translated):
 
 
 
-# =========================
-# Main Processor
-# =========================
+# =====================================================
+# Create Summary
+# =====================================================
 
 
-def process_news(title, summary):
+def create_summary(title, content, summary):
 
 
-    print(
+    if summary and len(summary) > 40:
 
-        "🤖 KhabarF24 AI v6.2"
+        return summary
+
+
+
+    source = content or title
+
+
+
+    if not source:
+
+        return ""
+
+
+
+    sentences = re.split(
+
+        r"[.!؟]",
+
+        source
+
+    )
+
+
+
+    result = ""
+
+
+
+    for sentence in sentences:
+
+
+        sentence = sentence.strip()
+
+
+
+        if len(sentence) > 40:
+
+
+            result = sentence
+
+            break
+
+
+
+    if not result:
+
+
+        result = source[:180]
+
+
+
+    return result.strip()
+
+
+
+
+
+
+
+# =====================================================
+# AI Processing
+# =====================================================
+
+
+def process_news(news):
+
+
+    title = news.get(
+
+        "title",
+
+        ""
+
+    )
+
+
+    summary = news.get(
+
+        "summary",
+
+        ""
+
+    )
+
+
+    content = news.get(
+
+        "content",
+
+        ""
+
+    )
+
+
+    source = news.get(
+
+        "source",
+
+        ""
+
+    )
+
+
+    category = news.get(
+
+        "category",
+
+        "world"
 
     )
 
 
 
 
-    # -------------------------
-    # Official names protection
-    # -------------------------
 
 
-    protected_title = replace_official_names(
+    print(
+
+        "🤖 KhabarF24 AI v7.0"
+
+    )
+
+
+
+
+
+    # ---------------------------------
+    # Protect official names
+    # ---------------------------------
+
+
+    title = replace_official_names(
 
         title
 
     )
 
 
-    protected_summary = replace_official_names(
+    summary = replace_official_names(
+
+        summary
+
+    )
+
+
+    content = replace_official_names(
+
+        content
+
+    )
+
+
+
+
+
+
+    # ---------------------------------
+    # Translation
+    # ---------------------------------
+
+
+    fa_title = translate_text(
+
+        title
+
+    )
+
+
+    fa_summary = translate_text(
 
         summary
 
@@ -213,45 +394,34 @@ def process_news(title, summary):
 
 
 
+    if not fa_summary:
 
 
+        fa_summary = translate_text(
 
-    # -------------------------
-    # Translation
-    # -------------------------
+            content
 
-
-    fa_title = translate_text(
-
-        protected_title
-
-    )
-
-
-    fa_summary = translate_text(
-
-        protected_summary
-
-    )
+        )
 
 
 
 
 
 
-    # -------------------------
+
+    # ---------------------------------
     # Cleanup
-    # -------------------------
+    # ---------------------------------
 
 
-    fa_title = clean_translation(
+    fa_title = clean_text(
 
         fa_title
 
     )
 
 
-    fa_summary = clean_translation(
+    fa_summary = clean_text(
 
         fa_summary
 
@@ -263,9 +433,9 @@ def process_news(title, summary):
 
 
 
-    # -------------------------
-    # Number protection
-    # -------------------------
+    # ---------------------------------
+    # Number Protection
+    # ---------------------------------
 
 
     fa_title = protect_numbers(
@@ -279,7 +449,7 @@ def process_news(title, summary):
 
     fa_summary = protect_numbers(
 
-        summary,
+        summary or content,
 
         fa_summary
 
@@ -291,10 +461,9 @@ def process_news(title, summary):
 
 
 
-
-    # -------------------------
+    # ---------------------------------
     # Restore official names
-    # -------------------------
+    # ---------------------------------
 
 
     fa_title = replace_official_names(
@@ -316,35 +485,16 @@ def process_news(title, summary):
 
 
 
-
-    # -------------------------
-    # News rewrite
-    # فقط اینجا تیتر و خلاصه اصلاح می‌شود
-    # -------------------------
+    # ---------------------------------
+    # Create final summary
+    # ---------------------------------
 
 
-    rewritten = rewrite_news(
+    fa_summary = create_summary(
 
         fa_title,
 
-        fa_summary
-
-    )
-
-
-
-    fa_title = rewritten.get(
-
-        "title",
-
-        fa_title
-
-    )
-
-
-    fa_summary = rewritten.get(
-
-        "summary",
+        fa_summary,
 
         fa_summary
 
@@ -356,10 +506,9 @@ def process_news(title, summary):
 
 
 
-
-    # -------------------------
-    # RTL Final
-    # -------------------------
+    # ---------------------------------
+    # RTL
+    # ---------------------------------
 
 
     fa_title = fix_rtl_text(
@@ -391,6 +540,22 @@ def process_news(title, summary):
 
         "summary":
 
-            fa_summary
+            fa_summary,
+
+
+        "content":
+
+            content,
+
+
+        "source":
+
+            source,
+
+
+        "category":
+
+            category
+
 
     }
