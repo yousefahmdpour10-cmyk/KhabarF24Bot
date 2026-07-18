@@ -1,256 +1,331 @@
 """
-KhabarF24 Category Hashtag Engine v1.0
+KhabarF24 Category Hashtag Engine v2.0
 
 وظیفه:
-- تعیین هشتک مناسب خبر
+- تعیین هشتگ نهایی خبر
 - تشخیص رشته ورزشی
+- هماهنگ با Category Engine v7
 - خروجی استاندارد برای Formatter
 """
 
 
-print("🏷️ KhabarF24 Hashtag Engine Loaded")
+print("🏷️ KhabarF24 Hashtag Engine v2.0 Loaded")
 
+
+
+# ==========================
+# Hashtags Database
+# ==========================
 
 
 HASHTAGS = {
 
 
-    "politics":
-        "#سیاست",
+    "politics": {
+        "emoji": "🔴",
+        "hashtag": "#سیاست"
+    },
 
 
-    "iran":
-        "#ایران",
+    "iran": {
+        "emoji": "🇮🇷",
+        "hashtag": "#ایران"
+    },
 
 
-    "world":
-        "#جهان",
+    "world": {
+        "emoji": "🌍",
+        "hashtag": "#جهان"
+    },
 
 
-    "technology":
-        "#فناوری",
+    "technology": {
+        "emoji": "💻",
+        "hashtag": "#تکنولوژی"
+    },
 
 
-    "gaming":
-        "#گیم",
+    "gaming": {
+        "emoji": "🎮",
+        "hashtag": "#گیم"
+    },
 
 
-    "economy":
-        "#اقتصاد",
+    "economy": {
+        "emoji": "💰",
+        "hashtag": "#اقتصاد"
+    },
 
 
-    "health":
-        "#سلامت",
+    "health": {
+        "emoji": "🏥",
+        "hashtag": "#سلامت"
+    },
 
 
-    "science":
-        "#علم",
+    "science": {
+        "emoji": "🔬",
+        "hashtag": "#علم"
+    },
 
 
-    "weather":
-        "#هواشناسی",
+    "weather": {
+        "emoji": "🌦",
+        "hashtag": "#هواشناسی"
+    },
 
 
-    "football":
-        "#فوتبال",
+    "football": {
+        "emoji": "⚽",
+        "hashtag": "#فوتبال"
+    },
 
 
-    "basketball":
-        "#بسکتبال",
+    "basketball": {
+        "emoji": "🏀",
+        "hashtag": "#بسکتبال"
+    },
 
 
-    "tennis":
-        "#تنیس",
+    "volleyball": {
+        "emoji": "🏐",
+        "hashtag": "#والیبال"
+    },
 
 
-    "volleyball":
-        "#والیبال",
+    "tennis": {
+        "emoji": "🎾",
+        "hashtag": "#تنیس"
+    },
 
 
-    "wrestling":
-        "#کشتی",
+    "wrestling": {
+        "emoji": "🤼",
+        "hashtag": "#کشتی"
+    },
 
 
-    "formula1":
-        "#فرمول_یک",
+    "formula1": {
+        "emoji": "🏎",
+        "hashtag": "#فرمول_یک"
+    },
 
 
-    "combat":
-        "#ورزش_رزمی",
+    "combat": {
+        "emoji": "🥊",
+        "hashtag": "#ورزش_رزمی"
+    },
 
 
-    "sport":
-        "#ورزش",
-
+    "sport": {
+        "emoji": "🏆",
+        "hashtag": "#ورزش"
+    }
 
 }
 
 
+
+
+
+# ==========================
+# Sport Detection
+# ==========================
 
 
 SPORT_KEYWORDS = {
 
 
-    "football": [
+"football": [
 
-        "فوتبال",
-        "football",
-        "soccer",
+    "فوتبال",
+    "football",
+    "soccer",
 
-        "فیفا",
-        "fifa",
+    "توپ فوتبال",
+    "کفش فوتبال",
+    "استوک",
 
-        "یوفا",
-        "uefa",
+    "دروازه",
+    "تور دروازه",
 
-        "جام جهانی",
+    "گل",
+    "گلزن",
+    "پنالتی",
 
-        "لیگ قهرمانان",
+    "var",
 
-        "premier league",
-        "la liga",
-        "serie a",
-        "bundesliga",
+    "بازیکن",
+    "مهاجم",
+    "مدافع",
+    "هافبک",
 
-        "گل",
-        "پنالتی",
-        "var",
+    "منچستر",
+    "رئال",
+    "بارسلونا",
+    "لیورپول",
+    "آرسنال",
 
-        "منچستر",
-        "رئال",
-        "بارسلونا",
-        "لیورپول",
+    "مسی",
+    "رونالدو",
+    "امباپه",
+    "هالند"
 
-        "مسی",
-        "رونالدو",
-        "امباپه",
-        "هالند",
+],
 
-    ],
 
 
+"basketball": [
 
-    "basketball": [
+    "بسکتبال",
+    "basketball",
 
-        "بسکتبال",
-        "basketball",
+    "توپ بسکتبال",
 
-        "nba",
-        "wnba",
+    "nba",
+    "wnba",
 
-        "دانک",
-        "ریباند",
+    "دانک",
+    "ریباند",
 
-        "سه امتیازی",
+    "سه امتیازی",
 
-        "لیکرز",
-        "بوستون",
+    "زمین بسکتبال",
 
-        "استفن کری",
+    "لیکرز",
+    "واریرز",
 
-    ],
+    "کری",
+    "لبران"
 
+],
 
 
-    "tennis": [
 
-        "تنیس",
-        "tennis",
 
-        "atp",
-        "wta",
+"volleyball": [
 
-        "گرند اسلم",
+    "والیبال",
+    "volleyball",
 
-        "ویمبلدون",
+    "توپ والیبال",
 
-        "رولان گاروس",
+    "fivb",
 
-        "جوکوویچ",
+    "ست",
 
-        "آلکاراز",
+    "اسپک",
 
-    ],
+    "سرویس",
 
+    "تور والیبال"
 
+],
 
-    "volleyball": [
 
-        "والیبال",
-        "volleyball",
 
-        "fivb",
 
-        "لیگ ملت‌ها",
+"tennis": [
 
-        "اسپک",
+    "تنیس",
+    "tennis",
 
-        "سرویس",
+    "راکت تنیس",
 
-    ],
+    "atp",
+    "wta",
 
+    "گرند اسلم",
 
+    "ویمبلدون",
 
-    "wrestling": [
+    "رولان گاروس",
 
-        "کشتی",
+    "جوکوویچ",
 
-        "کشتی آزاد",
+    "آلکاراز"
 
-        "کشتی فرنگی",
+],
 
-        "uww",
 
-        "قهرمانی جهان",
 
-        "مدال",
 
-        "حسن یزدانی",
+"wrestling": [
 
-    ],
+    "کشتی",
 
+    "کشتی آزاد",
 
+    "کشتی فرنگی",
 
-    "formula1": [
+    "تشک کشتی",
 
-        "فرمول یک",
+    "uww",
 
-        "formula 1",
+    "مدال",
 
-        "formula1",
+    "قهرمانی جهان",
 
-        "f1",
+    "حسن یزدانی"
 
-        "گرندپری",
+],
 
-        "ورشتپن",
 
-        "ردبول",
 
-    ],
 
+"formula1": [
 
+    "فرمول یک",
 
-    "combat": [
+    "formula 1",
 
-        "ufc",
+    "formula1",
 
-        "mma",
+    "f1",
 
-        "بوکس",
+    "گرندپری",
 
-        "boxing",
+    "ماشین فرمول یک",
 
-        "ناک اوت",
+    "ورشتپن",
 
-        "کمربند قهرمانی",
+    "ردبول"
 
-    ],
+],
+
+
+
+
+"combat": [
+
+    "ufc",
+
+    "mma",
+
+    "بوکس",
+
+    "boxing",
+
+    "ناک اوت",
+
+    "کمربند قهرمانی",
+
+    "مبارزه"
+
+]
+
 
 }
 
 
 
+
+
+
+
+# ==========================
+# Main Function
+# ==========================
 
 
 def get_hashtag(category, title="", summary=""):
@@ -260,10 +335,50 @@ def get_hashtag(category, title="", summary=""):
 
 
 
-    # اول ورزش‌های تخصصی
+    # اگر دسته ورزشی بود
+    if category in [
 
-    if category == "sport":
+        "sport",
 
+        "football",
+
+        "basketball",
+
+        "volleyball",
+
+        "tennis",
+
+        "wrestling",
+
+        "formula1",
+
+        "combat"
+
+    ]:
+
+
+
+        # اگر دسته دقیق آمده باشد
+
+        if category in SPORT_KEYWORDS:
+
+
+            return {
+
+                "emoji": HASHTAGS[category]["emoji"],
+
+                "hashtag": HASHTAGS[category]["hashtag"],
+
+                "sport_type": category
+
+            }
+
+
+
+
+
+
+        # تشخیص ورزش از متن
 
         for sport, words in SPORT_KEYWORDS.items():
 
@@ -276,30 +391,31 @@ def get_hashtag(category, title="", summary=""):
 
                     return {
 
+                        "emoji": HASHTAGS[sport]["emoji"],
 
-                        "category": "sport",
+                        "hashtag": HASHTAGS[sport]["hashtag"],
 
-
-                        "sport_type": sport,
-
-
-                        "hashtag": HASHTAGS[sport]
-
+                        "sport_type": sport
 
                     }
 
 
 
+
+
+
+
         return {
 
+            "emoji": HASHTAGS["sport"]["emoji"],
 
-            "category": "sport",
+            "hashtag": HASHTAGS["sport"]["hashtag"],
 
-            "sport_type": "general",
-
-            "hashtag": HASHTAGS["sport"]
+            "sport_type": "general"
 
         }
+
+
 
 
 
@@ -308,21 +424,22 @@ def get_hashtag(category, title="", summary=""):
     # دسته‌های عمومی
 
 
+    data = HASHTAGS.get(
+
+        category,
+
+        HASHTAGS["world"]
+
+    )
+
+
     return {
 
 
-        "category": category,
+        "emoji": data["emoji"],
 
+        "hashtag": data["hashtag"],
 
-        "sport_type": None,
-
-
-        "hashtag": HASHTAGS.get(
-
-            category,
-
-            "#خبر"
-
-        )
+        "sport_type": None
 
     }
