@@ -1,19 +1,21 @@
 """
-KhabarF24 Category Engine v7.0
+KhabarF24 Category Engine v7.1
 
 Smart Category + Hashtag Engine
 
 Features:
 
 - Weighted keywords
-- Priority detection
+- Sport separation
+- Equipment detection
+- Politics priority
 - Emoji
 - Hashtag
-- Sport separation
-- Politics protection
+- Formatter ready
 """
 
-print("🔥 KhabarF24 Category Engine v7.0 Loaded")
+
+print("🔥 KhabarF24 Category Engine v7.1 Loaded")
 
 
 
@@ -25,174 +27,26 @@ print("🔥 KhabarF24 Category Engine v7.0 Loaded")
 CATEGORIES = {
 
 
-    "football": {
 
-        "name": "فوتبال",
-        "emoji": "⚽",
-        "hashtag": "#فوتبال",
-        "weight": 5,
-
-        "keywords": [
-
-            "فوتبال",
-            "football",
-            "soccer",
-
-            "توپ فوتبال",
-            "کفش فوتبال",
-            "استوک",
-            "دروازه",
-
-            "گل",
-            "گلزنی",
-            "گلزن",
-
-            "بازیکن",
-            "مهاجم",
-            "مدافع",
-            "هافبک",
-
-            "مربی",
-            "سرمربی",
-
-            "ترکیب",
-            "lineup",
-
-            "کارت زرد",
-            "کارت قرمز",
-
-            "var",
-
-            "نقل و انتقالات",
-            "قرارداد بازیکن",
-
-            "جام جهانی",
-            "لیگ قهرمانان",
-            "چمپیونزلیگ",
-
-            "فیفا",
-            "یوفا",
-
-            "مسی",
-            "رونالدو",
-            "امباپه",
-            "هالند",
-            "یامال",
-
-            "منچستر یونایتد",
-            "Manchester United",
-
-            "منچستر سیتی",
-
-            "رئال مادرید",
-            "Real Madrid",
-
-            "بارسلونا",
-            "Barcelona",
-
-            "لیورپول",
-            "Liverpool",
-
-            "آرسنال",
-            "Arsenal",
-
-        ]
-    },
-
-
-
-
-
-    "basketball": {
-
-
-        "name": "بسکتبال",
-        "emoji": "🏀",
-        "hashtag": "#بسکتبال",
-        "weight": 5,
-
-
-        "keywords": [
-
-            "بسکتبال",
-            "basketball",
-
-            "nba",
-            "wnba",
-
-            "توپ بسکتبال",
-
-            "دانک",
-
-            "سه امتیازی",
-
-            "ریباند",
-
-            "کوآرتر",
-
-            "زمین بسکتبال",
-
-            "لیکرز",
-
-            "واریرز",
-
-            "لبران",
-
-            "کری",
-
-        ]
-
-    },
-
-
-
-
-
-
-    "volleyball": {
-
-
-        "name": "والیبال",
-        "emoji": "🏐",
-        "hashtag": "#والیبال",
-        "weight": 5,
-
-
-        "keywords": [
-
-            "والیبال",
-            "volleyball",
-
-            "fivb",
-
-            "ست",
-
-            "تور والیبال",
-
-            "توپ والیبال",
-
-        ]
-
-    },
-
-
-
-
+    # ==========================
+    # 🔴 Politics
+    # ==========================
 
     "politics": {
 
-
         "name": "سیاست",
+
         "emoji": "🔴",
+
         "hashtag": "#سیاست",
-        "weight": 5,
+
+        "priority": 10,
 
 
         "keywords": [
 
-            "جنگ",
 
-            "حمله",
+            "جنگ",
 
             "حمله نظامی",
 
@@ -250,6 +104,7 @@ CATEGORIES = {
 
             "کودتا",
 
+
         ]
 
     },
@@ -258,31 +113,119 @@ CATEGORIES = {
 
 
 
+    # ==========================
+    # ⚽ Football
+    # ==========================
 
-    "iran": {
+
+    "football": {
 
 
-        "name": "ایران",
-        "emoji": "🇮🇷",
-        "hashtag": "#ایران",
-        "weight": 4,
+        "name": "فوتبال",
+
+        "emoji": "⚽",
+
+        "hashtag": "#فوتبال",
+
+        "priority": 8,
 
 
         "keywords": [
 
-            "ایران",
 
-            "ایرانی",
+            "فوتبال",
 
-            "تهران",
+            "football",
 
-            "دولت ایران",
+            "soccer",
 
-            "مجلس ایران",
 
-            "سپاه",
+            "توپ فوتبال",
 
-            "وزارت کشور",
+            "کفش فوتبال",
+
+            "استوک",
+
+            "دروازه فوتبال",
+
+            "زمین فوتبال",
+
+
+            "بازیکن فوتبال",
+
+            "مهاجم",
+
+            "مدافع",
+
+            "هافبک",
+
+            "دروازه‌بان",
+
+
+            "سرمربی",
+
+            "مربی فوتبال",
+
+
+            "ترکیب رسمی",
+
+            "lineup",
+
+            "starting xi",
+
+
+            "var",
+
+            "داور فوتبال",
+
+
+            "نقل و انتقالات",
+
+            "قرارداد بازیکن",
+
+
+            "جام جهانی",
+
+            "لیگ قهرمانان",
+
+            "چمپیونزلیگ",
+
+            "فیفا",
+
+            "یوفا",
+
+
+            "مسی",
+
+            "رونالدو",
+
+            "امباپه",
+
+            "هالند",
+
+            "یامال",
+
+
+            "منچستر یونایتد",
+
+            "Manchester United",
+
+            "رئال مادرید",
+
+            "Real Madrid",
+
+            "بارسلونا",
+
+            "Barcelona",
+
+            "لیورپول",
+
+            "Liverpool",
+
+            "آرسنال",
+
+            "Arsenal",
+
 
         ]
 
@@ -291,49 +234,275 @@ CATEGORIES = {
 
 
 
-    "world": {
+
+    # ==========================
+    # 🏀 Basketball
+    # ==========================
 
 
-        "name": "جهان",
-        "emoji": "🌍",
-        "hashtag": "#جهان",
-        "weight": 3,
+    "basketball": {
+
+
+        "name": "بسکتبال",
+
+        "emoji": "🏀",
+
+        "hashtag": "#بسکتبال",
+
+        "priority": 8,
 
 
         "keywords": [
 
-            "آمریکا",
 
-            "روسیه",
+            "بسکتبال",
 
-            "چین",
+            "basketball",
 
-            "اروپا",
+            "nba",
 
-            "اوکراین",
+            "wnba",
 
-            "بریتانیا",
 
-            "فرانسه",
+            "توپ بسکتبال",
 
-            "آلمان",
+            "سبد بسکتبال",
 
-            "سازمان ملل",
+            "زمین بسکتبال",
 
-            "بین الملل",
+            "دانک",
 
-            "بین‌الملل",
+            "ریباند",
+
+            "سه امتیازی",
+
+            "کوآرتر",
+
+            "لیکرز",
+
+            "واریرز",
+
+            "لبران",
+
+            "کری",
+
 
         ]
 
     },
-        "technology": {
+
+
+
+
+
+    # ==========================
+    # 🏐 Volleyball
+    # ==========================
+
+
+    "volleyball": {
+
+
+        "name": "والیبال",
+
+        "emoji": "🏐",
+
+        "hashtag": "#والیبال",
+
+        "priority": 8,
+
+
+        "keywords": [
+
+
+            "والیبال",
+
+            "volleyball",
+
+            "fivb",
+
+            "توپ والیبال",
+
+            "تور والیبال",
+
+            "زمین والیبال",
+
+            "ست",
+
+            "اسپک",
+
+            "لیبرو",
+
+
+        ]
+
+    },
+        # ==========================
+    # 🎾 Tennis
+    # ==========================
+
+
+    "tennis": {
+
+
+        "name": "تنیس",
+
+        "emoji": "🎾",
+
+        "hashtag": "#تنیس",
+
+        "priority": 7,
+
+
+        "keywords": [
+
+            "تنیس",
+
+            "tennis",
+
+            "ATP",
+
+            "WTA",
+
+            "گرند اسلم",
+
+            "ویمبلدون",
+
+            "رولان گاروس",
+
+            "اوپن آمریکا",
+
+            "اوپن استرالیا",
+
+            "راکت تنیس",
+
+            "توپ تنیس",
+
+            "زمین تنیس",
+
+            "سرویس",
+
+            "ست تنیس",
+
+        ]
+
+    },
+
+
+
+
+
+    # ==========================
+    # 🤼 Wrestling
+    # ==========================
+
+
+    "wrestling": {
+
+
+        "name": "کشتی",
+
+        "emoji": "🤼",
+
+        "hashtag": "#کشتی",
+
+        "priority": 7,
+
+
+        "keywords": [
+
+            "کشتی",
+
+            "کشتی آزاد",
+
+            "کشتی فرنگی",
+
+            "اتحادیه جهانی کشتی",
+
+            "uww",
+
+            "قهرمانی جهان",
+
+            "تشک کشتی",
+
+            "وزن‌کشی",
+
+            "مدال طلا",
+
+            "فن کشتی",
+
+        ]
+
+    },
+
+
+
+
+
+    # ==========================
+    # 🏎 Formula 1
+    # ==========================
+
+
+    "formula1": {
+
+
+        "name": "فرمول یک",
+
+        "emoji": "🏎",
+
+        "hashtag": "#فرمول_یک",
+
+        "priority": 7,
+
+
+        "keywords": [
+
+            "فرمول یک",
+
+            "formula 1",
+
+            "formula1",
+
+            "f1",
+
+            "گرندپری",
+
+            "راننده فرمول یک",
+
+            "ماشین مسابقه",
+
+            "پیست",
+
+            "مرسدس",
+
+            "فراری",
+
+            "ردبول",
+
+        ]
+
+    },
+
+
+
+
+
+    # ==========================
+    # 💻 Technology
+    # ==========================
+
+
+    "technology": {
 
 
         "name": "تکنولوژی",
+
         "emoji": "💻",
+
         "hashtag": "#تکنولوژی",
-        "weight": 4,
+
+        "priority": 6,
 
 
         "keywords": [
@@ -346,9 +515,9 @@ CATEGORIES = {
 
             "هوش مصنوعی",
 
-            "ai",
-
             "artificial intelligence",
+
+            "ai",
 
             "openai",
 
@@ -394,13 +563,21 @@ CATEGORIES = {
 
 
 
+    # ==========================
+    # 🎮 Gaming
+    # ==========================
+
+
     "gaming": {
 
 
         "name": "گیم",
+
         "emoji": "🎮",
+
         "hashtag": "#گیم",
-        "weight": 3,
+
+        "priority": 5,
 
 
         "keywords": [
@@ -427,8 +604,6 @@ CATEGORIES = {
 
             "steam",
 
-            "استیم",
-
             "کنسول",
 
             "minecraft",
@@ -445,13 +620,21 @@ CATEGORIES = {
 
 
 
+    # ==========================
+    # 💰 Economy
+    # ==========================
+
+
     "economy": {
 
 
         "name": "اقتصاد",
+
         "emoji": "💰",
+
         "hashtag": "#اقتصاد",
-        "weight": 4,
+
+        "priority": 5,
 
 
         "keywords": [
@@ -492,13 +675,70 @@ CATEGORIES = {
 
 
 
+    # ==========================
+    # 🌍 World
+    # ==========================
+
+
+    "world": {
+
+
+        "name": "جهان",
+
+        "emoji": "🌍",
+
+        "hashtag": "#جهان",
+
+        "priority": 3,
+
+
+        "keywords": [
+
+            "آمریکا",
+
+            "روسیه",
+
+            "چین",
+
+            "اروپا",
+
+            "اوکراین",
+
+            "بریتانیا",
+
+            "فرانسه",
+
+            "آلمان",
+
+            "سازمان ملل",
+
+            "بین‌الملل",
+
+            "بین الملل",
+
+        ]
+
+    },
+
+
+
+
+
+    # ==========================
+    # 🏥 Health
+    # ==========================
+
+
     "health": {
 
 
         "name": "سلامت",
+
         "emoji": "🏥",
+
         "hashtag": "#سلامت",
-        "weight": 3,
+
+        "priority": 3,
 
 
         "keywords": [
@@ -525,46 +765,21 @@ CATEGORIES = {
 
 
 
-    "science": {
-
-
-        "name": "علم",
-        "emoji": "🔬",
-        "hashtag": "#علم",
-        "weight": 2,
-
-
-        "keywords": [
-
-            "علم",
-
-            "science",
-
-            "تحقیق",
-
-            "آزمایش",
-
-            "فضا",
-
-            "ناسا",
-
-            "nasa",
-
-        ]
-
-    },
-
-
-
+    # ==========================
+    # 🌦 Weather
+    # ==========================
 
 
     "weather": {
 
 
         "name": "آب‌وهوا",
+
         "emoji": "🌦",
+
         "hashtag": "#آب_وهوا",
-        "weight": 3,
+
+        "priority": 3,
 
 
         "keywords": [
@@ -591,9 +806,7 @@ CATEGORIES = {
 
     },
 
-
 }
-
 
 
 
@@ -605,19 +818,10 @@ CATEGORIES = {
 # ==========================
 
 
-def detect_smart_category(
-
-        title="",
-
-        summary="",
-
-        source=""
-
-):
+def detect_smart_category(title="", summary="", source=""):
 
 
     text = f"{title} {summary}".lower()
-
 
 
     scores = {}
@@ -630,90 +834,74 @@ def detect_smart_category(
         score = 0
 
 
-
         for word in data["keywords"]:
 
 
             if word.lower() in text:
 
-                score += data["weight"]
-
+                score += data["priority"]
 
 
         scores[category] = score
 
 
 
+    # اول امنیت و جنگ
 
+    if scores.get("politics", 0) >= 10:
 
-    # ==========================
-    # حفاظت فوتبال و ورزش
-    # ==========================
-
-
-    if scores.get("football",0) >= 5:
-
-        result = "football"
+        return "politics"
 
 
 
-    elif scores.get("basketball",0) >= 5:
+    # بعد ورزش‌ها
 
-        result = "basketball"
+    sport_categories = [
 
+        "football",
 
+        "basketball",
 
-    elif scores.get("volleyball",0) >= 5:
+        "volleyball",
 
-        result = "volleyball"
+        "tennis",
 
+        "wrestling",
 
+        "formula1"
 
-
-    # ==========================
-    # سیاست همیشه بالاتر از جهان
-    # ==========================
-
-
-    elif scores.get("politics",0) >= 5:
-
-        result = "politics"
+    ]
 
 
+    best_sport = max(
+
+        sport_categories,
+
+        key=lambda x: scores.get(x,0)
+
+    )
 
 
-    elif scores.get("iran",0) > 0:
+    if scores.get(best_sport,0) >= 7:
 
-        result = "iran"
-
-
-
-
-    elif scores.get("world",0) > 0:
-
-        result = "world"
+        return best_sport
 
 
 
-    else:
+    # بقیه دسته‌ها
+
+    result = max(
+
+        scores,
+
+        key=scores.get
+
+    )
 
 
-        result = max(
+    if scores[result] == 0:
 
-            scores,
-
-            key=scores.get
-
-        )
-
-
-
-        if scores[result] == 0:
-
-            result = "world"
-
-
-
+        return "world"
 
 
     return result
@@ -722,8 +910,9 @@ def detect_smart_category(
 
 
 
+
 # ==========================
-# Category Info
+# Formatter Info
 # ==========================
 
 
