@@ -1,19 +1,17 @@
 """
-KhabarF24 Main Engine v6.5
+KhabarF24 Main Engine v7.0
 
 Pipeline:
 
-News Fetcher (RSS + Scraper)
-      ↓
-News Shuffle
+News Fetcher
       ↓
 Category Engine
       ↓
 AI Processor
       ↓
-Sport Engine
+Sport Formatter
       ↓
-Game Engine
+Game Formatter
       ↓
 Quality Engine
       ↓
@@ -38,13 +36,9 @@ from telegram_bot import send_message
 
 
 from news_db import (
-
     init_db,
-
     is_published,
-
     mark_as_published,
-
 )
 
 
@@ -52,28 +46,80 @@ from news_db import (
 from category_engine import detect_smart_category
 
 
-from formatter import format_news
+
+from category_hashtags import get_hashtag
+
 
 
 from ai_processor import process_news
 
 
-from quality_engine import is_high_quality
-
-
-from importance_engine import is_important
-
 
 from sport_formatter import format_sport_news
+
 
 
 from game_formatter import format_game_news
 
 
 
+from quality_engine import is_high_quality
+
+
+
+from importance_engine import is_important
+
+
+
+from formatter import format_news
+
+
+
 
 
 CHECK_INTERVAL = 300
+
+
+
+
+
+
+# =================================
+# Sport Categories
+# =================================
+
+
+SPORT_CATEGORIES = {
+
+
+    "football",
+    "basketball",
+    "volleyball",
+    "tennis",
+    "wrestling",
+    "formula1",
+    "combat",
+
+}
+
+
+
+
+
+
+
+
+def normalize_category(category):
+
+
+    if category in SPORT_CATEGORIES:
+
+
+        return "sport"
+
+
+    return category
+
 
 
 
@@ -98,15 +144,12 @@ async def check_news():
             "No news found."
         )
 
+
         return
 
 
 
 
-
-    # =====================
-    # جلوگیری از سلطه یک منبع
-    # =====================
 
 
     random.shuffle(news)
@@ -120,11 +163,6 @@ async def check_news():
     for item in news:
 
 
-
-        # =====================
-        # Link Protection
-        # RSS + Scraper
-        # =====================
 
 
         link = item.get(
@@ -169,7 +207,6 @@ async def check_news():
 
 
 
-
         raw_title = item.get(
 
             "title",
@@ -177,6 +214,7 @@ async def check_news():
             ""
 
         )
+
 
 
         raw_summary = item.get(
@@ -189,53 +227,53 @@ async def check_news():
 
 
 
+        source = item.get(
 
+            "source",
 
-
-
-
-
-        # =====================
-        # Category
-        # =====================
-
-
-        source_category = item.get(
-
-            "category"
+            ""
 
         )
 
 
 
-        if source_category:
-
-
-            category = source_category
 
 
 
-        else:
 
 
-            category = detect_smart_category(
+        # =========================
+        # Category Detection
+        # =========================
 
 
-                title=raw_title,
+        detected_category = detect_smart_category(
 
 
-                summary=raw_summary,
+            title=raw_title,
 
 
-                source=item.get(
+            summary=raw_summary,
 
-                    "source",
 
-                    ""
+            source=source
 
-                )
 
-            )
+        )
+
+
+
+
+        original_category = detected_category
+
+
+
+
+        category = normalize_category(
+
+            detected_category
+
+        )
 
 
 
@@ -249,7 +287,7 @@ async def check_news():
 
         print(
 
-            f"📰 Source: {item.get('source','')}"
+            f"🏷️ Original: {original_category}"
 
         )
 
@@ -257,10 +295,9 @@ async def check_news():
 
 
 
-
-        # =====================
-        # AI Processor
-        # =====================
+        # =========================
+        # AI Processing
+        # =========================
 
 
         processed = process_news(
@@ -271,8 +308,8 @@ async def check_news():
 
             raw_summary
 
-        )
 
+        )
 
 
 
@@ -280,18 +317,20 @@ async def check_news():
 
             "title",
 
-            ""
+            raw_title
 
         )
+
 
 
         summary = processed.get(
 
             "summary",
 
-            ""
+            raw_summary
 
         )
+
 
 
 
@@ -299,11 +338,10 @@ async def check_news():
 
         sport_data = None
 
-
         game_data = None
-                  # =====================
-        # ⚽ Sport Processing
-        # =====================
+                  # =========================
+        # Sport Processing
+        # =========================
 
 
         if category == "sport":
@@ -318,16 +356,13 @@ async def check_news():
 
                 summary
 
+
             )
 
 
 
-            if sport_result.get(
 
-                "blocked"
-
-            ):
-
+            if sport_result.get("blocked"):
 
 
                 print(
@@ -338,6 +373,7 @@ async def check_news():
 
 
                 continue
+
 
 
 
@@ -377,9 +413,9 @@ async def check_news():
 
 
 
-        # =====================
-        # 🎮 Gaming Processing
-        # =====================
+        # =========================
+        # Gaming Processing
+        # =========================
 
 
         if category == "gaming":
@@ -398,12 +434,7 @@ async def check_news():
 
 
 
-            if game_result.get(
-
-                "blocked"
-
-            ):
-
+            if game_result.get("blocked"):
 
 
                 print(
@@ -414,6 +445,7 @@ async def check_news():
 
 
                 continue
+
 
 
 
@@ -453,11 +485,36 @@ async def check_news():
 
 
 
+        # =========================
+        # Hashtag Engine
+        # =========================
 
 
-        # =====================
-        # 🧪 Quality Check
-        # =====================
+        hashtag_data = get_hashtag(
+
+
+            category,
+
+
+            title,
+
+
+            summary
+
+
+        )
+
+
+
+
+
+
+
+
+
+        # =========================
+        # Quality Check
+        # =========================
 
 
         if not is_high_quality(
@@ -468,8 +525,8 @@ async def check_news():
 
             summary
 
-        ):
 
+        ):
 
 
             print(
@@ -487,9 +544,9 @@ async def check_news():
 
 
 
-        # =====================
-        # 🔥 Importance Check
-        # =====================
+        # =========================
+        # Importance Check
+        # =========================
 
 
         if not is_important(
@@ -503,8 +560,8 @@ async def check_news():
 
             category
 
-        ):
 
+        ):
 
 
             print(
@@ -522,43 +579,33 @@ async def check_news():
 
 
 
-        # =====================
-        # 📰 Telegram Formatter
-        # =====================
+        # =========================
+        # Telegram Formatter
+        # =========================
 
 
         message = format_news(
 
 
-
             title=title,
-
 
 
             summary=summary,
 
 
-
-            source=item.get(
-
-                "source",
-
-                ""
-
-            ),
-
+            source=source,
 
 
             category=category,
 
 
-
             sport=sport_data,
 
 
+            game=game_data,
 
-            game=game_data
 
+            hashtag_data=hashtag_data
 
 
         )
@@ -571,13 +618,12 @@ async def check_news():
 
 
 
-        # =====================
-        # 📢 Telegram Send
-        # =====================
+        # =========================
+        # Telegram Send
+        # =========================
 
 
         await send_message(
-
 
             message
 
@@ -585,9 +631,7 @@ async def check_news():
 
 
 
-
         mark_as_published(
-
 
             link
 
@@ -615,9 +659,7 @@ async def check_news():
 
 
 
-
 async def main():
-
 
 
     init_db()
@@ -626,7 +668,7 @@ async def main():
 
     print(
 
-        "🚀 KhabarF24 Started v6.5"
+        "🚀 KhabarF24 Started v7.0"
 
     )
 
@@ -657,8 +699,8 @@ async def main():
 
 
 
-        await asyncio.sleep(
 
+        await asyncio.sleep(
 
             CHECK_INTERVAL
 
