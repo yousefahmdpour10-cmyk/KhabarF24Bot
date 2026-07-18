@@ -1,159 +1,325 @@
 """
-KhabarF24 Formatter v6.3
+KhabarF24 Formatter v7.0
 
-Fixed Telegram Style
+Final Telegram Formatter
 
-Changes:
-- 🗞️ Source sticker
-- English source names preserved
-- Correct source flags
-- No "منبع:" text
-- Sport hashtag compatibility
+Compatible with:
+- category_engine v7
+- category_hashtags.py
+- sport_formatter v5
+- ai_processor v7
+- news_fetcher v7
+
+Features:
+- Final KhabarF24 style
+- Sport separated
+- Real team flags
+- English source names
+- Source country flags
+- Clean Telegram output
 """
+
+
+print("📰 KhabarF24 Formatter v7.0 Loaded")
+
+
+
+# =====================================
+# Category Style
+# =====================================
 
 
 CATEGORY_STYLE = {
 
+
     "politics": {
-        "name": "سیاست و امنیت",
+
+        "name": "سیاست",
+
         "emoji": "🔴",
+
         "hashtag": "#سیاست"
+
     },
+
 
     "iran": {
+
         "name": "ایران",
+
         "emoji": "🇮🇷",
+
         "hashtag": "#ایران"
+
     },
+
 
     "world": {
+
         "name": "جهان",
+
         "emoji": "🌍",
+
         "hashtag": "#جهان"
+
     },
 
-    "sport": {
-        "name": "ورزش",
-        "emoji": "⚽",
-        "hashtag": "#ورزش"
-    },
-
-    "gaming": {
-        "name": "گیم",
-        "emoji": "🎮",
-        "hashtag": "#گیم"
-    },
 
     "technology": {
-        "name": "فناوری",
+
+        "name": "تکنولوژی",
+
         "emoji": "💻",
-        "hashtag": "#فناوری"
+
+        "hashtag": "#تکنولوژی"
+
     },
+
+
+    "gaming": {
+
+        "name": "گیم",
+
+        "emoji": "🎮",
+
+        "hashtag": "#گیم"
+
+    },
+
 
     "economy": {
+
         "name": "اقتصاد",
+
         "emoji": "💰",
+
         "hashtag": "#اقتصاد"
+
     },
+
 
     "health": {
+
         "name": "سلامت",
+
         "emoji": "🏥",
+
         "hashtag": "#سلامت"
+
     },
+
 
     "science": {
+
         "name": "علم",
+
         "emoji": "🔬",
+
         "hashtag": "#علم"
+
     },
 
+
     "weather": {
-        "name": "هواشناسی",
+
+        "name": "آب‌وهوا",
+
         "emoji": "🌦",
-        "hashtag": "#هواشناسی"
+
+        "hashtag": "#آب_وهوا"
+
     },
+
+
+    # Sports
+
+    "football": {
+
+        "name": "فوتبال",
+
+        "emoji": "⚽",
+
+        "hashtag": "#فوتبال"
+
+    },
+
+
+    "basketball": {
+
+        "name": "بسکتبال",
+
+        "emoji": "🏀",
+
+        "hashtag": "#بسکتبال"
+
+    },
+
+
+    "volleyball": {
+
+        "name": "والیبال",
+
+        "emoji": "🏐",
+
+        "hashtag": "#والیبال"
+
+    },
+
+
+    "tennis": {
+
+        "name": "تنیس",
+
+        "emoji": "🎾",
+
+        "hashtag": "#تنیس"
+
+    },
+
+
+    "wrestling": {
+
+        "name": "کشتی",
+
+        "emoji": "🤼",
+
+        "hashtag": "#کشتی"
+
+    },
+
+
+    "formula1": {
+
+        "name": "فرمول یک",
+
+        "emoji": "🏎️",
+
+        "hashtag": "#فرمول_یک"
+
+    },
+
+
+    "combat": {
+
+        "name": "ورزش رزمی",
+
+        "emoji": "🥊",
+
+        "hashtag": "#ورزش_رزمی"
+
+    },
+
 
 }
 
 
 
-# =========================
-# Source Flags
-# =========================
+
+
+
+
+# =====================================
+# Source Dictionary
+# نام منابع انگلیسی + پرچم
+# =====================================
 
 
 SOURCE_FLAGS = {
 
 
-    "BBC World": "🇬🇧",
-
     "BBC Sport": "🇬🇧",
 
-    "CNN World": "🇺🇸",
+    "BBC": "🇬🇧",
+
 
     "Reuters": "🇺🇸",
 
-    "Sky Sports": "🇬🇧",
+
+    "CNN": "🇺🇸",
+
 
     "ESPN": "🇺🇸",
 
 
-    "Al Jazeera": "🇶🇦",
-
-    "العربیه": "🇸🇦",
-
-
-    "Channel 12 Israel": "🇮🇱",
-
-    "کان اسرائیل": "🇮🇱",
-
-
-    "ISNA": "🇮🇷",
-
-    "Tasnim": "🇮🇷",
-
-    "Fars": "🇮🇷",
-
-    "Khabar Fori": "🇮🇷",
-
-    "Iran International": "🇬🇧",
-
-
-    "Digikala": "🇮🇷",
-
-    "Digiato": "🇮🇷",
+    "Sky Sports": "🇬🇧",
 
 
     "FIFA": "🌐",
 
+
     "UEFA": "🇪🇺",
+
 
     "Premier League": "🇬🇧",
 
+
     "La Liga": "🇪🇸",
+
 
     "Bundesliga": "🇩🇪",
 
+
     "Serie A": "🇮🇹",
 
+
     "Di Marzio": "🇮🇹",
+
+
+    "Al Jazeera": "🇶🇦",
+
+
+    "Al Arabiya": "🇸🇦",
+
+
+    "Kan Israel": "🇮🇱",
+
+
+    "Israel Channel 12": "🇮🇱",
+
+
+    "Iran International": "🇬🇧",
+
+
+    "Tasnim": "🇮🇷",
+
+
+    "Fars News": "🇮🇷",
+
+
+    "ISNA": "🇮🇷",
+
+
+    "Khabar Fori": "🇮🇷",
+
+
+    "Digiato": "🇮🇷",
+
+
+    "Digikala": "🇮🇷",
+
 
 }
 
 
 
+
+
 def get_source_flag(source):
 
+
     if not source:
+
         return "🌐"
+
 
 
     for name, flag in SOURCE_FLAGS.items():
 
+
         if name.lower() in source.lower():
 
             return flag
+
 
 
     return "🌐"
@@ -162,68 +328,145 @@ def get_source_flag(source):
 
 
 
-# =========================
-# Sport Hashtag
-# =========================
 
 
-def get_sport_style(sport):
+def clean_source_name(source):
 
 
-    if not sport:
+    if not source:
 
-        return "⚽", "#ورزش"
+        return "Unknown"
 
 
 
-    sport_type = sport.get(
-        "type",
-        ""
-    )
+    SOURCE_NAMES = {
 
 
+        "العربیه": "Al Arabiya",
 
-    styles = {
+        "العربية": "Al Arabiya",
 
-        "football": (
-            "⚽",
-            "#فوتبال"
-        ),
 
-        "basketball": (
-            "🏀",
-            "#بسکتبال"
-        ),
+        "کان اسرائیل": "Kan Israel",
 
-        "volleyball": (
-            "🏐",
-            "#والیبال"
-        ),
 
-        "tennis": (
-            "🎾",
-            "#تنیس"
-        ),
+        "ایران اینترنشنال": "Iran International",
 
-        "wrestling": (
-            "🤼",
-            "#کشتی"
-        ),
 
-        "formula1": (
-            "🏎️",
-            "#فرمول_یک"
-        ),
+        "خبر فوری": "Khabar Fori",
+
+
+        "فارس": "Fars News",
 
     }
 
 
-    return styles.get(
-        sport_type,
-        (
-            "⚽",
-            "#ورزش"
-        )
+
+    for old,new in SOURCE_NAMES.items():
+
+
+        if old.lower() in source.lower():
+
+            return new
+
+
+
+    return source
+    # =====================================
+# Team Flags
+# فقط تیم‌ها و کشور واقعی
+# =====================================
+
+
+TEAM_FLAGS = {
+
+
+    "منچستر یونایتد":
+        "🇬🇧 منچستر یونایتد (Manchester United)",
+
+
+    "Manchester United":
+        "🇬🇧 منچستر یونایتد (Manchester United)",
+
+
+
+    "منچستر سیتی":
+        "🇬🇧 منچستر سیتی (Manchester City)",
+
+
+
+    "رئال مادرید":
+        "🇪🇸 رئال مادرید (Real Madrid)",
+
+
+
+    "Real Madrid":
+        "🇪🇸 رئال مادرید (Real Madrid)",
+
+
+
+    "بارسلونا":
+        "🇪🇸 بارسلونا (Barcelona)",
+
+
+
+    "Barcelona":
+        "🇪🇸 بارسلونا (Barcelona)",
+
+
+
+    "لیورپول":
+        "🇬🇧 لیورپول (Liverpool)",
+
+
+
+    "Liverpool":
+        "🇬🇧 لیورپول (Liverpool)",
+
+
+
+    "آرسنال":
+        "🇬🇧 آرسنال (Arsenal)",
+
+
+
+    "بایرن مونیخ":
+        "🇩🇪 بایرن مونیخ (Bayern Munich)",
+
+
+
+    "پاری سن ژرمن":
+        "🇫🇷 پاری‌سن‌ژرمن (Paris Saint-Germain)",
+
+
+
+    "یوونتوس":
+        "🇮🇹 یوونتوس (Juventus)",
+
+
+}
+
+
+
+
+
+
+
+
+# =====================================
+# Sport Style
+# =====================================
+
+
+def get_sport_style(category):
+
+
+    return CATEGORY_STYLE.get(
+
+        category,
+
+        CATEGORY_STYLE["world"]
+
     )
 
 
@@ -231,160 +474,272 @@ def get_sport_style(sport):
 
 
 
-def format_sport_section(sport):
 
-    if not sport:
+
+# =====================================
+# Add Team Flags
+# =====================================
+
+
+def add_team_flags(text):
+
+
+    if not text:
+
         return ""
 
 
-    text = ""
+
+    for team, replacement in TEAM_FLAGS.items():
+
+
+        if replacement not in text:
+
+            text = text.replace(
+
+                team,
+
+                replacement
+
+            )
+
+
+
+    return text
+
+
+
+
+
+
+
+# =====================================
+# Clean Empty Lines
+# =====================================
+
+
+def clean_lines(text):
+
+
+    lines = []
+
+
+    for line in text.split("\n"):
+
+
+        if line.strip():
+
+            lines.append(
+
+                line.rstrip()
+
+            )
+
+
+
+    return "\n".join(lines)
+
+
+
+
+
+
+
+
+
+# =====================================
+# Sport Extra Information
+# =====================================
+
+
+def format_sport_extra(sport):
+
+
+    if not sport:
+
+        return ""
+
+
+
+    output = []
+
 
 
     if sport.get("score"):
-        text += f"\n⚽ {sport['score']}\n"
+
+
+        output.append(
+
+            f"⚽ {sport['score']}"
+
+        )
+
 
 
     if sport.get("yellow_cards"):
-        text += f"\n🟨 {sport['yellow_cards']}\n"
+
+
+        output.append(
+
+            f"🟨 {sport['yellow_cards']}"
+
+        )
+
 
 
     if sport.get("red_cards"):
-        text += f"\n🟥 {sport['red_cards']}\n"
 
 
-    if sport.get("lineup"):
-        text += f"\n👥 {sport['lineup']}\n"
+        output.append(
 
+            f"🟥 {sport['red_cards']}"
 
-    if sport.get("interview"):
-        text += f"\n🎙️ {sport['interview']}\n"
-
-
-    return text.strip()
+        )
 
 
 
-
-
-
-def format_game_section(game):
-
-    if not game:
-        return ""
-
-
-    text = ""
-
-
-    if game.get("details"):
-        text += f"\n🎮 {game['details']}\n"
-
-
-    if game.get("release"):
-        text += f"\n📅 {game['release']}\n"
-
-
-    return text.strip()
+    return "\n".join(output)
 
 
 
 
 
 
-# =========================
-# Final Message
-# =========================
+
+
+
+
+# =====================================
+# Main Telegram Formatter
+# =====================================
 
 
 def format_news(
+
         title,
+
         summary,
+
         source,
+
         category,
+
         sport=None,
+
         game=None
+
 ):
 
 
-    style = CATEGORY_STYLE.get(
-        category,
-        CATEGORY_STYLE["world"]
+    # دسته
+
+
+    style = get_sport_style(
+
+        category
+
     )
 
 
-    emoji = style["emoji"]
 
-    name = style["name"]
+    category_name = style["name"]
+
+    category_emoji = style["emoji"]
 
     hashtag = style["hashtag"]
 
 
 
-    if category == "sport":
 
 
-        emoji, hashtag = get_sport_style(
-            sport
-        )
 
-        name = hashtag.replace(
-            "#",
+    # اگر ورزش تخصصی باشد
+
+
+    if sport:
+
+
+        sport_type = sport.get(
+
+            "type",
+
             ""
+
         )
 
 
+        if sport_type in CATEGORY_STYLE:
 
-    flag = get_source_flag(
-        source
+
+            style = CATEGORY_STYLE[sport_type]
+
+
+            category_name = style["name"]
+
+            category_emoji = style["emoji"]
+
+            hashtag = style["hashtag"]
+
+
+
+
+
+
+
+    # تیم‌ها
+
+
+    title = add_team_flags(
+
+        title
+
+    )
+
+
+    summary = add_team_flags(
+
+        summary
+
     )
 
 
 
-    extra = ""
-
-
-    if category == "sport":
-
-        extra = format_sport_section(
-            sport
-        )
-
-
-    if category == "gaming":
-
-        extra = format_game_section(
-            game
-        )
 
 
 
+    # منبع
 
-    message = f"""
-━━━━━━━━━━━━━━━━
-🔴 KhabarF24 | {emoji} {name}
+
+    source = clean_source_name(
+
+        source
+
+    )
+
+
+    source_flag = get_source_flag(
+
+        source
+
+    )
+
+
+
+
+
+
+    # متن نهایی
+
+
+    message = f"""━━━━━━━━━━━━━━━━
+🔴 KhabarF24 | {category_emoji} {category_name}
 ━━━━━━━━━━━━━━━━
 
 📰 {title}
 
-
 ✍️ {summary}
-"""
 
-
-
-    if extra:
-
-        message += f"""
-
-{extra}
-"""
-
-
-
-    message += f"""
-
-🗞️ {flag} {source}
-
+🗞️ {source_flag} {source}
 
 ━━━━━━━━━━━━━━━━
 📢 @KhabarF24
@@ -393,4 +748,9 @@ def format_news(
 """
 
 
-    return message.strip()
+
+    return clean_lines(
+
+        message
+
+    )
