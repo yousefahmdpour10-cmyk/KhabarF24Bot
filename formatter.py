@@ -627,7 +627,8 @@ def format_news(
         sport=None,
 
         game=None
-
+    
+hashtag_data=None
 ):
 
 
