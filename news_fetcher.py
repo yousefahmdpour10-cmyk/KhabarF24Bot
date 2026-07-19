@@ -155,48 +155,33 @@ def remove_ads(text):
 
 def fetch_rss_news(source):
 
+    if not source:
+        return []
+
+
+    url = source.get(
+        "url",
+        ""
+    )
+
+    name = source.get(
+        "name",
+        "Unknown"
+    )
+
+    category = source.get(
+        "category",
+        "world"
+    )
+
+
+    if not url:
+        return []
+
 
     news = []
 
 
-
-    url = source.get(
-
-        "url",
-
-        ""
-
-    )
-
-
-
-    name = source.get(
-
-        "name",
-
-        "Unknown"
-
-    )
-
-
-
-    category = source.get(
-
-        "category",
-
-        "world"
-
-    )
-
-
-
-    if not url:
-
-        return []
-
-
-
-    try:
     try:
 
         feed = feedparser.parse(
@@ -207,33 +192,38 @@ def fetch_rss_news(source):
         for item in feed.entries[:10]:
 
 
-            if isinstance(item.get("title"), list):
+            title_raw = item.get(
+                "title",
+                ""
+            )
+
+
+            summary_raw = item.get(
+                "summary",
+                ""
+            )
+
+
+            # جلوگیری از خطای list در RSS
+
+            if isinstance(title_raw, list):
                 continue
 
 
-            if isinstance(item.get("summary"), list):
-                item["summary"] = " ".join(
-                    item["summary"]
+            if isinstance(summary_raw, list):
+
+                summary_raw = " ".join(
+                    summary_raw
                 )
 
 
             title = clean_text(
-
-                item.get(
-                    "title",
-                    ""
-                )
-
+                title_raw
             )
 
 
             summary = clean_text(
-
-                item.get(
-                    "summary",
-                    ""
-                )
-
+                summary_raw
             )
 
 
@@ -244,7 +234,6 @@ def fetch_rss_news(source):
 
 
             if not title:
-
                 continue
 
 
@@ -270,7 +259,6 @@ def fetch_rss_news(source):
         print(
             f"RSS Error {name}: {e}"
         )
-
 
 
     return news
