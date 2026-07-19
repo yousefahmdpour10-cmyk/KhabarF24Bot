@@ -27,12 +27,10 @@ import asyncio
 import random
 
 
-
 from news_fetcher import get_latest_news
 
 
 from telegram_bot import send_message
-
 
 
 from news_db import (
@@ -42,45 +40,32 @@ from news_db import (
 )
 
 
-
 from category_engine import detect_smart_category
-
 
 
 from category_hashtags import get_hashtag
 
 
-
 from ai_processor import process_news
-
 
 
 from sport_formatter import format_sport_news
 
 
-
 from game_formatter import format_game_news
-
 
 
 from quality_engine import is_high_quality
 
 
-
 from importance_engine import is_important
-
 
 
 from formatter import format_news
 
 
 
-
-
 CHECK_INTERVAL = 300
-
-
-
 
 
 
@@ -90,7 +75,6 @@ CHECK_INTERVAL = 300
 
 
 SPORT_CATEGORIES = {
-
 
     "football",
     "basketball",
@@ -106,23 +90,15 @@ SPORT_CATEGORIES = {
 
 
 
-
-
-
 def normalize_category(category):
 
 
     if category in SPORT_CATEGORIES:
 
-
         return "sport"
 
 
     return category
-
-
-
-
 
 
 
@@ -136,14 +112,12 @@ async def check_news():
     news = get_latest_news()
 
 
-
     if not news:
 
 
         print(
             "No news found."
         )
-
 
         return
 
@@ -158,10 +132,7 @@ async def check_news():
 
 
 
-
-
     for item in news:
-
 
 
 
@@ -216,7 +187,6 @@ async def check_news():
         )
 
 
-
         raw_summary = item.get(
 
             "summary",
@@ -226,7 +196,6 @@ async def check_news():
         )
 
 
-
         source = item.get(
 
             "source",
@@ -234,10 +203,6 @@ async def check_news():
             ""
 
         )
-
-
-
-
 
 
 
@@ -263,9 +228,7 @@ async def check_news():
 
 
 
-
         original_category = detected_category
-
 
 
 
@@ -274,7 +237,6 @@ async def check_news():
             detected_category
 
         )
-
 
 
 
@@ -294,28 +256,31 @@ async def check_news():
 
 
 
-
         # =========================
-        # AI Processing
+        # AI Processing v7.1
         # =========================
 
 
-       processed = process_news({
+        processed = process_news({
 
-    "title": raw_title,
+            "title": raw_title,
 
-    "summary": raw_summary,
+            "summary": raw_summary,
 
-    "content": item.get(
-        "content",
-        ""
-    ),
+            "content": item.get(
 
-    "source": source,
+                "content",
 
-    "category": category
+                ""
 
-})
+            ),
+
+            "source": source,
+
+            "category": category
+
+        })
+
 
 
         title = processed.get(
@@ -338,19 +303,18 @@ async def check_news():
 
 
 
-
-
-
         sport_data = None
 
         game_data = None
-                  # =========================
+
+
+
+        # =========================
         # Sport Processing
         # =========================
 
 
         if category == "sport":
-
 
 
             sport_result = format_sport_news(
@@ -363,7 +327,6 @@ async def check_news():
 
 
             )
-
 
 
 
@@ -383,7 +346,6 @@ async def check_news():
 
 
 
-
             title = sport_result.get(
 
                 "title",
@@ -393,7 +355,6 @@ async def check_news():
             )
 
 
-
             summary = sport_result.get(
 
                 "summary",
@@ -401,7 +362,6 @@ async def check_news():
                 summary
 
             )
-
 
 
             sport_data = sport_result.get(
@@ -416,15 +376,12 @@ async def check_news():
 
 
 
-
-
         # =========================
         # Gaming Processing
         # =========================
 
 
         if category == "gaming":
-
 
 
             game_result = format_game_news(
@@ -455,7 +412,6 @@ async def check_news():
 
 
 
-
             title = game_result.get(
 
                 "title",
@@ -463,7 +419,6 @@ async def check_news():
                 title
 
             )
-
 
 
             summary = game_result.get(
@@ -475,14 +430,11 @@ async def check_news():
             )
 
 
-
             game_data = game_result.get(
 
                 "game"
 
             )
-
-
 
 
 
@@ -516,7 +468,6 @@ async def check_news():
 
 
 
-
         # =========================
         # Quality Check
         # =========================
@@ -542,6 +493,7 @@ async def check_news():
 
 
             continue
+
 
 
 
@@ -584,6 +536,7 @@ async def check_news():
 
 
 
+
         # =========================
         # Telegram Formatter
         # =========================
@@ -614,7 +567,6 @@ async def check_news():
 
 
         )
-
 
 
 
@@ -683,9 +635,7 @@ async def main():
     while True:
 
 
-
         try:
-
 
 
             await check_news()
@@ -695,13 +645,11 @@ async def main():
         except Exception as e:
 
 
-
             print(
 
                 f"Error: {e}"
 
             )
-
 
 
 
@@ -717,8 +665,6 @@ async def main():
 
 
 
-
-
 if __name__ == "__main__":
 
 
@@ -726,4 +672,4 @@ if __name__ == "__main__":
 
         main()
 
-    )
+    )          
