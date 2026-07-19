@@ -207,8 +207,13 @@ def fetch_rss_news(source):
 
 
 
-        for item in feed.entries[:10]:
+     for item in feed.entries[:10]:
+             
+if isinstance(item.get("title"), list):
+    continue
 
+if isinstance(item.get("summary"), list):
+    item["summary"] = " ".join(item["summary"])
 
             title = clean_text(
 
