@@ -764,22 +764,26 @@ def format_news(
     # متن نهایی
 
 
-    message = f"""━━━━━━━━━━━━━━━━
+        message = f"""━━━━━━━━━━━━━━━━
 🔴 KhabarF24 | {category_emoji} {category_name}
 ━━━━━━━━━━━━━━━━
 
+
 📰 {title}
+
 
 ✍️ {summary}
 
-🗞️ {source_flag} {source}
+
+
+• 🗞️ {source_flag} {source}
+
 
 ━━━━━━━━━━━━━━━━
 📢 @KhabarF24
 
 {hashtag}
 """
-
 
 
     return clean_lines(
