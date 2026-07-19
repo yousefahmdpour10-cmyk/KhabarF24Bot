@@ -1,15 +1,17 @@
 """
-KhabarF24 Sources v6.1
+KhabarF24 Sources v7.1
 
 RSS + Scraper Sources
 
-RSS:
-- منابعی که RSS پایدار دارند
+Compatible with:
+- News Fetcher v7
+- AI Processor v7.1
+- Formatter v7
+- Category Engine v7.1
 
-SCRAPER:
-- منابع مهم بدون RSS معتبر
+All source names are English
+Country flags are handled by Formatter
 """
-
 
 
 # =========================
@@ -20,26 +22,30 @@ SCRAPER:
 RSS_SOURCES = [
 
 
-
     # =========================
     # 🇮🇷 Iran
     # =========================
 
 
     {
-        "name": "ایسنا",
+        "name": "ISNA",
         "url": "https://www.isna.ir/rss",
         "category": "iran"
     },
 
 
     {
-        "name": "ایران اینترنشنال",
+        "name": "Iran International",
         "url": "https://www.iranintl.com/feed",
         "category": "iran"
     },
 
 
+    {
+        "name": "Vahid Online",
+        "url": "https://www.vahidonline.com/feed/",
+        "category": "iran"
+    },
 
 
 
@@ -70,8 +76,6 @@ RSS_SOURCES = [
 
 
 
-
-
     # =========================
     # 💻 Technology
     # =========================
@@ -99,12 +103,24 @@ RSS_SOURCES = [
 
 
     {
-        "name": "دیجیاتو",
+        "name": "Digiato",
         "url": "https://digiato.com/feed",
         "category": "technology"
     },
 
 
+    {
+        "name": "CITNA",
+        "url": "https://www.citna.ir/rss",
+        "category": "technology"
+    },
+
+
+    {
+        "name": "MIT Technology Review",
+        "url": "https://www.technologyreview.com/feed/",
+        "category": "technology"
+    },
 
 
 
@@ -135,8 +151,6 @@ RSS_SOURCES = [
 
 
 
-
-
     # =========================
     # ⚽ Sport
     # =========================
@@ -163,16 +177,8 @@ RSS_SOURCES = [
     },
 
 
+
 ]
-
-
-
-
-
-
-
-
-
 # =========================
 # SCRAPER SOURCES
 # =========================
@@ -181,12 +187,13 @@ RSS_SOURCES = [
 SCRAPER_SOURCES = [
 
 
-
+    # =========================
     # 🇮🇷 Iran
+    # =========================
 
 
     {
-        "name": "تسنیم",
+        "name": "Tasnim",
         "url": "https://www.tasnimnews.com",
         "category": "iran",
         "type": "scraper"
@@ -194,7 +201,7 @@ SCRAPER_SOURCES = [
 
 
     {
-        "name": "فارس",
+        "name": "Fars News",
         "url": "https://www.farsnews.ir",
         "category": "iran",
         "type": "scraper"
@@ -202,7 +209,7 @@ SCRAPER_SOURCES = [
 
 
     {
-        "name": "خبر فوری",
+        "name": "Khabar Fori",
         "url": "https://khabarfouri.com",
         "category": "iran",
         "type": "scraper"
@@ -210,31 +217,47 @@ SCRAPER_SOURCES = [
 
 
     {
-        "name": "هنگاو",
+        "name": "Hengaw",
         "url": "https://hengaw.net",
         "category": "iran",
         "type": "scraper"
     },
 
 
+    {
+        "name": "Vahid Online",
+        "url": "https://www.vahidonline.com",
+        "category": "iran",
+        "type": "scraper"
+    },
 
 
 
+    # =========================
     # 🇮🇱 Israel
+    # =========================
 
 
     {
-        "name": "کان اسرائیل",
+        "name": "Kan Israel",
         "url": "https://www.kan.org.il",
         "category": "world",
         "type": "scraper"
     },
 
 
+    {
+        "name": "Israel Channel 12",
+        "url": "https://www.n12.co.il",
+        "category": "world",
+        "type": "scraper"
+    },
 
 
 
+    # =========================
     # ⚽ Football
+    # =========================
 
 
     {
@@ -256,9 +279,9 @@ SCRAPER_SOURCES = [
 
 
 
-
-
+    # =========================
     # 🏀 Basketball
+    # =========================
 
 
     {
@@ -280,9 +303,9 @@ SCRAPER_SOURCES = [
 
 
 
-
-
+    # =========================
     # 🏐 Volleyball
+    # =========================
 
 
     {
@@ -295,9 +318,9 @@ SCRAPER_SOURCES = [
 
 
 
-
-
+    # =========================
     # 🤼 Wrestling
+    # =========================
 
 
     {
@@ -310,13 +333,13 @@ SCRAPER_SOURCES = [
 
 
 
-
-
+    # =========================
     # 🎾 Tennis
+    # =========================
 
 
     {
-        "name": "ATP",
+        "name": "ATP Tour",
         "url": "https://www.atptour.com",
         "category": "sport",
         "sport": "tennis",
@@ -325,7 +348,7 @@ SCRAPER_SOURCES = [
 
 
     {
-        "name": "WTA",
+        "name": "WTA Tennis",
         "url": "https://www.wtatennis.com",
         "category": "sport",
         "sport": "tennis",
@@ -334,9 +357,9 @@ SCRAPER_SOURCES = [
 
 
 
-
-
+    # =========================
     # 🏎 Formula 1
+    # =========================
 
 
     {
@@ -346,7 +369,6 @@ SCRAPER_SOURCES = [
         "sport": "formula1",
         "type": "scraper"
     },
-
 
 
 ]
