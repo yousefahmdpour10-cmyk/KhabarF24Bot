@@ -1,9 +1,11 @@
 """
-KhabarF24 AI Processor v7.0
+KhabarF24 AI Processor v7.1
 
 Pipeline:
 
 News Fetcher v7
+        ↓
+Source Normalize
         ↓
 Brand Protection
         ↓
@@ -25,9 +27,7 @@ import re
 import html
 
 
-
 from deep_translator import GoogleTranslator
-
 
 
 from brand_dictionary import (
@@ -41,52 +41,40 @@ from rtl_cleaner import (
 
 
 
-print("🤖 KhabarF24 AI Processor v7.0 Loaded")
+print("🤖 KhabarF24 AI Processor v7.1 Loaded")
 
 
 
 
 
 # =====================================================
-# Translator
+# Translation
 # =====================================================
 
 
 def translate_text(text):
-
 
     if not text:
 
         return ""
 
 
-
     try:
 
-
         result = GoogleTranslator(
-
             source="auto",
-
             target="fa"
-
         ).translate(text)
-
 
 
         return result.strip()
 
 
-
     except Exception as e:
 
-
         print(
-
             f"Translation Error: {e}"
-
         )
-
 
         return text
 
@@ -103,7 +91,6 @@ def translate_text(text):
 
 BAD_TRANSLATIONS = [
 
-
     "این متن",
 
     "به پایان می دهد",
@@ -114,6 +101,10 @@ BAD_TRANSLATIONS = [
 
     "یک اندازه",
 
+    "در این مقاله",
+
+    "این خبر",
+
 ]
 
 
@@ -122,11 +113,9 @@ BAD_TRANSLATIONS = [
 
 def clean_text(text):
 
-
     if not text:
 
         return ""
-
 
 
     text = html.unescape(text)
@@ -135,14 +124,22 @@ def clean_text(text):
 
     for bad in BAD_TRANSLATIONS:
 
-
         text = text.replace(
-
             bad,
-
             ""
-
         )
+
+
+
+    text = re.sub(
+
+        r"<.*?>",
+
+        "",
+
+        text
+
+    )
 
 
 
@@ -155,7 +152,6 @@ def clean_text(text):
         text
 
     )
-
 
 
     return text.strip()
@@ -173,7 +169,6 @@ def clean_text(text):
 
 def protect_numbers(original, translated):
 
-
     if not original:
 
         return translated
@@ -190,13 +185,12 @@ def protect_numbers(original, translated):
 
 
 
-    for num in numbers:
+    for number in numbers:
 
 
-        if num not in translated:
+        if number not in translated:
 
-
-            translated += f" {num}"
+            translated += f" {number}"
 
 
 
@@ -209,20 +203,24 @@ def protect_numbers(original, translated):
 
 
 # =====================================================
-# Create Summary
+# Summary Generator
 # =====================================================
 
 
-def create_summary(title, content, summary):
+def create_summary(title, summary, content):
 
 
-    if summary and len(summary) > 40:
+    # اگر خلاصه خوب وجود دارد
+
+    if summary and len(summary) >= 40:
 
         return summary
 
 
 
-    source = content or title
+
+
+    source = content or summary or title
 
 
 
@@ -232,9 +230,8 @@ def create_summary(title, content, summary):
 
 
 
-    sentences = re.split(
 
-        r"[.!؟]",
+    source = clean_text(
 
         source
 
@@ -242,7 +239,13 @@ def create_summary(title, content, summary):
 
 
 
-    result = ""
+    sentences = re.split(
+
+        r"[.!؟\n]",
+
+        source
+
+    )
 
 
 
@@ -253,23 +256,17 @@ def create_summary(title, content, summary):
 
 
 
-        if len(sentence) > 40:
+        if len(sentence) >= 40:
 
 
-            result = sentence
-
-            break
-
-
-
-    if not result:
-
-
-        result = source[:180]
+            return sentence[:250]
 
 
 
-    return result.strip()
+
+    return source[:250]
+
+
 
 
 
@@ -278,11 +275,19 @@ def create_summary(title, content, summary):
 
 
 # =====================================================
-# AI Processing
+# Main AI Processor
 # =====================================================
 
 
 def process_news(news):
+
+
+    if not isinstance(news, dict):
+
+        return {}
+
+
+
 
 
     title = news.get(
@@ -316,7 +321,7 @@ def process_news(news):
 
         "source",
 
-        ""
+        "Unknown"
 
     )
 
@@ -333,12 +338,13 @@ def process_news(news):
 
 
 
-
     print(
 
-        "🤖 KhabarF24 AI v7.0"
+        "🤖 KhabarF24 AI Processing..."
 
     )
+
+
 
 
 
@@ -349,21 +355,21 @@ def process_news(news):
     # ---------------------------------
 
 
-    title = replace_official_names(
+    protected_title = replace_official_names(
 
         title
 
     )
 
 
-    summary = replace_official_names(
+    protected_summary = replace_official_names(
 
         summary
 
     )
 
 
-    content = replace_official_names(
+    protected_content = replace_official_names(
 
         content
 
@@ -374,21 +380,33 @@ def process_news(news):
 
 
 
+
+
     # ---------------------------------
-    # Translation
+    # Translate title
     # ---------------------------------
 
 
     fa_title = translate_text(
 
-        title
+        protected_title
 
     )
 
 
+
+
+
+
+
+    # ---------------------------------
+    # Translate summary/content
+    # ---------------------------------
+
+
     fa_summary = translate_text(
 
-        summary
+        protected_summary
 
     )
 
@@ -399,9 +417,10 @@ def process_news(news):
 
         fa_summary = translate_text(
 
-            content
+            protected_content
 
         )
+
 
 
 
@@ -433,8 +452,10 @@ def process_news(news):
 
 
 
+
+
     # ---------------------------------
-    # Number Protection
+    # Numbers protection
     # ---------------------------------
 
 
@@ -449,7 +470,7 @@ def process_news(news):
 
     fa_summary = protect_numbers(
 
-        summary or content,
+        content or summary,
 
         fa_summary
 
@@ -461,8 +482,10 @@ def process_news(news):
 
 
 
+
+
     # ---------------------------------
-    # Restore official names
+    # Restore names
     # ---------------------------------
 
 
@@ -485,8 +508,10 @@ def process_news(news):
 
 
 
+
+
     # ---------------------------------
-    # Create final summary
+    # Generate final summary
     # ---------------------------------
 
 
@@ -496,9 +521,11 @@ def process_news(news):
 
         fa_summary,
 
-        fa_summary
+        content
 
     )
+
+
 
 
 
@@ -523,6 +550,8 @@ def process_news(news):
         fa_summary
 
     )
+
+
 
 
 
@@ -557,5 +586,4 @@ def process_news(news):
 
             category
 
-
-    }
+            }
