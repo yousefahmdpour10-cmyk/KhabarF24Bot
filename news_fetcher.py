@@ -197,76 +197,50 @@ def fetch_rss_news(source):
 
 
     try:
-
+    try:
 
         feed = feedparser.parse(
-
             url
-
         )
 
 
+        for item in feed.entries[:10]:
 
-     for item in feed.entries[:10]:
-             
-if isinstance(item.get("title"), list):
-    continue
 
-if isinstance(item.get("summary"), list):
-    item["summary"] = " ".join(item["summary"])
+            if isinstance(item.get("title"), list):
+                continue
+
+
+            if isinstance(item.get("summary"), list):
+                item["summary"] = " ".join(
+                    item["summary"]
+                )
+
 
             title = clean_text(
 
                 item.get(
-
                     "title",
-
                     ""
-
                 )
 
             )
-
 
 
             summary = clean_text(
 
                 item.get(
-
                     "summary",
-
                     ""
-
                 )
 
             )
-
-
-
-            content = clean_text(
-
-                item.get(
-
-                    "content",
-
-                    ""
-
-                )
-
-            )
-
 
 
             link = item.get(
-
                 "link",
-
                 ""
-
             )
-
-
-
 
 
             if not title:
@@ -274,40 +248,27 @@ if isinstance(item.get("summary"), list):
                 continue
 
 
-
-
             news.append({
-
 
                 "title": title,
 
+                "summary": summary,
 
-                "summary": remove_ads(summary),
-
-
-                "content": remove_ads(content),
-
+                "content": summary,
 
                 "link": link,
 
-
                 "source": name,
 
-
                 "category": category
-
 
             })
 
 
-
     except Exception as e:
 
-
         print(
-
-            f"RSS ERROR {name}: {e}"
-
+            f"RSS Error {name}: {e}"
         )
 
 
