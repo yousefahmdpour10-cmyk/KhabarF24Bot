@@ -300,17 +300,22 @@ async def check_news():
         # =========================
 
 
-        processed = process_news(
+       processed = process_news({
 
+    "title": raw_title,
 
-            raw_title,
+    "summary": raw_summary,
 
+    "content": item.get(
+        "content",
+        ""
+    ),
 
-            raw_summary
+    "source": source,
 
+    "category": category
 
-        )
-
+})
 
 
         title = processed.get(
