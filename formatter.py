@@ -332,43 +332,75 @@ def get_source_flag(source):
 
 def clean_source_name(source):
 
-
     if not source:
-
         return "Unknown"
-
 
 
     SOURCE_NAMES = {
 
-
-        "العربیه": "Al Arabiya",
-
-        "العربية": "Al Arabiya",
-
-
-        "کان اسرائیل": "Kan Israel",
-
-
+        # Iran
+        "ایسنا": "ISNA",
+        "ایرنا": "IRNA",
+        "تسنیم": "Tasnim",
+        "فارس": "Fars News",
+        "خبر فوری": "Khabar Fori",
         "ایران اینترنشنال": "Iran International",
 
 
-        "خبر فوری": "Khabar Fori",
+        # World
+        "بی‌بی‌سی": "BBC",
+        "بی بی سی": "BBC",
+        "بی‌بی‌سی اسپورت": "BBC Sport",
+
+        "رویترز": "Reuters",
+
+        "سی‌ان‌ان": "CNN",
+
+        "الجزیره": "Al Jazeera",
+
+        "العربیه": "Al Arabiya",
 
 
-        "فارس": "Fars News",
+        # Israel
+        "کان اسرائیل": "Kan Israel",
+        "کانال ۱۲ اسرائیل": "Israel Channel 12",
+
+
+        # Technology
+        "دیجیاتو": "Digiato",
+        "دیجی‌کالا": "Digikala",
+
+        "تک‌کرانچ": "TechCrunch",
+        "د ورج": "The Verge",
+        "آرس تکنیکا": "Ars Technica",
+
+
+        # Sport
+        "بی‌بی‌سی اسپورت": "BBC Sport",
+        "اسکای اسپورت": "Sky Sports",
+        "ای‌اس‌پی‌ان": "ESPN",
+
+        "فیفا": "FIFA",
+        "یوفا": "UEFA",
+
+        "لیگ برتر انگلیس": "Premier League",
+        "لالیگا": "La Liga",
+        "بوندسلیگا": "Bundesliga",
+        "سری آ": "Serie A",
+
+        "دی‌مارزیو": "Di Marzio",
 
     }
 
 
-
-    for old,new in SOURCE_NAMES.items():
-
+    for old, new in SOURCE_NAMES.items():
 
         if old.lower() in source.lower():
 
             return new
 
+
+    return source
 
 
     return source
