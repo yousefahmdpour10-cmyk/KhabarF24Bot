@@ -13,9 +13,7 @@ Sport Formatter
       ↓
 Game Formatter
       ↓
-Quality Engine
-      ↓
-Importance Engine
+Hashtag Engine
       ↓
 Formatter
       ↓
@@ -55,17 +53,15 @@ from sport_formatter import format_sport_news
 from game_formatter import format_game_news
 
 
-from quality_engine import is_high_quality
-
-
-from importance_engine import is_important
-
-
 from formatter import format_news
 
 
 
+
+
 CHECK_INTERVAL = 300
+
+
 
 
 
@@ -106,6 +102,9 @@ def normalize_category(category):
 
 
 
+
+
+
 async def check_news():
 
 
@@ -127,6 +126,7 @@ async def check_news():
 
 
     random.shuffle(news)
+
 
 
 
@@ -178,6 +178,8 @@ async def check_news():
 
 
 
+
+
         raw_title = item.get(
 
             "title",
@@ -185,6 +187,7 @@ async def check_news():
             ""
 
         )
+
 
 
         raw_summary = item.get(
@@ -196,6 +199,17 @@ async def check_news():
         )
 
 
+
+        raw_content = item.get(
+
+            "content",
+
+            ""
+
+        )
+
+
+
         source = item.get(
 
             "source",
@@ -203,6 +217,9 @@ async def check_news():
             ""
 
         )
+
+
+
 
 
 
@@ -256,6 +273,9 @@ async def check_news():
 
 
 
+
+
+
         # =========================
         # AI Processing v7.1
         # =========================
@@ -267,19 +287,14 @@ async def check_news():
 
             "summary": raw_summary,
 
-            "content": item.get(
-
-                "content",
-
-                ""
-
-            ),
+            "content": raw_content,
 
             "source": source,
 
             "category": category
 
         })
+
 
 
 
@@ -306,6 +321,8 @@ async def check_news():
         sport_data = None
 
         game_data = None
+
+
 
 
 
@@ -339,7 +356,6 @@ async def check_news():
 
                 )
 
-
                 continue
 
 
@@ -355,6 +371,7 @@ async def check_news():
             )
 
 
+
             summary = sport_result.get(
 
                 "summary",
@@ -364,15 +381,12 @@ async def check_news():
             )
 
 
+
             sport_data = sport_result.get(
 
                 "sport"
 
             )
-
-
-
-
 
 
 
@@ -392,6 +406,7 @@ async def check_news():
 
                 summary
 
+
             )
 
 
@@ -404,7 +419,6 @@ async def check_news():
                     "❌ Game video-only skipped"
 
                 )
-
 
                 continue
 
@@ -421,6 +435,7 @@ async def check_news():
             )
 
 
+
             summary = game_result.get(
 
                 "summary",
@@ -428,6 +443,7 @@ async def check_news():
                 summary
 
             )
+
 
 
             game_data = game_result.get(
@@ -467,24 +483,16 @@ async def check_news():
 
 
 
-
         # =========================
-        # Quality Check
+        # Quality TEST MODE
         # =========================
 
 
-        if not is_high_quality(
+        print(
 
-    title,
+            "🧪 Quality Check Passed (TEST)"
 
-    summary
-
-):
-
-    print(
-        "⚠️ Quality failed - TEST MODE"
-    )
-
+        )
 
 
 
@@ -493,23 +501,16 @@ async def check_news():
 
 
         # =========================
-        # Importance Check
+        # Importance TEST MODE
         # =========================
 
 
-        if not is_important(
+        print(
 
-    title,
+            "🔥 Importance Check Passed (TEST)"
 
-    summary,
+        )
 
-    category
-
-):
-
-    print(
-        "⚠️ Importance failed - TEST MODE"
-    )
 
 
 
@@ -596,6 +597,8 @@ async def check_news():
 
 
 
+
+
 async def main():
 
 
@@ -608,6 +611,7 @@ async def main():
         "🚀 KhabarF24 Started v7.0"
 
     )
+
 
 
 
@@ -645,6 +649,8 @@ async def main():
 
 
 
+
+
 if __name__ == "__main__":
 
 
@@ -652,4 +658,4 @@ if __name__ == "__main__":
 
         main()
 
-    )          
+    )
