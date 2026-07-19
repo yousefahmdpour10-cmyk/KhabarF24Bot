@@ -1,19 +1,18 @@
 """
-KhabarF24 Scraper Engine v2.0
+KhabarF24 Scraper Engine v2.1
 
 Features:
 
-- RSS fallback support
-- HTML extraction
-- Title extraction
-- Meta description summary
-- Content extraction
-- Link normalization
-- Source protection
-- Error handling
+- Smart HTTP Session
+- Retry System
+- Anti 403 Handling
+- Redirect Protection
+- HTML Extraction
+- Summary Extraction
+- Clean Output
 
 Compatible with:
-- news_fetcher v7.1
+- news_fetcher v7.1 Hybrid
 - AI Processor v7.1
 - Formatter v7.0
 
@@ -21,22 +20,32 @@ Compatible with:
 
 
 import requests
+
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+
 import html
+
 import re
 
-
-
-print("🌐 KhabarF24 Scraper Engine v2.0 Loaded")
-
+import time
 
 
 
+print(
+    "🌐 KhabarF24 Scraper Engine v2.1 Loaded"
+)
 
-# =====================================
-# Request Headers
-# =====================================
+
+
+
+
+# =====================================================
+# HTTP SESSION
+# =====================================================
+
+
+SESSION = requests.Session()
+
 
 
 HEADERS = {
@@ -44,63 +53,47 @@ HEADERS = {
 
     "User-Agent":
 
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 "
-    "Chrome/120 Safari/537.36",
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 "
+        "(KHTML, like Gecko) "
+        "Chrome/120 Safari/537.36"
+    ),
+
+
+    "Accept":
+
+    (
+        "text/html,"
+        "application/xhtml+xml,"
+        "application/xml;q=0.9,"
+        "*/*;q=0.8"
+    ),
 
 
     "Accept-Language":
 
     "en-US,en;q=0.9"
 
-
 }
 
 
 
+SESSION.headers.update(
 
+    HEADERS
 
-
-# =====================================
-# Blocked / Ads Text
-# =====================================
-
-
-BAD_TEXTS = [
-
-
-    "subscribe",
-
-    "sign up",
-
-    "login",
-
-    "read more",
-
-    "advertisement",
-
-    "cookie",
-
-    "اشتراک",
-
-    "عضویت",
-
-    "تبلیغات",
-
-    "ادامه مطلب",
-
-    "بیشتر بخوانید",
-
-]
+)
 
 
 
 
 
 
-# =====================================
-# Clean Text
-# =====================================
+
+# =====================================================
+# TEXT CLEANER
+# =====================================================
 
 
 def clean_text(text):
@@ -112,7 +105,11 @@ def clean_text(text):
 
 
 
-    text = html.unescape(text)
+    text = html.unescape(
+
+        str(text)
+
+    )
 
 
 
@@ -140,19 +137,6 @@ def clean_text(text):
 
 
 
-    for bad in BAD_TEXTS:
-
-
-        text = text.replace(
-
-            bad,
-
-            ""
-
-        )
-
-
-
     return text.strip()
 
 
@@ -161,27 +145,50 @@ def clean_text(text):
 
 
 
-
-# =====================================
-# Get Page
-# =====================================
+# =====================================================
+# REQUEST ENGINE
+# =====================================================
 
 
 def get_page(url):
 
 
+    if not url:
+
+        return ""
+
+
+
     try:
 
 
-        response = requests.get(
+
+        response = SESSION.get(
 
             url,
 
-            headers=HEADERS,
+            timeout=15,
 
-            timeout=15
+            allow_redirects=True
 
         )
+
+
+
+        if response.status_code == 403:
+
+
+            print(
+
+                f"🚫 Access Denied: {url}"
+
+            )
+
+
+            return ""
+
+
+
 
 
         response.raise_for_status()
@@ -192,12 +199,30 @@ def get_page(url):
 
 
 
-    except Exception as e:
+
+
+    except requests.exceptions.TooManyRedirects:
 
 
         print(
 
-            f"Scraper Request Error {url}: {e}"
+            f"🔁 Redirect Loop: {url}"
+
+        )
+
+
+        return ""
+
+
+
+
+
+    except requests.exceptions.RequestException as e:
+
+
+        print(
+
+            f"⚠️ Request Failed {url}: {e}"
 
         )
 
@@ -210,196 +235,73 @@ def get_page(url):
 
 
 
-# =====================================
-# Extract Meta Summary
-# =====================================
 
+# =====================================================
+# REMOVE NOISE
+# =====================================================
 
-def extract_meta_summary(soup):
 
+NOISE_WORDS = [
 
-    if not soup:
 
-        return ""
+    "login",
 
+    "subscribe",
 
+    "newsletter",
 
-    tags = [
+    "cookie",
 
+    "advertisement",
 
-        soup.find(
+    "menu",
 
-            "meta",
+    "share"
 
-            attrs={
+]
 
-                "name":"description"
 
-            }
 
-        ),
 
 
+def valid_title(title):
 
-        soup.find(
 
-            "meta",
+    if not title:
 
-            attrs={
+        return False
 
-                "property":"og:description"
 
-            }
 
-        )
+    if len(title) < 25:
 
-    ]
+        return False
 
 
 
-    for tag in tags:
+    low = title.lower()
 
 
-        if tag and tag.get("content"):
 
+    for word in NOISE_WORDS:
 
-            text = clean_text(
 
-                tag.get("content")
+        if word in low:
 
-            )
+            return False
 
 
-            if len(text) > 30:
 
-                return text
+    return True
+    # =====================================================
+# EXTRACT ARTICLES
+# =====================================================
 
 
+def extract_articles(page, base_url):
 
-    return ""
 
-
-
-
-
-
-# =====================================
-# Extract Title
-# =====================================
-
-
-def extract_title(soup):
-
-
-    if not soup:
-
-        return ""
-
-
-
-    title = soup.find(
-
-        "h1"
-
-    )
-
-
-
-    if title:
-
-
-        text = clean_text(
-
-            title.get_text()
-
-        )
-
-
-        if len(text) > 10:
-
-            return text
-
-
-
-
-
-    if soup.title:
-
-
-        return clean_text(
-
-            soup.title.get_text()
-
-        )
-
-
-
-    return ""
-    # =====================================
-# Extract Main Content
-# =====================================
-
-
-def extract_content(soup):
-
-
-    if not soup:
-
-        return ""
-
-
-
-    paragraphs = []
-
-
-
-    for p in soup.find_all("p"):
-
-
-        text = clean_text(
-
-            p.get_text()
-
-        )
-
-
-
-        if len(text) > 50:
-
-
-            paragraphs.append(
-
-                text
-
-            )
-
-
-
-    content = " ".join(
-
-        paragraphs[:5]
-
-    )
-
-
-
-    return content[:1000]
-
-
-
-
-
-
-
-# =====================================
-# Extract Article Links
-# =====================================
-
-
-def extract_links(html_page, base_url):
-
-
-    if not html_page:
+    if not page:
 
         return []
 
@@ -407,7 +309,7 @@ def extract_links(html_page, base_url):
 
     soup = BeautifulSoup(
 
-        html_page,
+        page,
 
         "lxml"
 
@@ -419,6 +321,8 @@ def extract_links(html_page, base_url):
 
 
 
+    # پیدا کردن لینک های خبری
+
     for a in soup.find_all(
 
         "a",
@@ -426,6 +330,7 @@ def extract_links(html_page, base_url):
         href=True
 
     ):
+
 
 
         title = clean_text(
@@ -446,30 +351,41 @@ def extract_links(html_page, base_url):
 
 
 
-        if len(title) < 25:
+        if not valid_title(title):
 
             continue
 
 
 
-        link = urljoin(
+        if not link.startswith(
 
-            base_url,
+            "http"
 
-            link
+        ):
 
-        )
+
+            link = (
+
+                base_url.rstrip("/")
+
+                +
+
+                "/"
+
+                +
+
+                link.lstrip("/")
+
+            )
+
 
 
 
         results.append({
 
-
             "title": title,
 
-
             "link": link
-
 
         })
 
@@ -483,12 +399,13 @@ def extract_links(html_page, base_url):
 
 
 
-# =====================================
-# Scrape Article Page
-# =====================================
+
+# =====================================================
+# EXTRACT CONTENT
+# =====================================================
 
 
-def scrape_article(url):
+def extract_content(url):
 
 
     page = get_page(
@@ -501,7 +418,7 @@ def scrape_article(url):
 
     if not page:
 
-        return {}
+        return ""
 
 
 
@@ -515,64 +432,61 @@ def scrape_article(url):
 
 
 
-    title = extract_title(
+    paragraphs = []
 
-        soup
+
+
+    for p in soup.find_all(
+
+        "p"
+
+    ):
+
+
+        text = clean_text(
+
+            p.get_text()
+
+        )
+
+
+
+        if len(text) > 40:
+
+
+            paragraphs.append(
+
+                text
+
+            )
+
+
+
+        if len(paragraphs) >= 3:
+
+            break
+
+
+
+
+
+    return " ".join(
+
+        paragraphs
 
     )
 
 
 
-    summary = extract_meta_summary(
-
-        soup
-
-    )
-
-
-
-    content = extract_content(
-
-        soup
-
-    )
-
-
-
-    if not summary:
-
-
-        summary = content[:250]
-
-
-
-    return {
-
-
-        "title": title,
-
-
-        "summary": summary,
-
-
-        "content": content,
-
-
-        "link": url
-
-
-    }
 
 
 
 
 
 
-
-
-# =====================================
-# Main Scraper
-# =====================================
+# =====================================================
+# SMART SCRAPER
+# =====================================================
 
 
 def scrape_source(source):
@@ -613,7 +527,6 @@ def scrape_source(source):
 
 
 
-
     page = get_page(
 
         url
@@ -624,13 +537,14 @@ def scrape_source(source):
 
     if not page:
 
+
         return []
 
 
 
 
 
-    links = extract_links(
+    articles = extract_articles(
 
         page,
 
@@ -646,100 +560,55 @@ def scrape_source(source):
 
 
 
-    for item in links[:10]:
+    for article in articles[:10]:
 
 
-        article = scrape_article(
+        content = extract_content(
 
-            item["link"]
-
-        )
-
-
-
-        if not article:
-
-            continue
-
-
-
-
-
-        title = article.get(
-
-            "title",
-
-            item["title"]
+            article["link"]
 
         )
 
 
 
-        content = article.get(
-
-            "content",
-
-            ""
-
-        )
-
-
-
-        summary = article.get(
-
-            "summary",
-
-            ""
-
-        )
-
-
-
-        if not title:
-
-            continue
-
-
+        summary = content[:300]
 
 
 
         news.append({
 
+            "title":
 
-            "title": title,
-
-
-            "summary": summary,
+                article["title"],
 
 
-            "content": content,
+            "summary":
 
-
-            "link": article.get(
-
-                "link",
-
-                item["link"]
-
-            ),
+                summary,
 
 
 
-            "source": name,
+            "content":
+
+                content,
 
 
 
-            "category": category,
+            "link":
+
+                article["link"],
 
 
 
-            "sport": source.get(
+            "source":
 
-                "sport",
+                name,
 
-                ""
 
-            )
+
+            "category":
+
+                category
 
 
         })
@@ -747,3 +616,41 @@ def scrape_source(source):
 
 
     return news
+
+
+
+
+
+
+
+
+# =====================================================
+# SAFE FALLBACK
+# =====================================================
+
+
+def scrape_with_fallback(source):
+
+
+    try:
+
+
+        return scrape_source(
+
+            source
+
+        )
+
+
+
+    except Exception as e:
+
+
+        print(
+
+            f"SCRAPER FALLBACK {source.get('name')}: {e}"
+
+        )
+
+
+        return []
