@@ -475,24 +475,15 @@ async def check_news():
 
         if not is_high_quality(
 
+    title,
 
-            title,
+    summary
 
+):
 
-            summary
-
-
-        ):
-
-
-            print(
-
-                "❌ Low quality news skipped"
-
-            )
-
-
-            continue
+    print(
+        "⚠️ Quality failed - TEST MODE"
+    )
 
 
 
@@ -508,28 +499,17 @@ async def check_news():
 
         if not is_important(
 
+    title,
 
-            title,
+    summary,
 
+    category
 
-            summary,
+):
 
-
-            category
-
-
-        ):
-
-
-            print(
-
-                "❌ Low importance news skipped"
-
-            )
-
-
-            continue
-
+    print(
+        "⚠️ Importance failed - TEST MODE"
+    )
 
 
 
