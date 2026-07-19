@@ -1,5 +1,5 @@
 """
-KhabarF24 Main Engine v7.0
+KhabarF24 Main Engine v7.0 TEST
 
 Pipeline:
 
@@ -13,7 +13,9 @@ Sport Formatter
       ↓
 Game Formatter
       ↓
-Hashtag Engine
+Quality Engine
+      ↓
+Importance Engine
       ↓
 Formatter
       ↓
@@ -65,6 +67,7 @@ CHECK_INTERVAL = 300
 
 
 
+
 # =================================
 # Sport Categories
 # =================================
@@ -81,6 +84,8 @@ SPORT_CATEGORIES = {
     "combat",
 
 }
+
+
 
 
 
@@ -105,10 +110,18 @@ def normalize_category(category):
 
 
 
+
 async def check_news():
 
 
     news = get_latest_news()
+
+
+
+    print(
+        f"📰 Total News Found: {len(news)}"
+    )
+
 
 
     if not news:
@@ -125,7 +138,9 @@ async def check_news():
 
 
 
+
     random.shuffle(news)
+
 
 
 
@@ -143,6 +158,7 @@ async def check_news():
             ""
 
         )
+
 
 
 
@@ -172,8 +188,6 @@ async def check_news():
         if is_published(link):
 
             continue
-
-
 
 
 
@@ -276,8 +290,9 @@ async def check_news():
 
 
 
+
         # =========================
-        # AI Processing v7.1
+        # AI Processing v7.1 TEST
         # =========================
 
 
@@ -295,6 +310,12 @@ async def check_news():
 
         })
 
+
+
+        print(
+            "🤖 AI RESULT:",
+            processed
+        )
 
 
 
@@ -321,12 +342,7 @@ async def check_news():
         sport_data = None
 
         game_data = None
-
-
-
-
-
-        # =========================
+                  # =========================
         # Sport Processing
         # =========================
 
@@ -336,12 +352,9 @@ async def check_news():
 
             sport_result = format_sport_news(
 
-
                 title,
 
-
                 summary
-
 
             )
 
@@ -390,6 +403,12 @@ async def check_news():
 
 
 
+
+
+
+
+
+
         # =========================
         # Gaming Processing
         # =========================
@@ -400,12 +419,9 @@ async def check_news():
 
             game_result = format_game_news(
 
-
                 title,
 
-
                 summary
-
 
             )
 
@@ -458,6 +474,8 @@ async def check_news():
 
 
 
+
+
         # =========================
         # Hashtag Engine
         # =========================
@@ -465,16 +483,12 @@ async def check_news():
 
         hashtag_data = get_hashtag(
 
-
             category,
-
 
             title,
 
-
             summary
 
-
         )
 
 
@@ -483,15 +497,14 @@ async def check_news():
 
 
 
+
         # =========================
-        # Quality TEST MODE
+        # Quality TEST
         # =========================
 
 
         print(
-
-            "🧪 Quality Check Passed (TEST)"
-
+            "🧪 Quality Check BYPASS TEST"
         )
 
 
@@ -500,16 +513,20 @@ async def check_news():
 
 
 
+
+
+
         # =========================
-        # Importance TEST MODE
+        # Importance TEST
         # =========================
 
 
         print(
-
-            "🔥 Importance Check Passed (TEST)"
-
+            "🔥 Importance Check BYPASS TEST"
         )
+
+
+
 
 
 
@@ -548,6 +565,17 @@ async def check_news():
 
 
         )
+
+
+
+        print(
+            "📨 FINAL MESSAGE:"
+        )
+
+        print(
+            message
+        )
+
 
 
 
@@ -608,7 +636,7 @@ async def main():
 
     print(
 
-        "🚀 KhabarF24 Started v7.0"
+        "🚀 KhabarF24 Started v7.0 TEST"
 
     )
 
@@ -619,7 +647,9 @@ async def main():
     while True:
 
 
+
         try:
+
 
 
             await check_news()
@@ -629,11 +659,14 @@ async def main():
         except Exception as e:
 
 
+
             print(
 
                 f"Error: {e}"
 
             )
+
+
 
 
 
