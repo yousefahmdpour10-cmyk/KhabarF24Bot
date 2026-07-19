@@ -1,26 +1,42 @@
 """
-KhabarF24 Scraper Engine v1.0
+KhabarF24 Scraper Engine v2.0
 
-وظیفه:
-- دریافت خبر از سایت های بدون RSS
-- استخراج عنوان
-- استخراج لینک
-- استاندارد سازی خروجی
+Features:
+
+- RSS fallback support
+- HTML extraction
+- Title extraction
+- Meta description summary
+- Content extraction
+- Link normalization
+- Source protection
+- Error handling
+
+Compatible with:
+- news_fetcher v7.1
+- AI Processor v7.1
+- Formatter v7.0
+
 """
 
 
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 import html
 import re
 
 
 
+print("🌐 KhabarF24 Scraper Engine v2.0 Loaded")
 
 
-# =========================
-# تنظیمات درخواست
-# =========================
+
+
+
+# =====================================
+# Request Headers
+# =====================================
 
 
 HEADERS = {
@@ -28,7 +44,15 @@ HEADERS = {
 
     "User-Agent":
 
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 "
+    "Chrome/120 Safari/537.36",
+
+
+    "Accept-Language":
+
+    "en-US,en;q=0.9"
+
 
 }
 
@@ -36,9 +60,47 @@ HEADERS = {
 
 
 
-# =========================
-# پاکسازی متن
-# =========================
+
+# =====================================
+# Blocked / Ads Text
+# =====================================
+
+
+BAD_TEXTS = [
+
+
+    "subscribe",
+
+    "sign up",
+
+    "login",
+
+    "read more",
+
+    "advertisement",
+
+    "cookie",
+
+    "اشتراک",
+
+    "عضویت",
+
+    "تبلیغات",
+
+    "ادامه مطلب",
+
+    "بیشتر بخوانید",
+
+]
+
+
+
+
+
+
+# =====================================
+# Clean Text
+# =====================================
 
 
 def clean_text(text):
@@ -56,6 +118,18 @@ def clean_text(text):
 
     text = re.sub(
 
+        r"<[^>]+>",
+
+        "",
+
+        text
+
+    )
+
+
+
+    text = re.sub(
+
         r"\s+",
 
         " ",
@@ -63,6 +137,19 @@ def clean_text(text):
         text
 
     )
+
+
+
+    for bad in BAD_TEXTS:
+
+
+        text = text.replace(
+
+            bad,
+
+            ""
+
+        )
 
 
 
@@ -75,9 +162,9 @@ def clean_text(text):
 
 
 
-# =========================
-# دریافت صفحه
-# =========================
+# =====================================
+# Get Page
+# =====================================
 
 
 def get_page(url):
@@ -95,7 +182,6 @@ def get_page(url):
             timeout=15
 
         )
-
 
 
         response.raise_for_status()
@@ -124,11 +210,190 @@ def get_page(url):
 
 
 
+# =====================================
+# Extract Meta Summary
+# =====================================
 
 
-# =========================
-# استخراج لینک ها
-# =========================
+def extract_meta_summary(soup):
+
+
+    if not soup:
+
+        return ""
+
+
+
+    tags = [
+
+
+        soup.find(
+
+            "meta",
+
+            attrs={
+
+                "name":"description"
+
+            }
+
+        ),
+
+
+
+        soup.find(
+
+            "meta",
+
+            attrs={
+
+                "property":"og:description"
+
+            }
+
+        )
+
+    ]
+
+
+
+    for tag in tags:
+
+
+        if tag and tag.get("content"):
+
+
+            text = clean_text(
+
+                tag.get("content")
+
+            )
+
+
+            if len(text) > 30:
+
+                return text
+
+
+
+    return ""
+
+
+
+
+
+
+# =====================================
+# Extract Title
+# =====================================
+
+
+def extract_title(soup):
+
+
+    if not soup:
+
+        return ""
+
+
+
+    title = soup.find(
+
+        "h1"
+
+    )
+
+
+
+    if title:
+
+
+        text = clean_text(
+
+            title.get_text()
+
+        )
+
+
+        if len(text) > 10:
+
+            return text
+
+
+
+
+
+    if soup.title:
+
+
+        return clean_text(
+
+            soup.title.get_text()
+
+        )
+
+
+
+    return ""
+    # =====================================
+# Extract Main Content
+# =====================================
+
+
+def extract_content(soup):
+
+
+    if not soup:
+
+        return ""
+
+
+
+    paragraphs = []
+
+
+
+    for p in soup.find_all("p"):
+
+
+        text = clean_text(
+
+            p.get_text()
+
+        )
+
+
+
+        if len(text) > 50:
+
+
+            paragraphs.append(
+
+                text
+
+            )
+
+
+
+    content = " ".join(
+
+        paragraphs[:5]
+
+    )
+
+
+
+    return content[:1000]
+
+
+
+
+
+
+
+# =====================================
+# Extract Article Links
+# =====================================
 
 
 def extract_links(html_page, base_url):
@@ -163,7 +428,6 @@ def extract_links(html_page, base_url):
     ):
 
 
-
         title = clean_text(
 
             a.get_text()
@@ -172,21 +436,29 @@ def extract_links(html_page, base_url):
 
 
 
-        link = a["href"]
+        link = a.get(
+
+            "href",
+
+            ""
+
+        )
 
 
 
-
-        if len(title) < 20:
+        if len(title) < 25:
 
             continue
 
 
 
-        if not link.startswith("http"):
+        link = urljoin(
 
+            base_url,
 
-            link = base_url.rstrip("/") + "/" + link.lstrip("/")
+            link
+
+        )
 
 
 
@@ -211,11 +483,96 @@ def extract_links(html_page, base_url):
 
 
 
+# =====================================
+# Scrape Article Page
+# =====================================
 
 
-# =========================
-# Scraper اصلی
-# =========================
+def scrape_article(url):
+
+
+    page = get_page(
+
+        url
+
+    )
+
+
+
+    if not page:
+
+        return {}
+
+
+
+    soup = BeautifulSoup(
+
+        page,
+
+        "lxml"
+
+    )
+
+
+
+    title = extract_title(
+
+        soup
+
+    )
+
+
+
+    summary = extract_meta_summary(
+
+        soup
+
+    )
+
+
+
+    content = extract_content(
+
+        soup
+
+    )
+
+
+
+    if not summary:
+
+
+        summary = content[:250]
+
+
+
+    return {
+
+
+        "title": title,
+
+
+        "summary": summary,
+
+
+        "content": content,
+
+
+        "link": url
+
+
+    }
+
+
+
+
+
+
+
+
+# =====================================
+# Main Scraper
+# =====================================
 
 
 def scrape_source(source):
@@ -234,10 +591,9 @@ def scrape_source(source):
 
         "name",
 
-        ""
+        "Unknown"
 
     )
-
 
 
     category = source.get(
@@ -266,7 +622,15 @@ def scrape_source(source):
 
 
 
-    articles = extract_links(
+    if not page:
+
+        return []
+
+
+
+
+
+    links = extract_links(
 
         page,
 
@@ -280,25 +644,102 @@ def scrape_source(source):
 
 
 
-    for item in articles[:10]:
+
+
+    for item in links[:10]:
+
+
+        article = scrape_article(
+
+            item["link"]
+
+        )
+
+
+
+        if not article:
+
+            continue
+
+
+
+
+
+        title = article.get(
+
+            "title",
+
+            item["title"]
+
+        )
+
+
+
+        content = article.get(
+
+            "content",
+
+            ""
+
+        )
+
+
+
+        summary = article.get(
+
+            "summary",
+
+            ""
+
+        )
+
+
+
+        if not title:
+
+            continue
+
+
+
 
 
         news.append({
 
 
-            "title": item["title"],
+            "title": title,
 
 
-            "summary": "",
+            "summary": summary,
 
 
-            "link": item["link"],
+            "content": content,
+
+
+            "link": article.get(
+
+                "link",
+
+                item["link"]
+
+            ),
+
 
 
             "source": name,
 
 
-            "category": category
+
+            "category": category,
+
+
+
+            "sport": source.get(
+
+                "sport",
+
+                ""
+
+            )
 
 
         })
