@@ -1,91 +1,61 @@
 """
-KhabarF24 AI Processor v7.2
-
-Pipeline:
-    News Fetcher v7
-        ↓
-    Source Normalize
-        ↓
-    Brand Protection
-        ↓
-    Language Detection + Skip Persian
-        ↓
-    Translation (only if needed)
-        ↓
-    Cleanup + Ad Removal
-        ↓
-    Summary Generator (Professional)
-        ↓
-    Official Names Restore
-        ↓
-    RTL Cleaner
-        ↓
-    Formatter Ready
+KhabarF24 AI Processor v7.3
+Compatible with formatter v7.2
 """
 
 import re
 import html
 from deep_translator import GoogleTranslator
 
-# Importهای موجود پروژه
 from brand_dictionary import replace_official_names
 from rtl_cleaner import fix_rtl_text
 
-print("🤖 KhabarF24 AI Processor v7.2 Loaded (8 قابلیت جدید اضافه شد)")
+print("🤖 KhabarF24 AI Processor v7.3 Loaded")
+
 
 # =====================================================
-# 1. تشخیص زبان (فارسی/انگلیسی)
+# تشخیص زبان
 # =====================================================
 try:
     from langdetect import detect, DetectorFactory
-    DetectorFactory.seed = 0  # برای تکرارپذیری
+    DetectorFactory.seed = 0
     LANGDETECT_AVAILABLE = True
 except ImportError:
     LANGDETECT_AVAILABLE = False
-    print("⚠️ langdetect نصب نیست. از روش ساده استفاده می‌شود.")
 
 
 def detect_language(text: str) -> str:
-    """تشخیص زبان - اولویت با فارسی"""
     if not text or len(text.strip()) < 10:
         return "unknown"
     
-    text_clean = re.sub(r'https?://\S+|www\.\S+', '', text)  # حذف لینک
+    text_clean = re.sub(r'https?://\S+|www\.\S+', '', text)
     
     if LANGDETECT_AVAILABLE:
         try:
-            lang = detect(text_clean[:500])  # کافی است
-            if lang == 'fa':
-                return 'fa'
-            if lang == 'en':
-                return 'en'
+            lang = detect(text_clean[:500])
+            if lang in ['fa', 'en']:
+                return lang
         except:
             pass
     
-    # روش پشتیبان ساده و سریع (بدون وابستگی)
+    # روش پشتیبان
     persian_chars = len(re.findall(r'[\u0600-\u06FF\uFB8A-\uFBFF]', text_clean))
     total_chars = len(re.sub(r'\s+', '', text_clean))
-    
-    if total_chars == 0:
-        return "unknown"
-    
-    persian_ratio = persian_chars / total_chars
-    return 'fa' if persian_ratio > 0.15 else 'en'
+    return 'fa' if total_chars > 0 and (persian_chars / total_chars) > 0.15 else 'en'
 
 
 # =====================================================
-# 2. عدم ترجمه خبرهای فارسی
+# ترجمه
 # =====================================================
-def translate_text(text: str, target_lang="fa"):
+def translate_text(text: str) -> str:
     if not text:
         return ""
     
-    detected = detect_language(text)
-    if detected == 'fa':
-        return text.strip()  # خبر فارسی → بدون ترجمه
+    if detect_language(text) == 'fa':
+        return text.strip()
     
     try:
-        result = GoogleTranslator(source="auto", target=target_lang).translate(text)
+        result = GoogleTranslator(source="auto", target="fa").translate(text)
         return result.strip()
     except Exception as e:
         print(f"Translation Error: {e}")
@@ -93,19 +63,11 @@ def translate_text(text: str, target_lang="fa"):
 
 
 # =====================================================
-# Cleanup + حذف متن‌های تبلیغاتی
+# Cleanup
 # =====================================================
-BAD_TRANSLATIONS = [
-    "این متن", "به پایان می دهد", "مورد حمله قرار داد", "می باشد",
-    "یک اندازه", "در این مقاله", "این خبر", "ادامه مطلب", "مطلب مرتبط",
-    "لینک خبر", "منبع:", "Sponsored", "Advertisement", "Click here",
-]
+BAD_TRANSLATIONS = ["این متن", "به پایان می دهد", "می باشد", "در این مقاله", "این خبر", "ادامه مطلب", "Sponsored", "Advertisement"]
 
-AD_PATTERNS = [
-    r'تبلیغات?.*', r'Sponsored.*', r'Advertisement.*',
-    r'📌.*', r'🔗.*', r'برای خواندن ادامه.*',
-    r'فالو کنید.*', r'در اینستاگرام.*'
-]
+AD_PATTERNS = [r'تبلیغات?.*', r'Sponsored.*', r'Advertisement.*', r'📌.*', r'برای خواندن ادامه.*']
 
 def clean_text(text: str) -> str:
     if not text:
@@ -113,25 +75,23 @@ def clean_text(text: str) -> str:
     
     text = html.unescape(text)
     
-    # حذف الگوهای تبلیغاتی
     for pattern in AD_PATTERNS:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
     
     for bad in BAD_TRANSLATIONS:
         text = text.replace(bad, "")
     
-    text = re.sub(r"<.*?>", "", text)          # حذف تگ‌ها
-    text = re.sub(r"\s+", " ", text)           # فضای اضافی
+    text = re.sub(r"<.*?>", "", text)
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
 # =====================================================
-# Protect Numbers + Brands (حفظ کامل)
+# Protect Numbers
 # =====================================================
 def protect_numbers(original: str, translated: str) -> str:
     if not original:
         return translated
-    
     numbers = re.findall(r'\d+[.,]?\d*', original)
     for num in numbers:
         if num not in translated:
@@ -140,55 +100,42 @@ def protect_numbers(original: str, translated: str) -> str:
 
 
 # =====================================================
-# 3+4. تیتر کوتاه و جذاب + خلاصه حرفه‌ای
+# Title & Summary
 # =====================================================
 def create_attractive_title(text: str) -> str:
-    """تیتر کوتاه، جذاب و مناسب فارسی (حداکثر ۷۰ کاراکتر)"""
     text = clean_text(text)
     if len(text) <= 70:
         return text
     
-    # روش ساده اما مؤثر: پیدا کردن جمله/بخش مهم
     sentences = re.split(r'[.!؟]', text)
     for sent in sentences:
         sent = sent.strip()
-        if 30 <= len(sent) <= 70 and any(kw in sent for kw in ['شد', 'کرد', 'است', 'می‌شود', 'خواهد']):
+        if 30 <= len(sent) <= 70:
             return sent[:70]
-    
     return text[:68] + "..."
 
 
 def create_professional_summary(title: str, summary: str, content: str) -> str:
-    """خلاصه حرفه‌ای - نه اولین جمله"""
     source = summary or content or title
     if not source:
         return ""
     
     source = clean_text(source)
-    
-    # تقسیم به جملات
-    sentences = re.split(r'[.!؟\n]+', source)
-    sentences = [s.strip() for s in sentences if len(s.strip()) > 30]
+    sentences = [s.strip() for s in re.split(r'[.!؟\n]+', source) if len(s.strip()) > 30]
     
     if not sentences:
         return source[:250]
     
-    # اولویت: جملات حاوی اعداد، نام‌ها یا فعل مهم
-    important = []
-    for s in sentences[:8]:  # فقط چند جمله اول را بررسی کن
-        if any(c.isdigit() for c in s) or len(re.findall(r'\b[A-Z][a-z]+\b', s)) > 0:
-            important.append(s)
+    # اولویت به جملات مهم
+    for s in sentences:
+        if any(c.isdigit() for c in s) or len(re.findall(r'\b[A-Z][a-z]+\b', s)) > 1:
+            return s[:280]
     
-    if important:
-        best = max(important, key=len)
-        return best[:280]
-    
-    # fallback: دومین یا سومین جمله (معمولاً بهتر از اول است)
     return sentences[1] if len(sentences) > 1 else sentences[0][:280]
 
 
 # =====================================================
-# Main Processor
+# Main Process
 # =====================================================
 def process_news(news: dict) -> dict:
     if not isinstance(news, dict):
@@ -199,47 +146,44 @@ def process_news(news: dict) -> dict:
     content = news.get("content", "")
     source = news.get("source", "Unknown")
     category = news.get("category", "world")
+    image_url = news.get("image_url") or news.get("image") or news.get("media_url")  # برای آینده
 
     print("🤖 KhabarF24 AI Processing...")
 
-    # ۱. حفاظت از نام‌های رسمی (قبل از ترجمه)
+    # Brand Protection
     protected_title = replace_official_names(title)
     protected_summary = replace_official_names(summary)
     protected_content = replace_official_names(content)
 
-    # ۲. ترجمه (فقط اگر لازم باشد)
+    # Translation
     fa_title = translate_text(protected_title)
-    fa_summary = translate_text(protected_summary)
+    fa_summary = translate_text(protected_summary) or translate_text(protected_content)
 
-    if not fa_summary:
-        fa_summary = translate_text(protected_content)
-
-    # ۳. Cleanup
+    # Cleanup
     fa_title = clean_text(fa_title)
     fa_summary = clean_text(fa_summary)
 
-    # ۴. حفاظت اعداد
+    # Numbers
     fa_title = protect_numbers(title, fa_title)
     fa_summary = protect_numbers(content or summary, fa_summary)
 
-    # ۵. بازگردانی نام‌ها
+    # Restore Names
     fa_title = replace_official_names(fa_title)
     fa_summary = replace_official_names(fa_summary)
 
-    # ۶. تیتر کوتاه و جذاب
+    # Attractive Title + Professional Summary
     fa_title = create_attractive_title(fa_title)
-
-    # ۷. خلاصه حرفه‌ای
     fa_summary = create_professional_summary(fa_title, fa_summary, content)
 
-    # ۸. RTL
+    # RTL
     fa_title = fix_rtl_text(fa_title)
     fa_summary = fix_rtl_text(fa_summary)
 
     return {
         "title": fa_title,
         "summary": fa_summary,
-        "content": content,      # محتوای اصلی انگلیسی/فارسی
         "source": source,
-        "category": category
+        "category": category,
+        "image_url": image_url,          # برای استفاده در formatter و image_processor
+        "content": content
     }
