@@ -1,20 +1,23 @@
 """
-KhabarF24 AI Processor v7.3
-Compatible with formatter v7.2
+KhabarF24 AI Processor v8.0
+Free AI Processing + Translation + Professional Formatting
 """
 
 import re
 import html
-from deep_translator import GoogleTranslator
+import logging
+from typing import Dict
 
+from deep_translator import GoogleTranslator
 from brand_dictionary import replace_official_names
 from rtl_cleaner import fix_rtl_text
 
-print("🤖 KhabarF24 AI Processor v7.3 Loaded")
+logger = logging.getLogger(__name__)
 
+print("🤖 KhabarF24 AI Processor v8.0 Loaded")
 
 # =====================================================
-# تشخیص زبان
+# Language Detection
 # =====================================================
 try:
     from langdetect import detect, DetectorFactory
@@ -22,123 +25,137 @@ try:
     LANGDETECT_AVAILABLE = True
 except ImportError:
     LANGDETECT_AVAILABLE = False
+    logger.warning("langdetect not installed. Using fallback detection.")
 
 
 def detect_language(text: str) -> str:
-    if not text or len(text.strip()) < 10:
+    if not text or len(text.strip()) < 15:
         return "unknown"
-    
+
+    # Remove URLs
     text_clean = re.sub(r'https?://\S+|www\.\S+', '', text)
-    
+
     if LANGDETECT_AVAILABLE:
         try:
-            lang = detect(text_clean[:500])
-            if lang in ['fa', 'en']:
+            lang = detect(text_clean[:600])
+            if lang in ['fa', 'ar', 'en']:
                 return lang
         except:
             pass
-    
-    # روش پشتیبان
+
+    # Fallback Persian detection
     persian_chars = len(re.findall(r'[\u0600-\u06FF\uFB8A-\uFBFF]', text_clean))
     total_chars = len(re.sub(r'\s+', '', text_clean))
-    return 'fa' if total_chars > 0 and (persian_chars / total_chars) > 0.15 else 'en'
+    
+    if total_chars > 0 and (persian_chars / total_chars) > 0.12:
+        return 'fa'
+    return 'en'
 
 
 # =====================================================
-# ترجمه
+# Translation
 # =====================================================
-def translate_text(text: str) -> str:
+def translate_to_persian(text: str) -> str:
     if not text:
         return ""
     
     if detect_language(text) == 'fa':
         return text.strip()
-    
+
     try:
-        result = GoogleTranslator(source="auto", target="fa").translate(text)
-        return result.strip()
+        result = GoogleTranslator(source="auto", target="fa").translate(text[:4500])
+        return result.strip() if result else text
     except Exception as e:
-        print(f"Translation Error: {e}")
+        logger.error(f"Translation failed: {e}")
         return text
 
 
 # =====================================================
-# Cleanup
+# Text Cleanup
 # =====================================================
-BAD_TRANSLATIONS = ["این متن", "به پایان می دهد", "می باشد", "در این مقاله", "این خبر", "ادامه مطلب", "Sponsored", "Advertisement"]
+BAD_PHRASES = [
+    "این متن", "به پایان می‌رسد", "می‌باشد", "در این مقاله", 
+    "این خبر", "ادامه مطلب", "Sponsored", "Advertisement", 
+    "برای خواندن کامل", "کلیک کنید"
+]
 
-AD_PATTERNS = [r'تبلیغات?.*', r'Sponsored.*', r'Advertisement.*', r'📌.*', r'برای خواندن ادامه.*']
+AD_PATTERNS = [
+    r'تبلیغات?.*', r'Sponsored.*', r'Advertisement.*', 
+    r'📌.*', r'برای خواندن ادامه.*', r'Click here.*'
+]
 
 def clean_text(text: str) -> str:
     if not text:
         return ""
-    
+
     text = html.unescape(text)
     
+    # Remove ad patterns
     for pattern in AD_PATTERNS:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
     
-    for bad in BAD_TRANSLATIONS:
-        text = text.replace(bad, "")
-    
+    # Remove bad phrases
+    for phrase in BAD_PHRASES:
+        text = text.replace(phrase, "")
+
     text = re.sub(r"<.*?>", "", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
-# =====================================================
-# Protect Numbers
-# =====================================================
 def protect_numbers(original: str, translated: str) -> str:
+    """Keep important numbers from original text"""
     if not original:
         return translated
     numbers = re.findall(r'\d+[.,]?\d*', original)
     for num in numbers:
         if num not in translated:
-            translated += f" {num}"
+            translated = translated + f" ({num})"
     return translated.strip()
 
 
 # =====================================================
-# Title & Summary
+# Title & Summary Generation
 # =====================================================
 def create_attractive_title(text: str) -> str:
     text = clean_text(text)
-    if len(text) <= 70:
+    if len(text) <= 75:
         return text
-    
-    sentences = re.split(r'[.!؟]', text)
+
+    # Try to find good sentence
+    sentences = re.split(r'[.!؟؟!]', text)
     for sent in sentences:
         sent = sent.strip()
-        if 30 <= len(sent) <= 70:
-            return sent[:70]
-    return text[:68] + "..."
+        if 35 <= len(sent) <= 75:
+            return sent[:75]
+    return text[:72] + "..."
 
 
 def create_professional_summary(title: str, summary: str, content: str) -> str:
-    source = summary or content or title
-    if not source:
+    source_text = summary or content or title
+    if not source_text:
         return ""
-    
-    source = clean_text(source)
-    sentences = [s.strip() for s in re.split(r'[.!؟\n]+', source) if len(s.strip()) > 30]
-    
+
+    source_text = clean_text(source_text)
+    sentences = [s.strip() for s in re.split(r'[.!؟\n]+', source_text) if len(s.strip()) > 25]
+
     if not sentences:
-        return source[:250]
-    
-    # اولویت به جملات مهم
-    for s in sentences:
-        if any(c.isdigit() for c in s) or len(re.findall(r'\b[A-Z][a-z]+\b', s)) > 1:
-            return s[:280]
-    
-    return sentences[1] if len(sentences) > 1 else sentences[0][:280]
+        return source_text[:280]
+
+    # Prefer informative sentences
+    for s in sentences[:5]:
+        if any(c.isdigit() for c in s) or len(re.findall(r'\b[A-Z][a-z]+\b', s)) >= 1:
+            return s[:285]
+
+    return sentences[0][:280]
 
 
 # =====================================================
-# Main Process
+# Main Processing Function
 # =====================================================
-def process_news(news: dict) -> dict:
+def process_news(news: Dict) -> Dict:
     if not isinstance(news, dict):
+        logger.error("Invalid news input to AI processor")
         return {}
 
     title = news.get("title", "")
@@ -146,36 +163,31 @@ def process_news(news: dict) -> dict:
     content = news.get("content", "")
     source = news.get("source", "Unknown")
     category = news.get("category", "world")
-    image_url = news.get("image_url") or news.get("image") or news.get("media_url")  # برای آینده
+    image_url = news.get("image_url") or news.get("image")
 
-    print("🤖 KhabarF24 AI Processing...")
+    logger.info(f"🤖 Processing: {title[:70]}...")
 
-    # Brand Protection
-    protected_title = replace_official_names(title)
-    protected_summary = replace_official_names(summary)
-    protected_content = replace_official_names(content)
+    # Brand name protection
+    title = replace_official_names(title)
+    summary = replace_official_names(summary)
+    content = replace_official_names(content)
 
     # Translation
-    fa_title = translate_text(protected_title)
-    fa_summary = translate_text(protected_summary) or translate_text(protected_content)
+    fa_title = translate_to_persian(title)
+    fa_summary = translate_to_persian(summary) or translate_to_persian(content)
 
-    # Cleanup
+    # Cleanup & Enhancement
     fa_title = clean_text(fa_title)
     fa_summary = clean_text(fa_summary)
 
-    # Numbers
     fa_title = protect_numbers(title, fa_title)
     fa_summary = protect_numbers(content or summary, fa_summary)
 
-    # Restore Names
-    fa_title = replace_official_names(fa_title)
-    fa_summary = replace_official_names(fa_summary)
-
-    # Attractive Title + Professional Summary
+    # Final Title & Summary
     fa_title = create_attractive_title(fa_title)
     fa_summary = create_professional_summary(fa_title, fa_summary, content)
 
-    # RTL
+    # RTL Fix
     fa_title = fix_rtl_text(fa_title)
     fa_summary = fix_rtl_text(fa_summary)
 
@@ -184,6 +196,7 @@ def process_news(news: dict) -> dict:
         "summary": fa_summary,
         "source": source,
         "category": category,
-        "image_url": image_url,          # برای استفاده در formatter و image_processor
-        "content": content
+        "image_url": image_url,
+        "original_title": title,   # برای لاگ و دیباگ
+        "link": news.get("link")
     }
