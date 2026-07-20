@@ -1,575 +1,100 @@
 """
-KhabarF24 Importance Engine v5.0
-
-News Importance Intelligence
-
-هماهنگ با:
-- category_engine v7
-- category_hashtags.py
-- sport_formatter v5
-- quality_engine v2
-
-Features:
-- Breaking news detection
-- Sport importance
-- Football / Basketball / Tennis / Wrestling separation
-- Technology priority
-- Economy priority
-- Weighted scoring
+KhabarF24 Importance Engine v8.0
+News Importance Scoring - Coordinated with all modules
 """
 
+import logging
+from typing import Dict
 
-print("🔥 KhabarF24 Importance Engine v5.0 Loaded")
+logger = logging.getLogger(__name__)
 
+print("🔥 KhabarF24 Importance Engine v8.0 Loaded")
 
 
 # =========================
 # Category Base Weights
 # =========================
-
-
 CATEGORY_WEIGHTS = {
-
-
-    "politics": 4,
-
-    "iran": 3,
-
+    "politics": 5,
+    "iran": 4,
     "world": 2,
-
-
     "football": 4,
-
     "basketball": 3,
-
     "volleyball": 3,
-
     "tennis": 3,
-
     "wrestling": 3,
-
-    "formula1": 3,
-
+    "formula1": 4,
     "combat": 3,
-
-
-    "technology": 3,
-
+    "technology": 4,
+    "economy": 4,
     "gaming": 2,
-
-    "economy": 3,
-
     "health": 2,
-
     "science": 2,
-
-    "weather": 3,
-
+    "weather": 2,
+    "default": 1,
 }
 
 
-
-
-
-
 # =========================
-# Important Keywords
+# Important Keywords per Category
 # =========================
-
-
 IMPORTANT_WORDS = {
-
-
-    "politics": [
-
-        "جنگ",
-
-        "حمله",
-
-        "حمله موشکی",
-
-        "حمله هوایی",
-
-        "موشک",
-
-        "پهپاد",
-
-        "ارتش",
-
-        "عملیات نظامی",
-
-        "درگیری",
-
-        "بحران",
-
-        "تحریم",
-
-        "مذاکرات",
-
-        "توافق",
-
-        "آتش بس",
-
-        "دیپلماسی",
-
-        "انتخابات",
-
-        "ترور",
-
-        "انفجار",
-
-    ],
-
-
-
-    "iran": [
-
-        "ایران",
-
-        "تهران",
-
-        "دولت",
-
-        "مجلس",
-
-        "وزارت",
-
-        "سپاه",
-
-    ],
-
-
-
-    "world": [
-
-        "آمریکا",
-
-        "روسیه",
-
-        "چین",
-
-        "اروپا",
-
-        "اوکراین",
-
-        "سازمان ملل",
-
-    ],
-
-
-
-
-    # =================
-    # Sports
-    # =================
-
-
-    "football": [
-
-        "فوتبال",
-
-        "گل",
-
-        "هتریک",
-
-        "قهرمانی",
-
-        "فینال",
-
-        "لیگ قهرمانان",
-
-        "جام جهانی",
-
-        "بازیکن",
-
-        "مربی",
-
-        "مصدومیت",
-
-        "انتقال",
-
-        "قرارداد",
-
-        "VAR",
-
-    ],
-
-
-
-    "basketball": [
-
-        "بسکتبال",
-
-        "NBA",
-
-        "WNBA",
-
-        "دانک",
-
-        "ریباند",
-
-        "سه امتیازی",
-
-        "قهرمانی NBA",
-
-    ],
-
-
-
-    "volleyball": [
-
-        "والیبال",
-
-        "FIVB",
-
-        "ست",
-
-        "اسپک",
-
-        "سرویس",
-
-    ],
-
-
-
-    "tennis": [
-
-        "تنیس",
-
-        "ATP",
-
-        "WTA",
-
-        "گرند اسلم",
-
-        "ویمبلدون",
-
-        "رولان گاروس",
-
-        "جوکوویچ",
-
-    ],
-
-
-
-    "wrestling": [
-
-        "کشتی",
-
-        "کشتی آزاد",
-
-        "کشتی فرنگی",
-
-        "UWW",
-
-        "مدال",
-
-        "قهرمانی جهان",
-
-    ],
-
-
-
-    "formula1": [
-
-        "فرمول یک",
-
-        "F1",
-
-        "Formula 1",
-
-        "گرندپری",
-
-        "ردبول",
-
-        "فراری",
-
-    ],
-
-
-
-
-    # =================
-    # Technology
-    # =================
-
-
-    "technology": [
-
-        "فناوری",
-
-        "تکنولوژی",
-
-        "هوش مصنوعی",
-
-        "AI",
-
-        "OpenAI",
-
-        "ChatGPT",
-
-        "گوگل",
-
-        "اپل",
-
-        "مایکروسافت",
-
-        "انویدیا",
-
-        "تراشه",
-
-        "چیپ",
-
-        "ربات",
-
-        "هک",
-
-        "امنیت سایبری",
-
-    ],
-
-
-
-
-    "economy": [
-
-        "دلار",
-
-        "ارز",
-
-        "طلا",
-
-        "نفت",
-
-        "تورم",
-
-        "بورس",
-
-        "بانک",
-
-        "کریپتو",
-
-        "بیت کوین",
-
-    ],
-
+    "politics": ["جنگ", "حمله", "موشک", "پهپاد", "درگیری", "بحران", "تحریم", "توافق", "آتش‌بس", "ترور", "انتخابات", "دیپلماسی"],
+    "iran": ["ایران", "تهران", "سپاه", "مجلس", "دولت رئیسی", "ابراهیم رئیسی"],
+    "world": ["آمریکا", "روسیه", "چین", "اوکراین", "اسرائیل", "غزه", "سازمان ملل"],
+    
+    "football": ["فوتبال", "گل", "هتریک", "لیگ قهرمانان", "فینال", "انتقال", "قرارداد", "VAR"],
+    "basketball": ["NBA", "بسکتبال", "دانک", "قهرمانی NBA"],
+    "volleyball": ["والیبال", "FIVB", "اسپک"],
+    "tennis": ["تنیس", "گرند اسلم", "جوکوویچ", "ATP", "WTA"],
+    "wrestling": ["کشتی", "کشتی آزاد", "کشتی فرنگی", "مدال"],
+    "formula1": ["فرمول یک", "F1", "گرندپری"],
+
+    "technology": ["هوش مصنوعی", "AI", "ChatGPT", "انویدیا", "تراشه", "هک", "امنیت سایبری"],
+    "economy": ["دلار", "تورم", "بورس", "بیت‌کوین", "کریپتو", "طلا", "نفت"],
 }
-
-
-
-
-
-
-# =========================
-# High Impact
-# =========================
 
 
 HIGH_IMPACT_WORDS = [
-
-
-    "خبر فوری",
-
-    "فوری",
-
-    "لحظاتی قبل",
-
-    "اکنون",
-
-    "کشته",
-
-    "تلفات",
-
-    "فاجعه",
-
-    "وضعیت اضطراری",
-
-    "حمله گسترده",
-
-    "جنگ آغاز شد",
-
-    "رکورد تاریخی",
-
-    "قهرمان شد",
-
-    "قهرمانی جهان",
-
-    "رکورد جهانی",
-
+    "خبر فوری", "فوری", "لحظاتی قبل", "اکنون", "کشته", "تلفات", "حمله گسترده",
+    "رکورد تاریخی", "قهرمان شد", "قهرمانی جهان", "فاجعه", "جنگ آغاز شد"
 ]
 
 
+def contains_any(text: str, words: list) -> bool:
+    if not text:
+        return False
+    text_lower = text.lower()
+    return any(word.lower() in text_lower for word in words)
 
 
-
-
-# =========================
-# Helpers
-# =========================
-
-
-def contains_any(text, words):
-
-
-    text = text.lower()
-
-
-    for word in words:
-
-        if word.lower() in text:
-
-            return True
-
-
-    return False
-
-
-
-
-
-
-# =========================
-# Score Engine
-# =========================
-
-
-def calculate_importance(
-
-        title="",
-
-        summary="",
-
-        category="world"
-
-):
-
-
+def calculate_importance(title: str = "", summary: str = "", category: str = "world") -> float:
     text = f"{title} {summary}".lower()
+    score = 1.0
 
+    # Base category weight
+    norm_category = category.lower()
+    score += CATEGORY_WEIGHTS.get(norm_category, CATEGORY_WEIGHTS["default"])
 
-    score = 1
-
-
-
-
-
-    # دسته اصلی
-
-    score += CATEGORY_WEIGHTS.get(
-
-        category,
-
-        0
-
-    )
-
-
-
-
-
-
-
-    # کلمات مرتبط
-
+    # Keyword hits
     for cat, words in IMPORTANT_WORDS.items():
-
-
-        hits = 0
-
-
-        for word in words:
-
-
-            if word.lower() in text:
-
-                hits += 1
-
-
-
+        hits = sum(1 for word in words if word.lower() in text)
         if hits:
-
-
             score += hits
+            if cat == norm_category:
+                score += 2.5  # Bonus for matching category
 
-
-
-            # تقویت دسته خودش
-
-            if cat == category:
-
-                score += 2
-
-
-
-
-
-
-    # خبر مهم
-
+    # High impact words
     for word in HIGH_IMPACT_WORDS:
-
-
         if word.lower() in text:
+            score += 3.5
 
-            score += 3
-
-
-
+    return round(min(score, 12), 1)
 
 
-
-    # محدود کردن
-
-    if score > 10:
-
-        score = 10
-
-
-
-    return round(score,1)
-
-
-
-
-
-
-
-# =========================
-# Final Check
-# =========================
-
-
-def is_important(
-
-        title="",
-
-        summary="",
-
-        category="world",
-
-        minimum=5
-
-):
-
-
-    score = calculate_importance(
-
-        title,
-
-        summary,
-
-        category
-
-    )
-
-
-
-    print(
-
-        f"🔥 Importance Score: {score}/10"
-
-    )
-
-
-
+def is_important(title: str = "", summary: str = "", category: str = "world", minimum: float = 5.0) -> bool:
+    score = calculate_importance(title, summary, category)
+    
+    logger.info(f"🔥 Importance Score: {score}/12 | Category: {category}")
+    
     return score >= minimum
