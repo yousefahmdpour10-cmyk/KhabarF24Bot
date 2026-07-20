@@ -220,8 +220,7 @@ def create_summary(title, summary, content):
 
 
 
-    source = content or summary or title
-
+    source = summary or content or title
 
 
     if not source:
