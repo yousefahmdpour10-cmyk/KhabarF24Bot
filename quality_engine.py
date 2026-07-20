@@ -1,466 +1,120 @@
 """
-KhabarF24 Quality Engine v2.0
-
-News Quality Control
-
-هماهنگ با:
-- category_engine v7
-- category_hashtags.py
-- ai_processor v7
-- sport_formatter v5
-
-Features:
-- Quality score
-- Advertisement filtering
-- Brand English protection
-- Sport news support
-- Breaking news support
-- AI summary support
+KhabarF24 Quality Engine v8.0
+News Quality Control & Filtering
 """
 
-
 import re
+import logging
+from typing import Tuple
 
+logger = logging.getLogger(__name__)
 
-
-print("🧪 KhabarF24 Quality Engine v2.0 Loaded")
-
+print("🧪 KhabarF24 Quality Engine v8.0 Loaded")
 
 
 # =========================
 # Limits
 # =========================
-
-
-MIN_TITLE_LENGTH = 8
-
-MIN_SUMMARY_LENGTH = 20
-
-
+MIN_TITLE_LENGTH = 10
+MIN_SUMMARY_LENGTH = 25
 
 
 # =========================
-# Allowed English
+# Allowed English Terms
 # =========================
-
-
 ALLOWED_ENGLISH = [
-
-    # Technology
-
-    "OpenAI",
-    "ChatGPT",
-    "Google",
-    "Apple",
-    "Microsoft",
-    "Tesla",
-    "NVIDIA",
-    "AI",
-
-
+    # Tech
+    "OpenAI", "ChatGPT", "Google", "Apple", "Microsoft", "Tesla", 
+    "NVIDIA", "AMD", "Intel", "AI", "iPhone", "iOS", "Android",
     # Sport
-
-    "Manchester United",
-    "Manchester City",
-    "Real Madrid",
-    "Barcelona",
-    "Liverpool",
-    "Arsenal",
-
-    "FIFA",
-    "UEFA",
-    "NBA",
-    "Formula 1",
-
-    "BBC Sport",
-
+    "Manchester United", "Real Madrid", "Barcelona", "Liverpool", 
+    "NBA", "FIFA", "UEFA", "Formula 1", "F1", "WTA", "ATP",
 ]
 
 
-
-
-
-
 # =========================
-# Bad Translation
+# Bad Phrases
 # =========================
-
-
 BAD_PHRASES = [
-
-    "این متن",
-
-    "یک اندازه",
-
-    "می باشد",
-
-    "به پایان می دهد",
-
-    "مورد حمله قرار داد",
-
-    "در این مقاله",
-
-    "برای اطلاعات بیشتر",
-
+    "این متن", "می باشد", "به پایان می دهد", "در این مقاله",
+    "برای اطلاعات بیشتر", "ادامه در لینک", "کلیک کنید",
+    "این خبر ادامه دارد", "مورد حمله قرار داد"
 ]
-
-
-
-
-
-# =========================
-# Advertisement
-# =========================
 
 
 ADVERTISEMENT_WORDS = [
-
-    "خرید",
-
-    "فروش",
-
-    "تخفیف",
-
-    "جایزه",
-
-    "ثبت نام",
-
-    "اسپانسر",
-
-    "تبلیغات",
-
-    "رایگان",
-
-    "کد تخفیف",
-
-    "همین حالا",
-
-    "تماس بگیرید",
-
-    "عضویت",
-
+    "خرید", "فروش", "تخفیف", "ثبت نام", "اسپانسر", "تبلیغات",
+    "رایگان", "کد تخفیف", "تماس بگیرید", "عضویت", "لینک دانلود"
 ]
 
 
+def normalize(text: str) -> str:
+    return text.lower() if text else ""
 
 
-
-
-
-# =========================
-# Helpers
-# =========================
-
-
-def normalize(text):
-
+def contains_bad_english(text: str) -> bool:
     if not text:
-
-        return ""
-
-    return text.lower()
-
-
-
-
-
-
-def remove_allowed_english(text):
-
-
-    for word in ALLOWED_ENGLISH:
-
-        text = text.replace(
-
-            word,
-
-            ""
-
-        )
-
-
-    return text
-
-
-
-
-
-
-def contains_bad_english(text):
-
-
-    if not text:
-
         return False
-
-
-
-    clean = remove_allowed_english(
-
-        text
-
-    )
-
-
-
-    english_words = re.findall(
-
-        r"[A-Za-z]{4,}",
-
-        clean
-
-    )
-
-
-
+    clean = text
+    for word in ALLOWED_ENGLISH:
+        clean = clean.replace(word, "")
+    
+    english_words = re.findall(r"[A-Za-z]{4,}", clean)
     return len(english_words) >= 3
 
 
+def contains_bad_phrase(text: str) -> bool:
+    text_lower = normalize(text)
+    return any(phrase in text_lower for phrase in BAD_PHRASES)
 
 
-
-
-
-def contains_bad_phrase(text):
-
-
-    text = normalize(text)
-
-
-    for phrase in BAD_PHRASES:
-
-        if phrase in text:
-
-            return True
-
-
-    return False
-
-
-
-
-
-
-
-def is_advertisement(text):
-
-
-    text = normalize(text)
-
-
-    count = 0
-
-
-
-    for word in ADVERTISEMENT_WORDS:
-
-
-        if word in text:
-
-            count += 1
-
-
-
+def is_advertisement(text: str) -> bool:
+    text_lower = normalize(text)
+    count = sum(1 for word in ADVERTISEMENT_WORDS if word in text_lower)
     return count >= 2
 
 
-
-
-
-
-
-# =========================
-# Quality Score
-# =========================
-
-
-def calculate_quality(
-
-        title,
-
-        summary,
-
-        category="world"
-
-):
-
-
+def calculate_quality(title: str = "", summary: str = "", category: str = "world") -> int:
     score = 100
-
-
-
     text = f"{title} {summary}"
 
-
-
-
-
-    # ---------------------
-    # Title
-    # ---------------------
-
-
-    if not title:
-
-
+    # Title Check
+    if not title or len(title.strip()) < MIN_TITLE_LENGTH:
         score -= 40
-
-
-
-    elif len(title) < MIN_TITLE_LENGTH:
-
-
+    elif len(title) > 120:          # خیلی طولانی
         score -= 10
 
+    # Summary Check
+    if not summary or len(summary.strip()) < MIN_SUMMARY_LENGTH:
+        if category not in ["politics", "sport"]:
+            score -= 20
 
-
-
-
-
-
-    # ---------------------
-    # Summary
-    # ---------------------
-
-
-    if not summary:
-
-
-        # خبر فوری می‌تواند خلاصه نداشته باشد
-
-        if category != "politics":
-
-            score -= 15
-
-
-
-    elif len(summary) < MIN_SUMMARY_LENGTH:
-
-
-        score -= 5
-
-
-
-
-
-
-    # ---------------------
     # Advertisement
-    # ---------------------
-
-
     if is_advertisement(text):
+        score -= 50
 
-        score -= 40
-
-
-
-
-
-
-    # ---------------------
-    # Bad AI Translation
-    # ---------------------
-
-
+    # Bad Translation / AI Artifacts
     if contains_bad_phrase(text):
+        score -= 20
 
+    # Too much unwanted English
+    if contains_bad_english(text):
         score -= 15
 
+    # Too short overall
+    if len(text.strip()) < 50:
+        score -= 25
+
+    return max(0, score)
 
 
-
-
-
-    # ---------------------
-    # Broken English
-    # ---------------------
-
-
-    if contains_bad_english(text):
-
-        score -= 10
-
-
-
-
-
-
-
-    # ---------------------
-    # Too Short
-    # ---------------------
-
-
-    if len(text) < 40:
-
-
-        if category not in [
-
-            "sport",
-
-            "politics"
-
-        ]:
-
-            score -= 15
-
-
-
-
-
-    # limit
-
-    if score < 0:
-
-        score = 0
-
-
-
-    return score
-
-
-
-
-
-
-
-# =========================
-# Final Check
-# =========================
-
-
-def is_high_quality(
-
-        title,
-
-        summary,
-
-        category="world",
-
-        minimum=50
-
-):
-
-
-    score = calculate_quality(
-
-        title,
-
-        summary,
-
-        category
-
-    )
-
-
-
-    print(
-
-        f"🧪 Quality Score: {score}/100"
-
-    )
-
-
-
-    return score >= minimum
+def is_high_quality(title: str = "", summary: str = "", category: str = "world", minimum: int = 55) -> bool:
+    score = calculate_quality(title, summary, category)
+    
+    logger.info(f"🧪 Quality Score: {score}/100 | Category: {category}")
+    
+    if score < minimum:
+        logger.info("❌ News rejected due to low quality")
+        return False
+    
+    return True
