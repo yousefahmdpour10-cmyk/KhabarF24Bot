@@ -1,16 +1,20 @@
 """
-KhabarF24 News Fetcher v7.2
-Hybrid (RSS + Scraper) - Ready for AI Processor
+KhabarF24 News Fetcher v8.0
+Hybrid RSS + Scraper - Optimized for Main Engine
 """
 
 import feedparser
 import html
 import re
+import logging
+from typing import List, Dict
 
 from sources import RSS_SOURCES, SCRAPER_SOURCES
 from scraper_engine import scrape_source
 
-print("📰 KhabarF24 News Fetcher v7.2 Hybrid Loaded")
+logger = logging.getLogger(__name__)
+
+print("📰 KhabarF24 News Fetcher v8.0 Loaded")
 
 
 # =====================================================
@@ -19,34 +23,35 @@ print("📰 KhabarF24 News Fetcher v7.2 Hybrid Loaded")
 def clean_text(text):
     if not text:
         return ""
-
+    
     if isinstance(text, list):
-        text = " ".join(text)
+        text = " ".join(str(t) for t in text)
 
     text = html.unescape(text)
-    text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"<[^>]+>", "", text)      # Remove HTML tags
+    text = re.sub(r"\s+", " ", text)         # Normalize whitespace
     return text.strip()
 
 
-def remove_ads(text):
+def remove_ads(text: str) -> str:
     if not text:
         return ""
 
-    BAD_TEXTS = [
+    BAD_PHRASES = [
         "برای مشاهده ادامه خبر", "ادامه مطلب", "عضویت در کانال",
-        "subscribe", "click here", "read more", "برای خواندن کامل"
+        "subscribe", "click here", "read more", "برای خواندن کامل",
+        "این خبر ادامه دارد", "جزئیات بیشتر"
     ]
     
-    for bad in BAD_TEXTS:
-        text = text.replace(bad, "")
+    for phrase in BAD_PHRASES:
+        text = text.replace(phrase, "")
     return text.strip()
 
 
 # =====================================================
 # RSS Fetch
 # =====================================================
-def fetch_rss_news(source):
+def fetch_rss_news(source: Dict) -> List[Dict]:
     url = source.get("url", "")
     name = source.get("name", "Unknown")
     category = source.get("category", "world")
@@ -54,42 +59,47 @@ def fetch_rss_news(source):
     if not url:
         return []
 
-    news = []
     try:
         feed = feedparser.parse(url)
-        
-        for item in feed.entries[:8]:   # محدود به ۸ خبر
-            title = clean_text(item.get("title", ""))
-            summary = clean_text(item.get("summary", ""))
-            content = clean_text(item.get("content", [{}])[0].get("value", summary) if isinstance(item.get("content"), list) else item.get("content", summary))
-            link = item.get("link", "")
+        news = []
 
+        for item in feed.entries[:10]:   # افزایش به ۱۰
+            title = clean_text(item.get("title", ""))
             if not title:
                 continue
+
+            summary = clean_text(item.get("summary", ""))
+            content = clean_text(
+                item.get("content", [{}])[0].get("value") 
+                if isinstance(item.get("content"), list) 
+                else item.get("content", summary)
+            )
 
             news.append({
                 "title": title,
                 "summary": remove_ads(summary),
                 "content": remove_ads(content),
-                "link": link,
+                "link": item.get("link", ""),
                 "source": name,
                 "category": category,
-                "image_url": item.get("media_content", [{}])[0].get("url") if item.get("media_content") else None
+                "image_url": item.get("media_content", [{}])[0].get("url") 
+                            if item.get("media_content") else None,
+                "published": item.get("published", "")
             })
 
         if news:
-            print(f"✅ RSS OK: {name} ({len(news)} news)")
+            logger.info(f"✅ RSS: {name} → {len(news)} news")
+        return news
 
     except Exception as e:
-        print(f"⚠️ RSS Failed {name}: {e}")
-
-    return news
+        logger.error(f"⚠️ RSS Failed {name}: {e}")
+        return []
 
 
 # =====================================================
 # Scraper Fetch
 # =====================================================
-def fetch_scraper_news(source):
+def fetch_scraper_news(source: Dict) -> List[Dict]:
     name = source.get("name", "Unknown")
     category = source.get("category", "world")
 
@@ -99,50 +109,47 @@ def fetch_scraper_news(source):
 
         for item in result[:8]:
             title = clean_text(item.get("title", ""))
-            summary = clean_text(item.get("summary", ""))
-            content = clean_text(item.get("content", summary))
-            link = item.get("link", "")
-
             if not title:
                 continue
+
+            summary = clean_text(item.get("summary", ""))
+            content = clean_text(item.get("content", summary))
 
             news.append({
                 "title": title,
                 "summary": remove_ads(summary),
                 "content": remove_ads(content),
-                "link": link,
+                "link": item.get("link", ""),
                 "source": name,
                 "category": category,
-                "image_url": item.get("image_url") or item.get("image")
+                "image_url": item.get("image_url") or item.get("image"),
+                "published": item.get("published", "")
             })
 
         if news:
-            print(f"✅ Scraper OK: {name} ({len(news)} news)")
-
+            logger.info(f"✅ Scraper: {name} → {len(news)} news")
         return news
 
     except Exception as e:
-        print(f"⚠️ Scraper Failed {name}: {e}")
+        logger.error(f"⚠️ Scraper Failed {name}: {e}")
         return []
 
 
 # =====================================================
-# Hybrid Fetch
+# Hybrid + Main Function
 # =====================================================
-def fetch_hybrid_news(source):
-    """اول RSS، اگر خالی بود Scraper"""
+def fetch_hybrid_news(source: Dict) -> List[Dict]:
+    """اول RSS امتحان کن، اگر خبر نیاورد Scraper"""
     rss_news = fetch_rss_news(source)
     if rss_news:
         return rss_news
 
-    print(f"🔄 Trying Scraper for: {source.get('name','Unknown')}")
+    logger.info(f"🔄 Switching to Scraper for: {source.get('name')}")
     return fetch_scraper_news(source)
 
 
-# =====================================================
-# Main Function
-# =====================================================
-def get_latest_news():
+def get_latest_news() -> List[Dict]:
+    """Main entry point - returns all fresh news"""
     all_news = []
 
     # RSS Sources (Hybrid)
@@ -153,5 +160,5 @@ def get_latest_news():
     for source in SCRAPER_SOURCES:
         all_news.extend(fetch_scraper_news(source))
 
-    print(f"📥 Total news fetched: {len(all_news)}")
+    logger.info(f"📥 Total news fetched: {len(all_news)}")
     return all_news
