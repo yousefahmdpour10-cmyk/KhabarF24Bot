@@ -1,675 +1,120 @@
 """
-KhabarF24 Main Engine v7.0
-
-Pipeline:
-
-News Fetcher
-      ↓
-Category Engine
-      ↓
-AI Processor
-      ↓
-Sport Formatter
-      ↓
-Game Formatter
-      ↓
-Quality Engine
-      ↓
-Importance Engine
-      ↓
-Formatter
-      ↓
-Telegram
+KhabarF24 Main Engine v7.1
+Fully coordinated with ai_processor + formatter + telegram_bot
 """
-
 
 import asyncio
 import random
 
-
 from news_fetcher import get_latest_news
-
-
-from telegram_bot import send_message
-
-
-from news_db import (
-    init_db,
-    is_published,
-    mark_as_published,
-)
-
+from telegram_bot import send_to_telegram          # تابع جدید
+from news_db import init_db, is_published, mark_as_published
 
 from category_engine import detect_smart_category
-
-
-from category_hashtags import get_hashtag
-
-
 from ai_processor import process_news
-
-
 from sport_formatter import format_sport_news
-
-
 from game_formatter import format_game_news
-
-
 from quality_engine import is_high_quality
-
-
 from importance_engine import is_important
+from formatter import format_news   # نسخه جدید formatter
 
-
-from formatter import format_news
-
-
-
-CHECK_INTERVAL = 300
-
-
-
-# =================================
-# Sport Categories
-# =================================
+CHECK_INTERVAL = 300  # 5 دقیقه
 
 
 SPORT_CATEGORIES = {
-
-    "football",
-    "basketball",
-    "volleyball",
-    "tennis",
-    "wrestling",
-    "formula1",
-    "combat",
-
+    "football", "basketball", "volleyball", "tennis",
+    "wrestling", "formula1", "combat"
 }
 
 
-
-
-
-def normalize_category(category):
-
-
-    if category in SPORT_CATEGORIES:
-
-        return "sport"
-
-
-    return category
-
-
-
-
-
+def normalize_category(category: str) -> str:
+    return "sport" if category in SPORT_CATEGORIES else category
 
 
 async def check_news():
-
-
-    news = get_latest_news()
-
-
-    if not news:
-
-
-        print(
-            "No news found."
-        )
-
+    news_list = get_latest_news()
+    if not news_list:
+        print("No new news found.")
         return
 
+    random.shuffle(news_list)
 
-
-
-
-
-    random.shuffle(news)
-
-
-
-
-
-    for item in news:
-
-
-
-        link = item.get(
-
-            "link",
-
-            ""
-
-        )
-
-
-
-        if not link:
-
-
-            link = (
-
-                item.get(
-                    "title",
-                    ""
-                )
-
-                +
-
-                item.get(
-                    "source",
-                    ""
-                )
-
-            )
-
-
-
-
+    for item in news_list:
+        link = item.get("link") or (item.get("title", "") + item.get("source", ""))
 
         if is_published(link):
-
             continue
 
-
-
-
-
-
-        raw_title = item.get(
-
-            "title",
-
-            ""
-
-        )
-
-
-        raw_summary = item.get(
-
-            "summary",
-
-            ""
-
-        )
-
-
-        source = item.get(
-
-            "source",
-
-            ""
-
-        )
-
-
-
-
-        # =========================
         # Category Detection
-        # =========================
-
-
         detected_category = detect_smart_category(
-
-
-            title=raw_title,
-
-
-            summary=raw_summary,
-
-
-            source=source
-
-
+            title=item.get("title", ""),
+            summary=item.get("summary", ""),
+            source=item.get("source", "")
         )
 
+        category = normalize_category(detected_category)
 
+        print(f"📂 Category: {category} | Original: {detected_category}")
 
-        original_category = detected_category
-
-
-
-        category = normalize_category(
-
-            detected_category
-
-        )
-
-
-
-        print(
-
-            f"📂 Category: {category}"
-
-        )
-
-
-        print(
-
-            f"🏷️ Original: {original_category}"
-
-        )
-
-
-
-
-        # =========================
-        # AI Processing v7.1
-        # =========================
-
-
+        # AI Processing
         processed = process_news({
-
-            "title": raw_title,
-
-            "summary": raw_summary,
-
-            "content": item.get(
-
-                "content",
-
-                ""
-
-            ),
-
-            "source": source,
-
-            "category": category
-
+            "title": item.get("title", ""),
+            "summary": item.get("summary", ""),
+            "content": item.get("content", ""),
+            "source": item.get("source", ""),
+            "category": category,
+            "image_url": item.get("image_url") or item.get("image")   # مهم!
         })
 
-
-
-        title = processed.get(
-
-            "title",
-
-            raw_title
-
-        )
-
-
-
-        summary = processed.get(
-
-            "summary",
-
-            raw_summary
-
-        )
-
-
-
+        # Sport / Game Processing
         sport_data = None
-
         game_data = None
 
-
-
-        # =========================
-        # Sport Processing
-        # =========================
-
-
         if category == "sport":
-
-
-            sport_result = format_sport_news(
-
-
-                title,
-
-
-                summary
-
-
-            )
-
-
-
+            sport_result = format_sport_news(processed["title"], processed["summary"])
             if sport_result.get("blocked"):
-
-
-                print(
-
-                    "❌ Sport video-only skipped"
-
-                )
-
-
                 continue
+            processed["title"] = sport_result.get("title", processed["title"])
+            processed["summary"] = sport_result.get("summary", processed["summary"])
+            sport_data = sport_result.get("sport")
 
-
-
-
-
-            title = sport_result.get(
-
-                "title",
-
-                title
-
-            )
-
-
-            summary = sport_result.get(
-
-                "summary",
-
-                summary
-
-            )
-
-
-            sport_data = sport_result.get(
-
-                "sport"
-
-            )
-
-
-
-
-
-
-
-        # =========================
-        # Gaming Processing
-        # =========================
-
-
-        if category == "gaming":
-
-
-            game_result = format_game_news(
-
-
-                title,
-
-
-                summary
-
-            )
-
-
-
+        elif category == "gaming":
+            game_result = format_game_news(processed["title"], processed["summary"])
             if game_result.get("blocked"):
-
-
-                print(
-
-                    "❌ Game video-only skipped"
-
-                )
-
-
                 continue
+            processed["title"] = game_result.get("title", processed["title"])
+            processed["summary"] = game_result.get("summary", processed["summary"])
+            game_data = game_result.get("game")
 
-
-
-
-
-            title = game_result.get(
-
-                "title",
-
-                title
-
-            )
-
-
-            summary = game_result.get(
-
-                "summary",
-
-                summary
-
-            )
-
-
-            game_data = game_result.get(
-
-                "game"
-
-            )
-
-
-
-
-
-
-
-        # =========================
-        # Hashtag Engine
-        # =========================
-
-
-        hashtag_data = get_hashtag(
-
-
-            category,
-
-
-            title,
-
-
-            summary
-
-
-        )
-
-
-
-
-
-
-
-
-        # =========================
-        # Quality Check
-        # =========================
-
-
-        if not is_high_quality(
-
-
-            title,
-
-
-            summary
-
-
-        ):
-
-
-            print(
-
-                "❌ Low quality news skipped"
-
-            )
-
-
+        # Quality & Importance Check
+        if not is_high_quality(processed["title"], processed["summary"]):
+            print("❌ Low quality skipped")
             continue
 
-
-
-
-
-
-
-
-        # =========================
-        # Importance Check
-        # =========================
-
-
-        if not is_important(
-
-
-            title,
-
-
-            summary,
-
-
-            category
-
-
-        ):
-
-
-            print(
-
-                "❌ Low importance news skipped"
-
-            )
-
-
+        if not is_important(processed["title"], processed["summary"], category):
+            print("❌ Low importance skipped")
             continue
 
+        # ارسال نهایی به تلگرام
+        await send_to_telegram(processed)
 
-
-
-
-
-
-
-        # =========================
-        # Telegram Formatter
-        # =========================
-
-
-        message = format_news(
-
-
-            title=title,
-
-
-            summary=summary,
-
-
-            source=source,
-
-
-            category=category,
-
-
-            sport=sport_data,
-
-
-            game=game_data,
-
-
-            hashtag_data=hashtag_data
-
-
-        )
-
-
-
-
-
-
-
-
-        # =========================
-        # Telegram Send
-        # =========================
-
-
-        await send_message(
-
-            message
-
-        )
-
-
-
-        mark_as_published(
-
-            link
-
-        )
-
-
-
-        print(
-
-            "✅ News published"
-
-        )
-
-
-
-        break
-
-
-
-
-
-
-
-
-
+        mark_as_published(link)
+        print("✅ News published successfully")
+        break   # فقط یک خبر در هر چرخه
 
 
 async def main():
-
-
     init_db()
-
-
-
-    print(
-
-        "🚀 KhabarF24 Started v7.0"
-
-    )
-
-
-
+    print("🚀 KhabarF24 Main Engine v7.1 Started")
 
     while True:
-
-
         try:
-
-
             await check_news()
-
-
-
         except Exception as e:
-
-
-            print(
-
-                f"Error: {e}"
-
-            )
-
-
-
-        await asyncio.sleep(
-
-            CHECK_INTERVAL
-
-        )
-
-
-
-
-
+            print(f"⚠️ Error in main loop: {e}")
+        
+        await asyncio.sleep(CHECK_INTERVAL)
 
 
 if __name__ == "__main__":
-
-
-    asyncio.run(
-
-        main()
-
-    )
+    asyncio.run(main())
