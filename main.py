@@ -1,117 +1,162 @@
 """
-KhabarF24 Main Engine v7.1
-Fully coordinated with ai_processor + formatter + telegram_bot
+KhabarF24 Main Engine v8.0
+Improved coordination + Multi-platform ready + Better stability
 """
 
 import asyncio
 import random
+import logging
+from datetime import datetime
 
+# Core modules
 from news_fetcher import get_latest_news
-from telegram_bot import send_to_telegram          # تابع جدید
-from news_db import init_db, is_published, mark_as_published
-
-from category_engine import detect_smart_category
 from ai_processor import process_news
+from formatter import format_news
+from category_engine import detect_smart_category
+
+# Specialized formatters (if needed)
 from sport_formatter import format_sport_news
 from game_formatter import format_game_news
+
+# Quality & Filters
 from quality_engine import is_high_quality
 from importance_engine import is_important
-from formatter import format_news   # نسخه جدید formatter
 
+# Database & Publishing
+from news_db import init_db, is_published, mark_as_published
+
+# Platforms (فقط تلگرام فعلاً)
+from telegram_bot import send_to_telegram
+
+# Config
 CHECK_INTERVAL = 300  # 5 دقیقه
+MAX_NEWS_PER_CYCLE = 3   # می‌تونی بعداً بیشتر کنی
 
-
-SPORT_CATEGORIES = {
-    "football", "basketball", "volleyball", "tennis",
-    "wrestling", "formula1", "combat"
-}
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 def normalize_category(category: str) -> str:
-    return "sport" if category in SPORT_CATEGORIES else category
+    sport_categories = {"football", "basketball", "volleyball", "tennis", 
+                       "wrestling", "formula1", "combat", "sport"}
+    if category.lower() in sport_categories or any(s in category.lower() for s in sport_categories):
+        return "sport"
+    return category.lower().strip()
 
 
-async def check_news():
-    news_list = get_latest_news()
-    if not news_list:
-        print("No new news found.")
-        return
+async def process_and_publish(item: dict) -> bool:
+    """Process one news item and publish if qualified"""
+    link = item.get("link") or item.get("url") or ""
+    title = item.get("title", "")
 
-    random.shuffle(news_list)
+    if not link and not title:
+        return False
 
-    for item in news_list:
-        link = item.get("link") or (item.get("title", "") + item.get("source", ""))
+    # Deduplication
+    if is_published(link, title):
+        logger.debug(f"Duplicate skipped: {title[:60]}...")
+        return False
 
-        if is_published(link):
-            continue
-
+    try:
         # Category Detection
-        detected_category = detect_smart_category(
-            title=item.get("title", ""),
+        raw_category = detect_smart_category(
+            title=title,
             summary=item.get("summary", ""),
             source=item.get("source", "")
         )
+        category = normalize_category(raw_category)
 
-        category = normalize_category(detected_category)
+        logger.info(f"📂 Category: {category} | Title: {title[:70]}...")
 
-        print(f"📂 Category: {category} | Original: {detected_category}")
-
-        # AI Processing
+        # AI Processing (تیتر + خلاصه)
         processed = process_news({
-            "title": item.get("title", ""),
+            "title": title,
             "summary": item.get("summary", ""),
             "content": item.get("content", ""),
             "source": item.get("source", ""),
             "category": category,
-            "image_url": item.get("image_url") or item.get("image")   # مهم!
+            "image_url": item.get("image_url") or item.get("image"),
+            "link": link
         })
 
-        # Sport / Game Processing
-        sport_data = None
-        game_data = None
-
+        # Specialized Formatting
         if category == "sport":
             sport_result = format_sport_news(processed["title"], processed["summary"])
             if sport_result.get("blocked"):
-                continue
+                return False
             processed["title"] = sport_result.get("title", processed["title"])
             processed["summary"] = sport_result.get("summary", processed["summary"])
-            sport_data = sport_result.get("sport")
 
         elif category == "gaming":
             game_result = format_game_news(processed["title"], processed["summary"])
             if game_result.get("blocked"):
-                continue
+                return False
             processed["title"] = game_result.get("title", processed["title"])
             processed["summary"] = game_result.get("summary", processed["summary"])
-            game_data = game_result.get("game")
 
-        # Quality & Importance Check
+        # Final Quality Check
         if not is_high_quality(processed["title"], processed["summary"]):
-            print("❌ Low quality skipped")
-            continue
+            logger.info("❌ Low quality skipped")
+            return False
 
         if not is_important(processed["title"], processed["summary"], category):
-            print("❌ Low importance skipped")
-            continue
+            logger.info("❌ Low importance skipped")
+            return False
 
-        # ارسال نهایی به تلگرام
-        await send_to_telegram(processed)
+        # Format final output
+        final_news = format_news(processed)
 
-        mark_as_published(link)
-        print("✅ News published successfully")
-        break   # فقط یک خبر در هر چرخه
+        # Send to Telegram
+        success = await send_to_telegram(final_news)
+        
+        if success:
+            mark_as_published(link, title)
+            logger.info(f"✅ Published: {processed['title'][:80]}...")
+            return True
+        else:
+            logger.warning("⚠️ Failed to send to Telegram")
+            return False
+
+    except Exception as e:
+        logger.error(f"Error processing news '{title[:60]}...': {e}")
+        return False
+
+
+async def check_news():
+    """Main news checking cycle"""
+    news_list = get_latest_news()
+    if not news_list:
+        logger.info("No new news found.")
+        return
+
+    random.shuffle(news_list)
+    published_count = 0
+
+    for item in news_list:
+        if published_count >= MAX_NEWS_PER_CYCLE:
+            break
+
+        success = await process_and_publish(item)
+        if success:
+            published_count += 1
+            await asyncio.sleep(8)  # فاصله بین پست‌ها برای جلوگیری از اسپم
+
+    logger.info(f"Cycle finished. Published {published_count} news.")
 
 
 async def main():
     init_db()
-    print("🚀 KhabarF24 Main Engine v7.1 Started")
+    logger.info("🚀 KhabarF24 Main Engine v8.0 Started - Multi-platform Ready")
 
     while True:
         try:
             await check_news()
         except Exception as e:
-            print(f"⚠️ Error in main loop: {e}")
+            logger.error(f"Critical error in main loop: {e}")
+            await asyncio.sleep(60)
         
         await asyncio.sleep(CHECK_INTERVAL)
 
