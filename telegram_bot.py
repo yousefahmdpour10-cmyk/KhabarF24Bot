@@ -1,44 +1,44 @@
 """
-KhabarF24 Telegram Bot v7.1
-- ارسال متن + عکس با واترمارک
-- هماهنگ با ai_processor و formatter
+KhabarF24 Telegram Bot v8.1
+Fully coordinated with formatter v8 + image processor
 """
 
 from telegram import Bot
 from config import BOT_TOKEN, CHANNEL_ID
 import asyncio
 import os
+import logging
 
-# Importهای پروژه
-from formatter import format_news, format_news_with_image
+# Core imports
+from formatter import format_news
 from image_processor import download_image, add_khabarf24_watermark
+
+logger = logging.getLogger(__name__)
 
 bot = Bot(token=BOT_TOKEN)
 
 
-async def send_to_telegram(news: dict):
+async def send_to_telegram(processed_news: dict):
     """
-    ارسال خبر به کانال تلگرام
-    news: خروجی تابع process_news
+    ارسال نهایی خبر به کانال تلگرام
+    processed_news: خروجی تابع process_news از ai_processor
     """
     try:
-        title = news.get("title", "")
-        summary = news.get("summary", "")
-        source = news.get("source", "Unknown")
-        category = news.get("category", "world")
-        image_url = news.get("image_url")
+        # استفاده از formatter v8
+        formatted = format_news(processed_news)
+        
+        caption = formatted["text"]
+        image_url = processed_news.get("image_url")
 
-        print(f"📤 در حال ارسال خبر: {title[:50]}...")
+        logger.info(f"📤 Sending news: {processed_news.get('title', '')[:60]}...")
+
+        final_image_path = None
 
         # اگر عکس داشت → دانلود + واترمارک
-        final_image_path = None
         if image_url:
             temp_image = download_image(image_url)
-            if temp_image:
+            if temp_image and os.path.exists(temp_image):
                 final_image_path = add_khabarf24_watermark(temp_image)
-
-        # ساخت کپشن
-        caption = format_news(title, summary, source, category)
 
         if final_image_path and os.path.exists(final_image_path):
             # ارسال با عکس
@@ -47,42 +47,45 @@ async def send_to_telegram(news: dict):
                     chat_id=CHANNEL_ID,
                     photo=photo,
                     caption=caption,
-                    parse_mode='HTML'
+                    parse_mode='Markdown'
                 )
-            print("✅ خبر با عکس ارسال شد.")
-            
-            # پاک کردن فایل‌های موقتی
+            logger.info("✅ News sent with photo")
+
+            # پاکسازی فایل‌های موقتی
             try:
                 os.remove(final_image_path)
                 if temp_image and os.path.exists(temp_image):
                     os.remove(temp_image)
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Cleanup warning: {e}")
         else:
             # ارسال فقط متن
             await bot.send_message(
                 chat_id=CHANNEL_ID,
                 text=caption,
-                parse_mode='HTML'
+                parse_mode='Markdown'
             )
-            print("✅ خبر متنی ارسال شد.")
+            logger.info("✅ News sent as text")
+
+        return True
 
     except Exception as e:
-        print(f"❌ خطا در ارسال به تلگرام: {e}")
+        logger.error(f"❌ Error sending to Telegram: {e}")
+        return False
 
 
-# تابع کمکی برای تست
+# تست سریع
 async def test_send():
     test_news = {
-        "title": "تست عنوان خبر",
-        "summary": "این یک خلاصه آزمایشی برای چک کردن فرمت است.",
-        "source": "ISNA",
+        "title": "تست ارسال خبر",
+        "summary": "این یک خبر آزمایشی برای بررسی فرمت نهایی است. امیدواریم خوب نمایش داده شود.",
+        "source": "CITNA",
         "category": "politics",
-        "image_url": None  # می‌تونی لینک عکس بذاری برای تست
+        "image_url": None
     }
-    await send_to_telegram(test_news)
+    success = await send_to_telegram(test_news)
+    print("Test successful" if success else "Test failed")
 
 
-# اگر مستقیم اجرا شود
 if __name__ == "__main__":
     asyncio.run(test_send())
