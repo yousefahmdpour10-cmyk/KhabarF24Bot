@@ -41,42 +41,29 @@ def get_category_style(category: str):
 # =====================================
 # Main Formatter
 # =====================================
-def format_news(processed: Dict) -> Dict:
-    title = processed.get("title", "").strip()
-    summary = processed.get("summary", "").strip()
-    source = processed.get("source", "نامشخص")
-    category = processed.get("category", "default")
-    image_url = processed.get("image_url")
-    link = processed.get("link", "")
+def format_news(title: str, summary: str, source: str, category: str = "world"):
+    style = CATEGORY_STYLE.get(category.lower(), CATEGORY_STYLE["world"])
+    
+    category_name = style["name"]
+    category_emoji = style["emoji"]
+    hashtag = style["hashtag"]
 
-    style = get_category_style(category)
+    source = clean_source_name(source)
+    source_flag = get_source_flag(source)
 
-    caption = f"""
+    # تیتر بولد (در تلگرام با ** قوی نمایش داده می‌شود)
+    message = f"""━━━━━━━━━━━━━━━━
+🔴 KhabarF24 | {category_emoji} {category_name}
 ━━━━━━━━━━━━━━━━
-{style['header']}
-━━━━━━━━━━━━━━━━
+
 📰 **{title}**
 
-✍️ {summary}
+{summary}
 
-🗞️ 🌐 {source}
-"""
-
-    if link:
-        caption += f"\n🔗 [ادامه خبر]({link})"
-
-    caption += f"""
+• 🗞️ {source_flag} {source}
 ━━━━━━━━━━━━━━━━
 📢 @KhabarF24
-{style['hashtag']}
+{hashtag}
 """
 
-    return {
-        "text": caption.strip(),
-        "title": title,
-        "summary": summary,
-        "category": category,
-        "hashtag": style['hashtag'],
-        "image_url": image_url,
-        "parse_mode": "Markdown"
-    }
+    return message.strip()
