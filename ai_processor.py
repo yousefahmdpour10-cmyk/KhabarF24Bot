@@ -1,6 +1,6 @@
 """
 KhabarF24 AI Processor v8.1
-Translation + Rewriting + Professional Output
+هوش مصنوعی پردازش خبر - بهینه شده با تمام ویژگی‌های درخواستی
 """
 
 import re
@@ -11,63 +11,48 @@ from typing import Dict
 from deep_translator import GoogleTranslator
 from brand_dictionary import replace_official_names
 from rtl_cleaner import fix_rtl_text
-from news_rewriter import rewrite_news   # ← ادغام شد
+from news_rewriter import rewrite_news
 
 logger = logging.getLogger(__name__)
 
 print("🤖 KhabarF24 AI Processor v8.1 Loaded")
 
 
-# =====================================================
-# Language Detection
-# =====================================================
-try:
-    from langdetect import detect, DetectorFactory
-    DetectorFactory.seed = 0
-    LANGDETECT_AVAILABLE = True
-except ImportError:
-    LANGDETECT_AVAILABLE = False
-
-
 def detect_language(text: str) -> str:
+    """تشخیص زبان (فارسی یا انگلیسی)"""
     if not text or len(text.strip()) < 15:
         return "unknown"
 
     text_clean = re.sub(r'https?://\S+|www\.\S+', '', text)
 
-    if LANGDETECT_AVAILABLE:
-        try:
-            lang = detect(text_clean[:600])
-            if lang in ['fa', 'ar', 'en']:
-                return lang
-        except:
-            pass
+    try:
+        from langdetect import detect, DetectorFactory
+        DetectorFactory.seed = 0
+        lang = detect(text_clean[:700])
+        if lang in ['fa', 'ar']:
+            return 'fa'
+        if lang == 'en':
+            return 'en'
+    except:
+        pass
 
-    persian_chars = len(re.findall(r'[\u0600-\u06FF\uFB8A-\uFBFF]', text_clean))
-    total_chars = len(re.sub(r'\s+', '', text_clean))
-    return 'fa' if total_chars > 0 and (persian_chars / total_chars) > 0.12 else 'en'
+    # روش پشتیبان فارسی
+    persian_ratio = len(re.findall(r'[\u0600-\u06FF\uFB8A-\uFBFF]', text_clean)) / max(1, len(text_clean))
+    return 'fa' if persian_ratio > 0.15 else 'en'
 
 
-# =====================================================
-# Translation
-# =====================================================
 def translate_to_persian(text: str) -> str:
-    if not text:
-        return ""
+    """ترجمه فقط در صورت نیاز"""
     if detect_language(text) == 'fa':
-        return text.strip()
+        return text.strip()   # ✅ عدم ترجمه خبر فارسی
     
     try:
         result = GoogleTranslator(source="auto", target="fa").translate(text[:4500])
         return result.strip() if result else text
-    except Exception as e:
-        logger.error(f"Translation failed: {e}")
+    except:
         return text
 
 
-# =====================================================
-# Cleanup
-# =====================================================
 def clean_text(text: str) -> str:
     if not text:
         return ""
@@ -77,61 +62,43 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-def protect_numbers(original: str, translated: str) -> str:
-    if not original:
-        return translated
-    numbers = re.findall(r'\d+[.,]?\d*', original)
-    for num in numbers:
-        if num not in translated:
-            translated += f" ({num})"
-    return translated.strip()
-
-
-# =====================================================
-# Main Processing
-# =====================================================
 def process_news(news: Dict) -> Dict:
-    if not isinstance(news, dict):
-        logger.error("Invalid input to AI processor")
-        return {}
-
     title = news.get("title", "")
     summary = news.get("summary", "")
     content = news.get("content", "")
     source = news.get("source", "Unknown")
     category = news.get("category", "world")
-    image_url = news.get("image_url") or news.get("image")
-    link = news.get("link", "")
+    image_url = news.get("image_url")
+    link = news.get("link")
 
-    logger.info(f"🤖 Processing: {title[:70]}...")
+    logger.info(f"🤖 Processing: {title[:65]}...")
 
-    # 1. Brand Protection
+    # حفاظت از برندها
     title = replace_official_names(title)
     summary = replace_official_names(summary)
-    content = replace_official_names(content)
 
-    # 2. Translation
+    # ترجمه هوشمند
     fa_title = translate_to_persian(title)
     fa_summary = translate_to_persian(summary) or translate_to_persian(content)
 
-    # 3. Natural Persian Rewriting (مهم!)
+    # طبیعی‌سازی فارسی
     rewritten = rewrite_news(fa_title, fa_summary)
     fa_title = rewritten["title"]
     fa_summary = rewritten["summary"]
 
-    # 4. Final Cleanup
+    # تمیزکاری نهایی
     fa_title = clean_text(fa_title)
     fa_summary = clean_text(fa_summary)
 
-    fa_title = protect_numbers(title, fa_title)
-    fa_summary = protect_numbers(content or summary, fa_summary)
+    # تیتر کوتاه و جذاب
+    if len(fa_title) > 85:
+        fa_title = fa_title[:82] + "..."
 
-    # 5. Attractive Title & Professional Summary
-    fa_title = fa_title[:85] if len(fa_title) > 85 else fa_title
+    # خلاصه حرفه‌ای
     if len(fa_summary) > 280:
-        fa_summary = fa_summary[:280].rsplit(" ", 1)[0] + "..."
+        fa_summary = fa_summary[:277] + "..."
 
-    # 6. RTL Fix
+    # RTL + نهایی
     fa_title = fix_rtl_text(fa_title)
     fa_summary = fix_rtl_text(fa_summary)
 
@@ -141,6 +108,5 @@ def process_news(news: Dict) -> Dict:
         "source": source,
         "category": category,
         "image_url": image_url,
-        "link": link,
-        "original_title": title
+        "link": link
     }
