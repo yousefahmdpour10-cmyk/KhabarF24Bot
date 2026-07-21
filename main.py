@@ -135,3 +135,11 @@ if __name__ == "__main__":
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
     asyncio.run(main())
+
+from config import (
+    CHECK_INTERVAL, 
+    MAX_NEWS_PER_CYCLE, 
+    DEBUG_MODE,
+    MIN_QUALITY_SCORE,
+    MIN_IMPORTANCE_SCORE
+)
