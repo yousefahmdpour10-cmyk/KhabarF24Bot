@@ -80,9 +80,8 @@ def process_news(news: dict) -> dict:
     protected_content = replace_official_names(content)
 
     # ترجمه فقط اگر انگلیسی باشد
-    fa_title = translate_text(protected_title)
-    fa_summary = translate_text(protected_summary) or translate_text(protected_content)
-
+fa_title = translate_to_persian(protected_title)
+fa_summary = translate_to_persian(protected_summary) or translate_to_persian(protected_content)
     # Cleanup قوی
     fa_title = clean_text(fa_title)
     fa_summary = clean_text(fa_summary)
