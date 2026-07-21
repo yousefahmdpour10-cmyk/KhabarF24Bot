@@ -62,51 +62,50 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-def process_news(news: Dict) -> Dict:
-    title = news.get("title", "")
-    summary = news.get("summary", "")
-    content = news.get("content", "")
-    source = news.get("source", "Unknown")
-    category = news.get("category", "world")
-    image_url = news.get("image_url")
-    link = news.get("link")
+def process_news(news: dict) -> dict:
+    if not isinstance(news, dict):
+        return {}
 
-    logger.info(f"🤖 Processing: {title[:65]}...")
+    title = news.get("title", "").strip()
+    summary = news.get("summary", "").strip()
+    content = news.get("content", "").strip()
+    source = news.get("source", "نامشخص").strip()   # مهم!
+    category = news.get("category", "world").strip()
 
-    # حفاظت از برندها
-    title = replace_official_names(title)
-    summary = replace_official_names(summary)
+    print(f"🤖 Processing: {source} | {title[:50]}...")
 
-    # ترجمه هوشمند
-    fa_title = translate_to_persian(title)
-    fa_summary = translate_to_persian(summary) or translate_to_persian(content)
+    # حفاظت از نام‌ها
+    protected_title = replace_official_names(title)
+    protected_summary = replace_official_names(summary)
+    protected_content = replace_official_names(content)
 
-    # طبیعی‌سازی فارسی
-    rewritten = rewrite_news(fa_title, fa_summary)
-    fa_title = rewritten["title"]
-    fa_summary = rewritten["summary"]
+    # ترجمه فقط اگر انگلیسی باشد
+    fa_title = translate_text(protected_title)
+    fa_summary = translate_text(protected_summary) or translate_text(protected_content)
 
-    # تمیزکاری نهایی
+    # Cleanup قوی
     fa_title = clean_text(fa_title)
     fa_summary = clean_text(fa_summary)
 
-    # تیتر کوتاه و جذاب
-    if len(fa_title) > 85:
-        fa_title = fa_title[:82] + "..."
+    # حفاظت اعداد و برند
+    fa_title = protect_numbers(title, fa_title)
+    fa_summary = protect_numbers(content or summary, fa_summary)
 
-    # خلاصه حرفه‌ای
-    if len(fa_summary) > 280:
-        fa_summary = fa_summary[:277] + "..."
+    fa_title = replace_official_names(fa_title)
+    fa_summary = replace_official_names(fa_summary)
 
-    # RTL + نهایی
+    # تیتر و خلاصه
+    fa_title = create_attractive_title(fa_title)
+    fa_summary = create_professional_summary(fa_title, fa_summary, content)
+
+    # RTL
     fa_title = fix_rtl_text(fa_title)
     fa_summary = fix_rtl_text(fa_summary)
 
     return {
         "title": fa_title,
         "summary": fa_summary,
-        "source": source,
+        "source": source,          # خیلی مهم!
         "category": category,
-        "image_url": image_url,
-        "link": link
+        "image_url": news.get("image_url")
     }
