@@ -1,6 +1,5 @@
 """
-KhabarF24 Main Engine v8.1
-نسخه نهایی هماهنگ
+KhabarF24 Main Engine v8.1 - Final Coordinated Version
 """
 
 import asyncio
@@ -13,23 +12,27 @@ from config import (
     MAX_NEWS_PER_CYCLE,
     DEBUG_MODE,
     MIN_QUALITY_SCORE,
-    MIN_IMPORTANCE_SCORE
+    MIN_IMPORTANCE_SCORE,
+    LOG_LEVEL,
 )
+
 # ===================================================
 
-# Core
 from news_fetcher import get_latest_news
 from ai_processor import process_news
 from formatter import format_news
 from category_engine import detect_smart_category
 from sport_formatter import format_sport_news
-
 from quality_engine import is_high_quality
 from importance_engine import is_important
-
 from news_db import init_db, is_published, mark_as_published
 from telegram_bot import send_to_telegram
 
+# ====================== LOGGING ======================
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL),
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +51,11 @@ async def process_and_publish(item: dict) -> bool:
         return False
 
     try:
-        raw_category = detect_smart_category(title=title, summary=item.get("summary", ""), source=item.get("source", ""))
+        raw_category = detect_smart_category(
+            title=title, 
+            summary=item.get("summary", ""), 
+            source=item.get("source", "")
+        )
         category = normalize_category(raw_category)
 
         logger.info(f"📂 Category: {category} | {title[:70]}...")
@@ -63,20 +70,21 @@ async def process_and_publish(item: dict) -> bool:
             "link": link
         })
 
-        # Sport special format
+        # Sport special handling
         if category in ["sport", "football", "basketball", "volleyball", "tennis", "wrestling", "formula1"]:
             sport_result = format_sport_news(processed["title"], processed["summary"])
             if sport_result.get("blocked"):
+                logger.info(f"🚫 Blocked by sport formatter: {title[:50]}...")
                 return False
             processed["title"] = sport_result.get("title", processed["title"])
             processed["summary"] = sport_result.get("summary", processed["summary"])
 
         if not is_high_quality(processed["title"], processed["summary"], category):
-            logger.info("❌ Low quality")
+            logger.info(f"❌ Low quality: {title[:60]}...")
             return False
 
         if not is_important(processed["title"], processed["summary"], category):
-            logger.info("❌ Low importance")
+            logger.info(f"❌ Low importance: {title[:60]}...")
             return False
 
         final_news = format_news(processed)
@@ -86,17 +94,18 @@ async def process_and_publish(item: dict) -> bool:
             mark_as_published(link, processed["title"], processed.get("source"), category)
             logger.info(f"✅ Published: {processed['title'][:80]}...")
             return True
+            
         return False
 
     except Exception as e:
-        logger.error(f"Error: {e}")
+        logger.error(f"Error processing '{title[:70]}...': {e}", exc_info=True)
         return False
 
 
 async def check_news():
     news_list = get_latest_news()
     if not news_list:
-        logger.info("No new news.")
+        logger.info("No new news found.")
         return
 
     random.shuffle(news_list)
@@ -105,11 +114,12 @@ async def check_news():
     for item in news_list:
         if count >= MAX_NEWS_PER_CYCLE:
             break
+            
         if await process_and_publish(item):
             count += 1
-            await asyncio.sleep(8)
+            await asyncio.sleep(8)   # جلوگیری از rate limit تلگرام
 
-    logger.info(f"Cycle done - Published {count} news")
+    logger.info(f"✅ Cycle completed - Published {count}/{len(news_list)} news")
 
 
 async def main():
@@ -120,12 +130,11 @@ async def main():
         try:
             await check_news()
         except Exception as e:
-            logger.error(f"Critical error: {e}")
+            logger.error(f"Critical error in main loop: {e}", exc_info=True)
             await asyncio.sleep(60)
         
         await asyncio.sleep(CHECK_INTERVAL)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     asyncio.run(main())
