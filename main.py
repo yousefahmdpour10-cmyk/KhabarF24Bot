@@ -26,8 +26,7 @@ from news_db import init_db, is_published, mark_as_published
 from telegram_bot import send_to_telegram
 
 # Config
-from config.settings import CHECK_INTERVAL, MAX_NEWS_PER_CYCLE, DEBUG_MODE
-
+from config import CHECK_INTERVAL, MAX_NEWS_PER_CYCLE, DEBUG_MODE
 logger = logging.getLogger(__name__)
 
 
