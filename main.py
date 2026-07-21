@@ -64,14 +64,13 @@ async def process_and_publish(item: dict) -> bool:
         logger.info(f"📂 Category: {category} | {title[:70]}...")
 
         processed = process_news({
-            "title": title,
-            "summary": item.get("summary", ""),
-            "content": item.get("content", ""),
-            "source": item.get("source", ""),
-            "category": category,
-            "image_url": item.get("image_url"),
-            "link": link
-        })
+    "title": item.get("title", ""),
+    "summary": item.get("summary", ""),
+    "content": item.get("content", ""),
+    "source": item.get("source", "نامشخص"),     # ← خیلی مهم
+    "category": category,
+    "image_url": item.get("image_url") or item.get("image")
+})
 
         # Sport special handling
         if category in ["sport", "football", "basketball", "volleyball", "tennis", "wrestling", "formula1"]:
