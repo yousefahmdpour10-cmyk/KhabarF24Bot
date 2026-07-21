@@ -1,219 +1,100 @@
 """
-KhabarF24 RTL Cleaner v2.0
-
-Fix:
-- English entities at beginning of Persian sentences
-- RTL/LTR mixing
-- Company names
-- Sports clubs
-- Countries
+KhabarF24 RTL Cleaner v8.0
+اصلاح مشکلات RTL + نام‌های انگلیسی در متن فارسی
 """
 
-
 import re
+import logging
 
+logger = logging.getLogger(__name__)
+
+print("🔄 KhabarF24 RTL Cleaner v8.0 Loaded")
 
 
 ENGLISH_TO_PERSIAN = {
-
-
-    # Technology
-
-    "Thinking Machines": "تینکینگ ماشینز",
-
-    "Apple": "اپل",
-
+    # Technology & Companies
+    "OpenAI": "اوپن‌ای‌آی",
     "Google": "گوگل",
-
     "Microsoft": "مایکروسافت",
-
-    "OpenAI": "OpenAI",
-
+    "Apple": "اپل",
     "Tesla": "تسلا",
-
     "NVIDIA": "انویدیا",
-
     "Anthropic": "آنتروپیک",
-
     "Claude": "کلود",
-
     "Gemini": "جمینای",
-
     "Grok": "گروک",
-
     "Boston Dynamics": "بوستون داینامیکس",
 
-
-
-    # Sports
-
+    # Sports Clubs
     "Manchester United": "منچستر یونایتد",
-
     "Manchester City": "منچستر سیتی",
-
     "Real Madrid": "رئال مادرید",
-
     "Barcelona": "بارسلونا",
-
     "Liverpool": "لیورپول",
-
-
+    "Arsenal": "آرسنال",
+    "Bayern Munich": "بایرن مونیخ",
 
     # Countries
-
     "United States": "آمریکا",
-
     "USA": "آمریکا",
-
     "US": "آمریکا",
-
+    "United Kingdom": "بریتانیا",
     "UK": "بریتانیا",
-
     "Iran": "ایران",
-
     "Iraq": "عراق",
-
     "Israel": "اسرائیل",
-
+    "Russia": "روسیه",
+    "China": "چین",
 }
 
 
-
-
-
-COMPANY_NAMES = [
-
-    "Thinking Machines",
-
-    "Apple",
-
-    "Google",
-
-    "Microsoft",
-
-    "OpenAI",
-
-    "Anthropic",
-
-    "Boston Dynamics",
-
-    "Tesla",
-
-    "NVIDIA",
-
-]
-
-
-
-CLUB_NAMES = [
-
-    "Manchester United",
-
-    "Manchester City",
-
-    "Real Madrid",
-
-    "Barcelona",
-
-    "Liverpool",
-
-    "Arsenal",
-
-]
-
-
-
-
-
-def replace_english_names(text):
-
+def replace_english_names(text: str) -> str:
+    """جایگزینی نام‌های انگلیسی با معادل فارسی"""
     if not text:
         return ""
 
-
-    items = sorted(
-        ENGLISH_TO_PERSIAN.items(),
-        key=lambda x: len(x[0]),
-        reverse=True
-    )
-
-
-    for english, persian in items:
-
-        text = text.replace(
-            english,
-            persian
-        )
-
+    # جایگزینی از طولانی به کوتاه
+    for english, persian in sorted(ENGLISH_TO_PERSIAN.items(), key=lambda x: len(x[0]), reverse=True):
+        text = text.replace(english, persian)
 
     return text
 
 
-
-
-
-def fix_rtl_text(text):
-
+def fix_rtl_text(text: str) -> str:
+    """اصلاح نهایی متن راست به چپ"""
     if not text:
         return ""
 
+    text = " ".join(text.split())                    # پاک کردن فاصله‌های اضافی
+    text = replace_english_names(text)               # جایگزینی نام‌ها
 
-    text = " ".join(
-        text.split()
-    )
+    # اضافه کردن پیشوند برای نام‌های خاص در ابتدای جمله
+    prefixes = {
+        "OpenAI": "شرکت ",
+        "Google": "شرکت ",
+        "Microsoft": "شرکت ",
+        "Tesla": "شرکت ",
+        "NVIDIA": "شرکت ",
+        "Manchester United": "باشگاه ",
+        "Real Madrid": "باشگاه ",
+        "Barcelona": "باشگاه ",
+    }
 
+    for eng, prefix in prefixes.items():
+        if text.startswith(eng):
+            text = prefix + text
+            break
 
-    # اول اسم‌های رسمی را تبدیل کن
-
-    text = replace_english_names(
-        text
-    )
-
-
-
-    # اگر هنوز جمله با انگلیسی شروع شد
-
-    for company in COMPANY_NAMES:
-
-        if text.startswith(company):
-
-            text = text.replace(
-                company,
-                "شرکت " + company,
-                1
-            )
-
-            return text
-
-
-
-    for club in CLUB_NAMES:
-
-        if text.startswith(club):
-
-            text = text.replace(
-                club,
-                "باشگاه " + club,
-                1
-            )
-
-            return text
-
-
-
-    # علائم نگارشی
-
-    text = re.sub(
-        r"\s+([،.!؟])",
-        r"\1",
-        text
-    )
-
-
-    text = text.replace(
-        " - ",
-        " – "
-    )
-
+    # اصلاح علائم نگارشی
+    text = re.sub(r"\s+([،.!؟:؛])", r"\1", text)
+    text = text.replace(" - ", " – ")
 
     return text.strip()
+
+
+# تابع کمکی برای لاگ
+def clean_and_log(text: str) -> str:
+    cleaned = fix_rtl_text(text)
+    if cleaned != text:
+        logger.debug(f"RTL Fixed: '{text[:60]}...' → '{cleaned[:60]}...'")
+    return cleaned
