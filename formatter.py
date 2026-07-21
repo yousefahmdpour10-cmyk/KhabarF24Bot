@@ -42,11 +42,10 @@ def get_category_style(category: str):
 # Main Formatter
 # =====================================
 def format_news(title: str, summary: str, source: str, category: str = "world"):
-    style = CATEGORY_STYLE.get(category.lower(), CATEGORY_STYLE["world"])
-    
-    category_name = style["name"]
-    category_emoji = style["emoji"]
-    hashtag = style["hashtag"]
+    style = get_category_style(category)
+
+header = style["header"]
+hashtag = style["hashtag"]]
 
     source = clean_source_name(source)
     source_flag = get_source_flag(source)
