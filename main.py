@@ -1,6 +1,6 @@
 """
 KhabarF24 Main Engine v8.1
-نسخه نهایی - هماهنگ با تمام فایل‌ها
+نسخه نهایی هماهنگ
 """
 
 import asyncio
@@ -8,12 +8,16 @@ import random
 import logging
 
 # ====================== CONFIG ======================
-CHECK_INTERVAL = 300
-MAX_NEWS_PER_CYCLE = 3
-DEBUG_MODE = False
+from config import (
+    CHECK_INTERVAL,
+    MAX_NEWS_PER_CYCLE,
+    DEBUG_MODE,
+    MIN_QUALITY_SCORE,
+    MIN_IMPORTANCE_SCORE
+)
 # ===================================================
 
-# Core Modules
+# Core
 from news_fetcher import get_latest_news
 from ai_processor import process_news
 from formatter import format_news
@@ -40,15 +44,11 @@ async def process_and_publish(item: dict) -> bool:
     title = item.get("title", "")
 
     if is_published(link, title):
-        logger.debug(f"Duplicate skipped: {title[:60]}...")
+        logger.debug(f"Duplicate: {title[:60]}...")
         return False
 
     try:
-        raw_category = detect_smart_category(
-            title=title,
-            summary=item.get("summary", ""),
-            source=item.get("source", "")
-        )
+        raw_category = detect_smart_category(title=title, summary=item.get("summary", ""), source=item.get("source", ""))
         category = normalize_category(raw_category)
 
         logger.info(f"📂 Category: {category} | {title[:70]}...")
@@ -63,7 +63,7 @@ async def process_and_publish(item: dict) -> bool:
             "link": link
         })
 
-        # Sport Formatter
+        # Sport special format
         if category in ["sport", "football", "basketball", "volleyball", "tennis", "wrestling", "formula1"]:
             sport_result = format_sport_news(processed["title"], processed["summary"])
             if sport_result.get("blocked"):
@@ -72,47 +72,44 @@ async def process_and_publish(item: dict) -> bool:
             processed["summary"] = sport_result.get("summary", processed["summary"])
 
         if not is_high_quality(processed["title"], processed["summary"], category):
-            logger.info("❌ Low quality skipped")
+            logger.info("❌ Low quality")
             return False
 
         if not is_important(processed["title"], processed["summary"], category):
-            logger.info("❌ Low importance skipped")
+            logger.info("❌ Low importance")
             return False
 
         final_news = format_news(processed)
-
         success = await send_to_telegram(final_news)
-        
+
         if success:
             mark_as_published(link, processed["title"], processed.get("source"), category)
             logger.info(f"✅ Published: {processed['title'][:80]}...")
             return True
-
         return False
 
     except Exception as e:
-        logger.error(f"Error processing '{title[:60]}...': {e}")
+        logger.error(f"Error: {e}")
         return False
 
 
 async def check_news():
     news_list = get_latest_news()
     if not news_list:
-        logger.info("No new news found.")
+        logger.info("No new news.")
         return
 
     random.shuffle(news_list)
-    published_count = 0
+    count = 0
 
     for item in news_list:
-        if published_count >= MAX_NEWS_PER_CYCLE:
+        if count >= MAX_NEWS_PER_CYCLE:
             break
-
         if await process_and_publish(item):
-            published_count += 1
+            count += 1
             await asyncio.sleep(8)
 
-    logger.info(f"Cycle finished → {published_count} news published.")
+    logger.info(f"Cycle done - Published {count} news")
 
 
 async def main():
@@ -130,16 +127,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     asyncio.run(main())
-
-from config import (
-    CHECK_INTERVAL, 
-    MAX_NEWS_PER_CYCLE, 
-    DEBUG_MODE,
-    MIN_QUALITY_SCORE,
-    MIN_IMPORTANCE_SCORE
-)
