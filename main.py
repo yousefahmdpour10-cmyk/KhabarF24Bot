@@ -1,6 +1,6 @@
 """
-KhabarF24 Main Engine v8.0
-Improved coordination + Multi-platform ready + Better stability
+KhabarF24 Main Engine v8.1
+نسخه نهایی و قوی - هماهنگ با تمام فایل‌های v8
 """
 
 import asyncio
@@ -8,47 +8,37 @@ import random
 import logging
 from datetime import datetime
 
-# Core modules
+# Core Modules
 from news_fetcher import get_latest_news
 from ai_processor import process_news
 from formatter import format_news
 from category_engine import detect_smart_category
-
-# Specialized formatters (if needed)
 from sport_formatter import format_sport_news
-from game_formatter import format_game_news
 
 # Quality & Filters
 from quality_engine import is_high_quality
 from importance_engine import is_important
 
-# Database & Publishing
+# Database
 from news_db import init_db, is_published, mark_as_published
 
-# Platforms (فقط تلگرام فعلاً)
+# Platform
 from telegram_bot import send_to_telegram
 
 # Config
-CHECK_INTERVAL = 300  # 5 دقیقه
-MAX_NEWS_PER_CYCLE = 3   # می‌تونی بعداً بیشتر کنی
+from config.settings import CHECK_INTERVAL, MAX_NEWS_PER_CYCLE, DEBUG_MODE
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 
 def normalize_category(category: str) -> str:
-    sport_categories = {"football", "basketball", "volleyball", "tennis", 
-                       "wrestling", "formula1", "combat", "sport"}
-    if category.lower() in sport_categories or any(s in category.lower() for s in sport_categories):
-        return "sport"
-    return category.lower().strip()
+    cat = str(category).lower().strip()
+    sport_map = {"football", "basketball", "volleyball", "tennis", "wrestling", "formula1", "combat"}
+    return "sport" if cat in sport_map or any(s in cat for s in sport_map) else cat
 
 
 async def process_and_publish(item: dict) -> bool:
-    """Process one news item and publish if qualified"""
+    """پردازش کامل یک خبر"""
     link = item.get("link") or item.get("url") or ""
     title = item.get("title", "")
 
@@ -57,7 +47,7 @@ async def process_and_publish(item: dict) -> bool:
 
     # Deduplication
     if is_published(link, title):
-        logger.debug(f"Duplicate skipped: {title[:60]}...")
+        logger.debug(f"🔁 Duplicate skipped: {title[:60]}...")
         return False
 
     try:
@@ -69,36 +59,30 @@ async def process_and_publish(item: dict) -> bool:
         )
         category = normalize_category(raw_category)
 
-        logger.info(f"📂 Category: {category} | Title: {title[:70]}...")
+        logger.info(f"📂 Category: {category} | {title[:70]}...")
 
-        # AI Processing (تیتر + خلاصه)
+        # AI Processing + Rewriting
         processed = process_news({
             "title": title,
             "summary": item.get("summary", ""),
             "content": item.get("content", ""),
             "source": item.get("source", ""),
             "category": category,
-            "image_url": item.get("image_url") or item.get("image"),
+            "image_url": item.get("image_url"),
             "link": link
         })
 
-        # Specialized Formatting
-        if category == "sport":
+        # Sport Special Formatting
+        if category == "sport" or category in ["football", "basketball", "volleyball", "tennis", "wrestling", "formula1"]:
             sport_result = format_sport_news(processed["title"], processed["summary"])
             if sport_result.get("blocked"):
+                logger.info("⛔ Sport video-only content blocked")
                 return False
             processed["title"] = sport_result.get("title", processed["title"])
             processed["summary"] = sport_result.get("summary", processed["summary"])
 
-        elif category == "gaming":
-            game_result = format_game_news(processed["title"], processed["summary"])
-            if game_result.get("blocked"):
-                return False
-            processed["title"] = game_result.get("title", processed["title"])
-            processed["summary"] = game_result.get("summary", processed["summary"])
-
-        # Final Quality Check
-        if not is_high_quality(processed["title"], processed["summary"]):
+        # Quality & Importance Check
+        if not is_high_quality(processed["title"], processed["summary"], category):
             logger.info("❌ Low quality skipped")
             return False
 
@@ -106,14 +90,14 @@ async def process_and_publish(item: dict) -> bool:
             logger.info("❌ Low importance skipped")
             return False
 
-        # Format final output
+        # Final Format
         final_news = format_news(processed)
 
         # Send to Telegram
         success = await send_to_telegram(final_news)
         
         if success:
-            mark_as_published(link, title)
+            mark_as_published(link, processed["title"], processed["source"], category)
             logger.info(f"✅ Published: {processed['title'][:80]}...")
             return True
         else:
@@ -126,7 +110,7 @@ async def process_and_publish(item: dict) -> bool:
 
 
 async def check_news():
-    """Main news checking cycle"""
+    """چک کردن اخبار جدید"""
     news_list = get_latest_news()
     if not news_list:
         logger.info("No new news found.")
@@ -142,14 +126,14 @@ async def check_news():
         success = await process_and_publish(item)
         if success:
             published_count += 1
-            await asyncio.sleep(8)  # فاصله بین پست‌ها برای جلوگیری از اسپم
+            await asyncio.sleep(8)  # فاصله بین پست‌ها
 
-    logger.info(f"Cycle finished. Published {published_count} news.")
+    logger.info(f"Cycle finished → Published {published_count} news.")
 
 
 async def main():
     init_db()
-    logger.info("🚀 KhabarF24 Main Engine v8.0 Started - Multi-platform Ready")
+    logger.info("🚀 KhabarF24 Main Engine v8.1 Started - Fully Optimized")
 
     while True:
         try:
@@ -162,4 +146,8 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
     asyncio.run(main())
