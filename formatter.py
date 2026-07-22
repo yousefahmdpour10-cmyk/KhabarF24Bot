@@ -45,7 +45,7 @@ def format_news(title: str, summary: str, source: str, category: str = "world"):
     style = get_category_style(category)
 
 header = style["header"]
-hashtag = style["hashtag"]]
+hashtag = style["hashtag"]
 
     source = clean_source_name(source)
     source_flag = get_source_flag(source)
