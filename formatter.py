@@ -23,9 +23,7 @@ CATEGORY_STYLE = {
     "wrestling":  {"header": "🔴 KhabarF24 | 🤼 کشتی", "hashtag": "#کشتی"},
     "formula1":   {"header": "🔴 KhabarF24 | 🏎️ فرمول یک", "hashtag": "#فرمول_یک"},
     "gaming":     {"header": "🔴 KhabarF24 | 🎮 گیم", "hashtag": "#گیم"},
-    "sport":      {"header": "🔴 KhabarF24 | ⚽ ورزش", "hashtag": "#ورزش"},
-    "default":    {"header": "🔴 KhabarF24 | 📰 اخبار", "hashtag": "#اخبار"},
-}
+    
 
 
 def get_category_style(category: str):
