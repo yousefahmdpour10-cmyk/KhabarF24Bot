@@ -23,6 +23,17 @@ class NewsSource:
     # نوع منبع
     # rss / website / api / social
     source_type: str
+        # آیا RSS دارد؟
+    has_rss: bool = False
+
+    # آیا از API استفاده می‌کند؟
+    has_api: bool = False
+
+    # آیا امکان Web Scraping دارد؟
+    supports_scraping: bool = False
+
+    # آیا برای دریافت اطلاعات نیاز به مرورگر دارد؟
+    requires_browser: bool = False
 
     # آدرس منبع
     url: str
@@ -41,6 +52,8 @@ class NewsSource:
 
     # میزان اعتبار منبع (0 تا 100)
     priority: int = 50
+        # فاصله بررسی این منبع (بر حسب ثانیه)
+    check_interval: int = 60
 
     # فعال یا غیرفعال بودن
     enabled: bool = True
