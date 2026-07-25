@@ -11,51 +11,66 @@ from typing import List
 @dataclass
 class NewsSource:
     """
-    اطلاعات یک منبع خبری
+    مدل اطلاعات یک منبع خبری
     """
+
+    # ==========================================================
+    # اطلاعات اصلی
+    # ==========================================================
 
     # شناسه یکتا
     id: str
 
-    # نام نمایشی
+    # نام منبع
     name: str
 
     # نوع منبع
-# rss / website / api / social
-source_type: str
+    # rss / website / api / social
+    source_type: str
 
-# آیا RSS دارد؟
-has_rss: bool = False
+    # آدرس منبع
+    url: str
 
-# آیا از API استفاده می‌کند؟
-has_api: bool = False
+    # کشور
+    country: str
 
-# آیا امکان Web Scraping دارد؟
-supports_scraping: bool = False
+    # پرچم کشور
+    flag: str
 
-# آیا برای دریافت اطلاعات نیاز به مرورگر دارد؟
-requires_browser: bool = False
+    # زبان
+    language: str
 
-# آدرس منبع
-url: str
+    # ==========================================================
+    # قابلیت‌های منبع
+    # ==========================================================
 
-# کشور
-country: str
+    # آیا RSS دارد؟
+    has_rss: bool = False
 
-# پرچم کشور
-flag: str
+    # آیا API دارد؟
+    has_api: bool = False
 
-# زبان
-language: str
+    # آیا امکان Web Scraping دارد؟
+    supports_scraping: bool = False
 
-# دسته‌های خبری
-categories: List[str] = field(default_factory=list)
+    # آیا برای دریافت اطلاعات نیاز به مرورگر دارد؟
+    requires_browser: bool = False
 
-# میزان اعتبار منبع (0 تا 100)
-priority: int = 50
+    # آیا نیاز به ورود (Login / Token) دارد؟
+    requires_auth: bool = False
 
-# فاصله بررسی این منبع (بر حسب ثانیه)
-check_interval: int = 60
+    # ==========================================================
+    # تنظیمات منبع
+    # ==========================================================
 
-# فعال یا غیرفعال بودن
-enabled: bool = True
+    # دسته‌های خبری
+    categories: List[str] = field(default_factory=list)
+
+    # میزان اعتبار منبع (۰ تا ۱۰۰)
+    priority: int = 50
+
+    # فاصله بررسی خبر (ثانیه)
+    check_interval: int = 60
+
+    # فعال یا غیرفعال بودن منبع
+    enabled: bool = True
