@@ -21,39 +21,41 @@ class NewsSource:
     name: str
 
     # نوع منبع
-    # rss / website / api / social
-    source_type: str
-        # آیا RSS دارد؟
-    has_rss: bool = False
+# rss / website / api / social
+source_type: str
 
-    # آیا از API استفاده می‌کند؟
-    has_api: bool = False
+# آیا RSS دارد؟
+has_rss: bool = False
 
-    # آیا امکان Web Scraping دارد؟
-    supports_scraping: bool = False
+# آیا از API استفاده می‌کند؟
+has_api: bool = False
 
-    # آیا برای دریافت اطلاعات نیاز به مرورگر دارد؟
-    requires_browser: bool = False
+# آیا امکان Web Scraping دارد؟
+supports_scraping: bool = False
 
-    # آدرس منبع
-    url: str
+# آیا برای دریافت اطلاعات نیاز به مرورگر دارد؟
+requires_browser: bool = False
 
-    # کشور
-    country: str
+# آدرس منبع
+url: str
 
-    # پرچم کشور
-    flag: str
+# کشور
+country: str
 
-    # زبان
-    language: str
+# پرچم کشور
+flag: str
 
-    # دسته‌های خبری
-    categories: List[str] = field(default_factory=list)
+# زبان
+language: str
 
-    # میزان اعتبار منبع (0 تا 100)
-    priority: int = 50
-        # فاصله بررسی این منبع (بر حسب ثانیه)
-    check_interval: int = 60
+# دسته‌های خبری
+categories: List[str] = field(default_factory=list)
 
-    # فعال یا غیرفعال بودن
-    enabled: bool = True
+# میزان اعتبار منبع (0 تا 100)
+priority: int = 50
+
+# فاصله بررسی این منبع (بر حسب ثانیه)
+check_interval: int = 60
+
+# فعال یا غیرفعال بودن
+enabled: bool = True
