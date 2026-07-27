@@ -1,37 +1,66 @@
 """
-دریافت اخبار از RSS
+RSS Fetcher
+
+دریافت خبر از منابع RSS
 """
 
 import feedparser
 from typing import List
 
 from app.fetchers.base_fetcher import BaseFetcher
-from app.models.news import News
+from app.models.raw_news import RawNews
+from app.utils.http_client import HTTPClient
 
 
 class RSSFetcher(BaseFetcher):
     """
-    دریافت اخبار از RSS
+    دریافت خبر از RSS
     """
 
-    async def fetch(self) -> List[News]:
+    def __init__(self, source):
+        super().__init__(source)
+        self.http = HTTPClient()
 
-        feed = feedparser.parse(self.source.url)
+    async def fetch(self) -> List[RawNews]:
+        """
+        دریافت خبرها از RSS
+        """
 
-        news_list = []
+        news_list: List[RawNews] = []
+
+        xml = await self.http.get(self.source.url)
+
+        if not xml:
+            return news_list
+
+        feed = feedparser.parse(xml)
+
+        if feed.bozo:
+            print(f"RSS Error: {self.source.name}")
 
         for entry in feed.entries:
 
-            news = News(
-                title=entry.get("title", ""),
-                summary=entry.get("summary", ""),
-                url=entry.get("link", ""),
-                source=self.source.name,
-                category=self.source.categories[0] if self.source.categories else "",
-            )
+            try:
 
-            if await self.validate(news):
-                news = await self.normalize(news)
-                news_list.append(news)
+                news = RawNews(
+                    source_id=self.source.id,
+                    source_name=self.source.name,
+                    source_url=self.source.url,
+                    title=getattr(entry, "title", ""),
+                    summary=getattr(entry, "summary", ""),
+                    url=getattr(entry, "link", ""),
+                    published_at=getattr(entry, "published", ""),
+                    language=self.source.language,
+                )
+
+                if await self.validate(news):
+                    news = await self.normalize(news)
+                    news_list.append(news)
+
+            except Exception as e:
+
+                print(
+                    f"Error parsing news from {self.source.name}: {e}"
+                )
 
         return news_list
