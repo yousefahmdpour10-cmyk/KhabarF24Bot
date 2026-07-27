@@ -1,0 +1,11 @@
+aiohttp
+feedparser
+beautifulsoup4
+lxml
+requests
+python-dotenv
+python-telegram-bot==22.2
+deep-translator
+langdetect
+Pillow
+schedule
