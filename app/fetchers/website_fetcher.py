@@ -1,36 +1,57 @@
 """
-دریافت اخبار از وب‌سایت‌هایی که RSS ندارند
+Website Fetcher
+
+دریافت خبر از وب‌سایت‌هایی که RSS ندارند.
 """
 
 from typing import List
 
-import requests
-from bs4 import BeautifulSoup
-
 from app.fetchers.base_fetcher import BaseFetcher
-from app.models.news import News
+from app.models.raw_news import RawNews
+from app.utils.logger import logger
 
 
 class WebsiteFetcher(BaseFetcher):
     """
-    دریافت اخبار با Web Scraping
+    دریافت خبر از وب‌سایت
     """
 
-    async def fetch(self) -> List[News]:
+    async def fetch(self) -> List[RawNews]:
+        """
+        این کلاس در نسخه پایه فقط یک اسکلت است.
 
-        response = requests.get(
-            self.source.url,
-            timeout=20,
-            headers={
-                "User-Agent": "Mozilla/5.0"
-            }
-        )
+        هر سایت در آینده Parser اختصاصی خودش را خواهد داشت.
+        """
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        logger.info(f"Fetching website: {self.source.name}")
 
-        news_list = []
+        news_list: List[RawNews] = []
 
-        # هر سایت بعداً Parser مخصوص خودش را خواهد داشت.
-        # فعلاً فقط اسکلت کلاس را می‌سازیم.
+        try:
+
+            if not self.source.supports_scraping:
+
+                logger.warning(
+                    f"{self.source.name} does not support scraping."
+                )
+
+                return news_list
+
+            # Parser اختصاصی هر سایت
+            #
+            # مثال:
+            #
+            # if self.source.id == "vahid":
+            #     ...
+            #
+            # elif self.source.id == "hengaw":
+            #     ...
+            #
+            # elif self.source.id == "romano":
+            #     ...
+
+        except Exception as e:
+
+            logger.exception(e)
 
         return news_list
