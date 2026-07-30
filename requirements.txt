@@ -10,3 +10,4 @@ deep-translator
 langdetect
 Pillow
 schedule
+langdetect==1.0.9
