@@ -1,1 +1,143 @@
+# app/processors/category/keywords.py
 
+"""
+Category Keywords
+
+کلمات کلیدی تشخیص دسته‌بندی خبر
+"""
+
+CATEGORY_KEYWORDS = {
+
+    "politics": [
+        "رئیس جمهور",
+        "وزیر",
+        "دولت",
+        "پارلمان",
+        "مجلس",
+        "انتخابات",
+        "دیپلماسی",
+        "تحریم",
+        "سیاست",
+        "سفیر",
+        "نخست وزیر",
+        "کاخ سفید",
+        "کرملین",
+        "وزارت خارجه",
+        "NATO",
+        "UN",
+        "Pentagon",
+        "White House",
+        "President",
+        "Prime Minister",
+        "Government",
+        "Election",
+        "Parliament",
+        "Diplomacy",
+        "Sanctions"
+    ],
+
+    "war": [
+        "جنگ",
+        "حمله",
+        "موشک",
+        "پهپاد",
+        "انفجار",
+        "ارتش",
+        "نیروی هوایی",
+        "پدافند",
+        "درگیری",
+        "حماس",
+        "اسرائیل",
+        "اوکراین",
+        "روسیه",
+        "Iran",
+        "Israel",
+        "Missile",
+        "Drone",
+        "Airstrike",
+        "Army",
+        "Military"
+    ],
+
+    "economy": [
+        "دلار",
+        "یورو",
+        "بورس",
+        "اقتصاد",
+        "بانک",
+        "تورم",
+        "طلا",
+        "نفت",
+        "گاز",
+        "بازار",
+        "Bitcoin",
+        "Oil",
+        "Gold",
+        "Inflation",
+        "Economy",
+        "Stock",
+        "Bank"
+    ],
+
+    "technology": [
+        "هوش مصنوعی",
+        "ربات",
+        "فناوری",
+        "اپل",
+        "گوگل",
+        "مایکروسافت",
+        "OpenAI",
+        "AI",
+        "Artificial Intelligence",
+        "Google",
+        "Apple",
+        "Microsoft",
+        "Tesla",
+        "SpaceX"
+    ],
+
+    "health": [
+        "سلامت",
+        "بیمار",
+        "پزشک",
+        "دارو",
+        "واکسن",
+        "ویروس",
+        "Hospital",
+        "Health",
+        "Medicine",
+        "COVID"
+    ],
+
+    "weather": [
+        "هواشناسی",
+        "بارندگی",
+        "بارش",
+        "طوفان",
+        "زلزله",
+        "سیل",
+        "گرما",
+        "سرما",
+        "Weather",
+        "Storm",
+        "Flood",
+        "Earthquake"
+    ],
+
+    "sports": [
+        "فوتبال",
+        "بسکتبال",
+        "والیبال",
+        "تنیس",
+        "کشتی",
+        "فرمول یک",
+        "المپیک",
+        "ورزش",
+        "Football",
+        "Basketball",
+        "Volleyball",
+        "Tennis",
+        "Olympics"
+    ]
+
+}
