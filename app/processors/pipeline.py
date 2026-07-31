@@ -1,87 +1,67 @@
 """
-Processing Pipeline
-
-اجرای تمام پردازش‌های خبر به ترتیب مشخص
+KhabarF24 Processing Pipeline
 """
 
-from typing import List
-
 from app.models.raw_news import RawNews
-from app.models.news import News
+
+from app.processors.language import LanguageDetector
+from app.processors.translate import Translator
+
+from app.processors.category import CategoryDetector
+from app.processors.sport import SportDetector
+
+from app.processors.importance import ImportanceScorer
+from app.processors.credibility import CredibilityChecker
+
+from app.processors.duplicate import DuplicateChecker
+from app.processors.summarize import Summarizer
+
 from app.utils.logger import logger
 
 
-class ProcessingPipeline:
-    """
-    موتور پردازش خبر
-    """
+class NewsPipeline:
 
     def __init__(self):
-        self.processors = []
 
-    def register(self, processor):
-        """
-        ثبت یک Processor
-        """
+        self.language = LanguageDetector()
 
-        self.processors.append(processor)
+        self.translator = Translator()
 
-        logger.info(
-            f"Registered processor: {processor.__class__.__name__}"
-        )
+        self.category = CategoryDetector()
+
+        self.sport = SportDetector()
+
+        self.importance = ImportanceScorer()
+
+        self.credibility = CredibilityChecker()
+
+        self.duplicate = DuplicateChecker()
+
+        self.summarizer = Summarizer()
 
     async def process(
         self,
-        raw_news: RawNews,
-    ) -> News | None:
-        """
-        پردازش یک خبر
-        """
+        news: RawNews,
+    ) -> RawNews:
 
-        data = raw_news
+        logger.info("Pipeline Started")
 
-        for processor in self.processors:
+        news = await self.language.process(news)
 
-            try:
+        news = await self.translator.process(news)
 
-                data = await processor.process(data)
+        news = await self.category.process(news)
 
-                if data is None:
+        news = await self.sport.process(news)
 
-                    logger.warning(
-                        f"News dropped by {processor.__class__.__name__}"
-                    )
+        news = await self.importance.process(news)
 
-                    return None
+        news = await self.credibility.process(news)
 
-            except Exception as e:
+        news = await self.duplicate.process(news)
 
-                logger.exception(e)
+        news = await self.summarizer.process(news)
 
-                return None
+        logger.info("Pipeline Finished")
 
-        return data
-
-    async def process_many(
-        self,
-        news_list: List[RawNews],
-    ) -> List[News]:
-        """
-        پردازش چند خبر
-        """
-
-        result = []
-
-        for news in news_list:
-
-            processed = await self.process(news)
-
-            if processed:
-
-                result.append(processed)
-
-        logger.info(
-            f"Processed {len(result)} news."
-        )
-
-        return result
+        return news
