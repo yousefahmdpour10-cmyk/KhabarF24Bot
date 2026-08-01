@@ -6,17 +6,10 @@ import re
 
 from app.models.raw_news import RawNews
 
+from .extractor import BaseEntityExtractor
 
-class RefereeEntityExtractor:
 
-    REFEREE_KEYWORDS = [
-        "referee",
-        "match referee",
-        "official",
-        "داور",
-        "داور مسابقه",
-        "داور دیدار",
-    ]
+class RefereeEntityExtractor(BaseEntityExtractor):
 
     def extract(
         self,
@@ -26,17 +19,10 @@ class RefereeEntityExtractor:
         text = self._get_text(news)
 
         if not text:
+            news.referees = []
             return news
 
-        referees = self.find_referees(text)
-
-        if referees:
-
-            setattr(
-                news,
-                "referees",
-                referees,
-            )
+        news.referees = self.find_referees(text)
 
         return news
 
@@ -47,38 +33,20 @@ class RefereeEntityExtractor:
 
         found = []
 
-        # --------------------------------------------------
-        # English referee patterns
-        # --------------------------------------------------
+        patterns = [
 
-        english_patterns = [
+            # English
+            r"\breferee\s*[:\-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})",
 
-            r"referee\s*[:\-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})",
+            r"\bmatch referee\s*[:\-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})",
 
-            r"match referee\s*[:\-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})",
-
-            r"referee\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})",
-
-        ]
-
-        # --------------------------------------------------
-        # Persian referee patterns
-        # --------------------------------------------------
-
-        persian_patterns = [
-
+            # Persian
             r"داور\s*[:\-]\s*([آ-ی]{2,}(?:\s+[آ-ی]{2,}){1,3})",
 
             r"داور مسابقه\s*[:\-]\s*([آ-ی]{2,}(?:\s+[آ-ی]{2,}){1,3})",
 
             r"داور دیدار\s*[:\-]\s*([آ-ی]{2,}(?:\s+[آ-ی]{2,}){1,3})",
-
         ]
-
-        patterns = (
-            english_patterns
-            + persian_patterns
-        )
 
         for pattern in patterns:
 
@@ -92,14 +60,8 @@ class RefereeEntityExtractor:
 
                 name = match.strip()
 
-                if (
-                    name
-                    and name not in found
-                ):
-
-                    found.append(
-                        name
-                    )
+                if name and name not in found:
+                    found.append(name)
 
         return found
 
@@ -108,15 +70,9 @@ class RefereeEntityExtractor:
         text: str,
     ) -> str | None:
 
-        referees = self.find_referees(
-            text
-        )
+        referees = self.find_referees(text)
 
-        if referees:
-
-            return referees[0]
-
-        return None
+        return referees[0] if referees else None
 
     @staticmethod
     def _get_text(
@@ -125,37 +81,13 @@ class RefereeEntityExtractor:
 
         parts = []
 
-        title = getattr(
-            news,
-            "title",
-            None,
-        )
+        if news.title:
+            parts.append(news.title)
 
-        summary = getattr(
-            news,
-            "summary",
-            None,
-        )
+        if news.summary:
+            parts.append(news.summary)
 
-        content = getattr(
-            news,
-            "content",
-            None,
-        )
-
-        if title:
-            parts.append(
-                str(title)
-            )
-
-        if summary:
-            parts.append(
-                str(summary)
-            )
-
-        if content:
-            parts.append(
-                str(content)
-            )
+        if news.content:
+            parts.append(news.content)
 
         return " ".join(parts)
