@@ -37,29 +37,39 @@ class FootballFormatter:
 
         text += f"{TITLE} {news.title}\n\n"
 
-        details = self.build_details(news)
-
-        if details:
-
-            text += details
-
-            text += "\n"
-
-        text += f"{SOURCE} {flag} {news.source}\n"
-
-        text += build_footer()
-
-        if hashtags:
-
-            text += "\n\n"
-
-            text += hashtags
-
-        return text
-
-    def build_details(
+            def build_details(
         self,
         news: RawNews,
     ) -> str:
 
-        return ""
+        lines = []
+
+        # نتیجه مسابقه
+        if getattr(news, "result", None):
+            lines.append(f"🏆 {news.result}")
+
+        # گلزنان
+        goals = getattr(news, "goals", [])
+
+        for goal in goals:
+            lines.append(f"🥅 {goal}")
+
+        # پاس گل
+        assists = getattr(news, "assists", [])
+
+        for assist in assists:
+            lines.append(f"🎯 {assist}")
+
+        # کارت زرد
+        yellow_cards = getattr(news, "yellow_cards", [])
+
+        for card in yellow_cards:
+            lines.append(f"🟨 {card}")
+
+        # کارت قرمز
+        red_cards = getattr(news, "red_cards", [])
+
+        for card in red_cards:
+            lines.append(f"🟥 {card}")
+
+        return "\n".join(lines)
