@@ -16,6 +16,8 @@ FOOTBALL_TEAMS = {
         "Man United",
         "Man Utd",
         "Manchester Utd",
+        "Man U",
+        "MUFC",
         "منچستر یونایتد",
         "منچستریونایتد",
         "منچستر یونایتد اف سی",
@@ -26,6 +28,7 @@ FOOTBALL_TEAMS = {
         "Man City",
         "Man C",
         "Manchester City FC",
+        "MCFC",
         "منچستر سیتی",
         "منچسترسیتی",
     ],
@@ -40,21 +43,24 @@ FOOTBALL_TEAMS = {
     "Arsenal": [
         "Arsenal",
         "Arsenal FC",
+        "AFC",
         "آرسنال",
     ],
 
     "Chelsea": [
         "Chelsea",
         "Chelsea FC",
+        "CFC",
         "چلسی",
     ],
 
     "Real Madrid": [
         "Real Madrid",
         "Real Madrid CF",
-        "Madrid",
+        "Los Blancos",
         "رئال مادرید",
         "رئال‌مادرید",
+        "رئال‌مادريد",
     ],
 
     "Barcelona": [
@@ -86,18 +92,17 @@ FOOTBALL_TEAMS = {
 
     "Inter Milan": [
         "Inter Milan",
-        "Inter",
-        "Internazionale",
         "Inter Milano",
-        "اینتر",
+        "Internazionale",
+        "اینتر میلان",
         "اینترمیلان",
     ],
 
     "AC Milan": [
         "AC Milan",
-        "Milan",
-        "ACM",
+        "ACMilan",
         "آث میلان",
+        "ای سی میلان",
         "میلان",
     ],
 
@@ -151,6 +156,7 @@ FOOTBALL_LEAGUES = {
         "Ligue 1",
         "French Ligue 1",
         "لیگ ۱ فرانسه",
+        "لیگ یک فرانسه",
         "لوشامپیونه",
     ],
 }
@@ -193,6 +199,7 @@ FOOTBALL_TOURNAMENTS = {
 
     "UEFA European Championship": [
         "UEFA European Championship",
+        "European Championship",
         "Euro",
         "EURO",
         "جام ملت‌های اروپا",
@@ -252,17 +259,29 @@ def normalize_text(
         return ""
 
     replacements = {
+
+        # Arabic → Persian
         "ي": "ی",
         "ى": "ی",
         "ك": "ک",
         "ۀ": "ه",
         "ة": "ه",
-        "‌": " ",
+
+        # Zero-width characters
+        "\u200c": " ",
+        "\u200d": " ",
+        "\ufeff": " ",
+
+        # Punctuation-like separators
         "_": " ",
     }
 
     for old, new in replacements.items():
-        text = text.replace(old, new)
+
+        text = text.replace(
+            old,
+            new,
+        )
 
     return " ".join(
         text.strip().split()
@@ -270,7 +289,7 @@ def normalize_text(
 
 
 # ============================================================
-# GENERIC ALIAS LOOKUP
+# EXACT ALIAS LOOKUP
 # ============================================================
 
 def find_canonical(
@@ -287,18 +306,22 @@ def find_canonical(
 
     for canonical, aliases in dictionary.items():
 
-        if normalize_text(
-            canonical
-        ).lower() == normalized_lower:
+        canonical_normalized = (
+            normalize_text(canonical)
+            .lower()
+        )
 
+        if canonical_normalized == normalized_lower:
             return canonical
 
         for alias in aliases:
 
-            if (
-                normalize_text(alias).lower()
-                == normalized_lower
-            ):
+            alias_normalized = (
+                normalize_text(alias)
+                .lower()
+            )
+
+            if alias_normalized == normalized_lower:
 
                 return canonical
 
@@ -358,4 +381,4 @@ def find_country(
     return find_canonical(
         text,
         COUNTRIES,
-)
+    )
