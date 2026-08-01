@@ -5,12 +5,7 @@ KhabarF24 Entity Manager
 from app.models.raw_news import RawNews
 
 from .extractor import BaseEntityExtractor
-from .teams import TeamEntityExtractor
-from .people import PeopleEntityExtractor
-from .leagues import LeagueEntityExtractor
-from .tournaments import TournamentEntityExtractor
-from .stadiums import StadiumEntityExtractor
-from .referees import RefereeEntityExtractor
+from .football import FootballEntityExtractor
 
 
 class EntityManager:
@@ -21,17 +16,8 @@ class EntityManager:
             BaseEntityExtractor
         ] = [
 
-            TeamEntityExtractor(),
+            FootballEntityExtractor(),
 
-            PeopleEntityExtractor(),
-
-            LeagueEntityExtractor(),
-
-            TournamentEntityExtractor(),
-
-            StadiumEntityExtractor(),
-
-            RefereeEntityExtractor(),
         ]
 
     def extract(
