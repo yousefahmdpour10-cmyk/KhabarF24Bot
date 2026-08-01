@@ -6,8 +6,10 @@ import re
 
 from app.models.raw_news import RawNews
 
+from .extractor import BaseEntityExtractor
 
-class PeopleEntityExtractor:
+
+class PeopleEntityExtractor(BaseEntityExtractor):
 
     ROLE_ALIASES = {
 
@@ -38,7 +40,6 @@ class PeopleEntityExtractor:
             "گفت",
             "اظهار داشت",
         ],
-
     }
 
     def extract(
@@ -53,13 +54,7 @@ class PeopleEntityExtractor:
 
         people = self.find_people(text)
 
-        if people:
-
-            setattr(
-                news,
-                "people",
-                people,
-            )
+        news.people = people
 
         return news
 
@@ -70,17 +65,9 @@ class PeopleEntityExtractor:
 
         people = []
 
-        # --------------------------------------------------
-        # English names
-        # --------------------------------------------------
-
         english_pattern = re.compile(
             r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\b"
         )
-
-        # --------------------------------------------------
-        # Persian names
-        # --------------------------------------------------
 
         persian_pattern = re.compile(
             r"\b[آ-ی]{2,}(?:\s+[آ-ی]{2,}){1,3}\b"
@@ -130,60 +117,38 @@ class PeopleEntityExtractor:
         text: str,
     ) -> str:
 
-        name_lower = name.lower()
-
-        text_lower = text.lower()
-
-        # --------------------------------------------------
-        # Coach
-        # --------------------------------------------------
-
         for keyword in self.ROLE_ALIASES["coach"]:
 
-            if keyword.lower() in text_lower:
+            nearby = self._nearby_text(
+                name,
+                text,
+            )
 
-                nearby = self._nearby_text(
-                    name,
-                    text,
-                )
+            if keyword.lower() in nearby.lower():
 
-                if keyword.lower() in nearby.lower():
-
-                    return "coach"
-
-        # --------------------------------------------------
-        # Captain
-        # --------------------------------------------------
+                return "coach"
 
         for keyword in self.ROLE_ALIASES["captain"]:
 
-            if keyword.lower() in text_lower:
+            nearby = self._nearby_text(
+                name,
+                text,
+            )
 
-                nearby = self._nearby_text(
-                    name,
-                    text,
-                )
+            if keyword.lower() in nearby.lower():
 
-                if keyword.lower() in nearby.lower():
-
-                    return "captain"
-
-        # --------------------------------------------------
-        # Interview
-        # --------------------------------------------------
+                return "captain"
 
         for keyword in self.ROLE_ALIASES["interview"]:
 
-            if keyword.lower() in text_lower:
+            nearby = self._nearby_text(
+                name,
+                text,
+            )
 
-                nearby = self._nearby_text(
-                    name,
-                    text,
-                )
+            if keyword.lower() in nearby.lower():
 
-                if keyword.lower() in nearby.lower():
-
-                    return "interview"
+                return "interview"
 
         return "player"
 
@@ -235,7 +200,6 @@ class PeopleEntityExtractor:
             "پریمیر لیگ",
             "لیگ قهرمانان",
             "جام جهانی",
-
         }
 
         return text in common_phrases
@@ -247,37 +211,13 @@ class PeopleEntityExtractor:
 
         parts = []
 
-        title = getattr(
-            news,
-            "title",
-            None,
-        )
+        if news.title:
+            parts.append(news.title)
 
-        summary = getattr(
-            news,
-            "summary",
-            None,
-        )
+        if news.summary:
+            parts.append(news.summary)
 
-        content = getattr(
-            news,
-            "content",
-            None,
-        )
-
-        if title:
-            parts.append(
-                str(title)
-            )
-
-        if summary:
-            parts.append(
-                str(summary)
-            )
-
-        if content:
-            parts.append(
-                str(content)
-            )
+        if news.content:
+            parts.append(news.content)
 
         return " ".join(parts)
