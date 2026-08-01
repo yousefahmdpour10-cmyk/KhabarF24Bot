@@ -18,7 +18,9 @@ class FootballFormatter:
 
     def __init__(self):
 
+        self.hashtags = HashtagBuilder()
         self.builder = FootballBuilder()
+
     async def format(
         self,
         news: RawNews,
@@ -36,9 +38,27 @@ class FootballFormatter:
 
         text += f"{TITLE} {news.title}\n\n"
 
-            def build_details(
-    self,
-    news: RawNews,
-) -> str:
+        details = self.build_details(news)
 
-    return self.builder.build(news)
+        if details:
+
+            text += details
+            text += "\n\n"
+
+        text += f"{SOURCE} {flag} {news.source}\n"
+
+        text += build_footer()
+
+        if hashtags:
+
+            text += "\n\n"
+            text += hashtags
+
+        return text
+
+    def build_details(
+        self,
+        news: RawNews,
+    ) -> str:
+
+        return self.builder.build(news)
