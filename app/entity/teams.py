@@ -4,6 +4,7 @@ Football Teams Entity Extractor
 
 from app.models.raw_news import RawNews
 
+from .extractor import BaseEntityExtractor
 from .dictionary import (
     FOOTBALL_TEAMS,
     find_team,
@@ -11,7 +12,7 @@ from .dictionary import (
 )
 
 
-class TeamEntityExtractor:
+class TeamEntityExtractor(BaseEntityExtractor):
 
     def extract(
         self,
@@ -25,13 +26,7 @@ class TeamEntityExtractor:
 
         teams = self.find_teams(text)
 
-        if teams:
-
-            setattr(
-                news,
-                "teams",
-                teams,
-            )
+        news.teams = teams
 
         return news
 
@@ -41,6 +36,7 @@ class TeamEntityExtractor:
     ) -> list[str]:
 
         normalized_text = normalize_text(text)
+        normalized_lower = normalized_text.lower()
 
         found = []
 
@@ -60,7 +56,10 @@ class TeamEntityExtractor:
                 if not normalized_name:
                     continue
 
-                if normalized_name.lower() in normalized_text.lower():
+                if (
+                    normalized_name.lower()
+                    in normalized_lower
+                ):
 
                     if canonical not in found:
 
@@ -86,37 +85,13 @@ class TeamEntityExtractor:
 
         parts = []
 
-        title = getattr(
-            news,
-            "title",
-            None,
-        )
+        if news.title:
+            parts.append(news.title)
 
-        summary = getattr(
-            news,
-            "summary",
-            None,
-        )
+        if news.summary:
+            parts.append(news.summary)
 
-        content = getattr(
-            news,
-            "content",
-            None,
-        )
-
-        if title:
-            parts.append(
-                str(title)
-            )
-
-        if summary:
-            parts.append(
-                str(summary)
-            )
-
-        if content:
-            parts.append(
-                str(content)
-            )
+        if news.content:
+            parts.append(news.content)
 
         return " ".join(parts)
