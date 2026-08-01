@@ -4,17 +4,18 @@ Football Stadium Entity Extractor
 
 from app.models.raw_news import RawNews
 
+from .extractor import BaseEntityExtractor
 from .dictionary import normalize_text
 
 
-class StadiumEntityExtractor:
+class StadiumEntityExtractor(BaseEntityExtractor):
 
     STADIUMS = {
 
         "Old Trafford": [
             "Old Trafford",
             "اولدترافورد",
-            "اولدترافورد",
+            "اولد ترافورد",
         ],
 
         "Etihad Stadium": [
@@ -39,6 +40,7 @@ class StadiumEntityExtractor:
 
         "Camp Nou": [
             "Camp Nou",
+            "Nou Camp",
             "نوکمپ",
             "کمپ نو",
         ],
@@ -50,7 +52,9 @@ class StadiumEntityExtractor:
 
         "San Siro": [
             "San Siro",
+            "Giuseppe Meazza",
             "سن سیرو",
+            "جوزپه مه‌آتزا",
         ],
     }
 
@@ -62,17 +66,10 @@ class StadiumEntityExtractor:
         text = self._get_text(news)
 
         if not text:
+            news.stadiums = []
             return news
 
-        stadiums = self.find_stadiums(text)
-
-        if stadiums:
-
-            setattr(
-                news,
-                "stadiums",
-                stadiums,
-            )
+        news.stadiums = self.find_stadiums(text)
 
         return news
 
@@ -81,35 +78,22 @@ class StadiumEntityExtractor:
         text: str,
     ) -> list[str]:
 
-        normalized_text = normalize_text(
-            text
-        ).lower()
+        normalized_text = normalize_text(text).lower()
 
         found = []
 
         for canonical, aliases in self.STADIUMS.items():
 
-            names = [
-                canonical,
-                *aliases,
-            ]
+            for name in [canonical, *aliases]:
 
-            for name in names:
+                normalized_name = normalize_text(name).lower()
 
-                normalized_name = normalize_text(
-                    name
-                ).lower()
-
-                if not normalized_name:
-                    continue
-
-                if normalized_name in normalized_text:
-
+                if (
+                    normalized_name
+                    and normalized_name in normalized_text
+                ):
                     if canonical not in found:
-
-                        found.append(
-                            canonical
-                        )
+                        found.append(canonical)
 
                     break
 
@@ -122,11 +106,7 @@ class StadiumEntityExtractor:
 
         stadiums = self.find_stadiums(text)
 
-        if stadiums:
-
-            return stadiums[0]
-
-        return None
+        return stadiums[0] if stadiums else None
 
     @staticmethod
     def _get_text(
@@ -135,37 +115,13 @@ class StadiumEntityExtractor:
 
         parts = []
 
-        title = getattr(
-            news,
-            "title",
-            None,
-        )
+        if news.title:
+            parts.append(news.title)
 
-        summary = getattr(
-            news,
-            "summary",
-            None,
-        )
+        if news.summary:
+            parts.append(news.summary)
 
-        content = getattr(
-            news,
-            "content",
-            None,
-        )
-
-        if title:
-            parts.append(
-                str(title)
-            )
-
-        if summary:
-            parts.append(
-                str(summary)
-            )
-
-        if content:
-            parts.append(
-                str(content)
-            )
+        if news.content:
+            parts.append(news.content)
 
         return " ".join(parts)
