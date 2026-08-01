@@ -8,9 +8,10 @@ from .result import ResultBuilder
 from .goals import GoalsBuilder
 from .assists import AssistsBuilder
 from .cards import CardsBuilder
-from .interview import InterviewBuilder
+from .lineup import LineupBuilder
 from .coach import CoachBuilder
 from .captain import CaptainBuilder
+from .interview import InterviewBuilder
 from .referee import RefereeBuilder
 from .stadium import StadiumBuilder
 from .stats import StatsBuilder
@@ -26,9 +27,10 @@ class FootballBuilder:
         self.goals = GoalsBuilder()
         self.assists = AssistsBuilder()
         self.cards = CardsBuilder()
-        self.interview = InterviewBuilder()
+        self.lineup = LineupBuilder()
         self.coach = CoachBuilder()
         self.captain = CaptainBuilder()
+        self.interview = InterviewBuilder()
         self.referee = RefereeBuilder()
         self.stadium = StadiumBuilder()
         self.stats = StatsBuilder()
@@ -45,6 +47,8 @@ class FootballBuilder:
         builders = [
 
             self.result,
+
+            self.lineup,
 
             self.goals,
 
