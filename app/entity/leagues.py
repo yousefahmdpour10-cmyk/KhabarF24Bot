@@ -4,6 +4,7 @@ Football League Entity Extractor
 
 from app.models.raw_news import RawNews
 
+from .extractor import BaseEntityExtractor
 from .dictionary import (
     FOOTBALL_LEAGUES,
     find_league,
@@ -11,7 +12,7 @@ from .dictionary import (
 )
 
 
-class LeagueEntityExtractor:
+class LeagueEntityExtractor(BaseEntityExtractor):
 
     def extract(
         self,
@@ -21,17 +22,10 @@ class LeagueEntityExtractor:
         text = self._get_text(news)
 
         if not text:
+            news.leagues = []
             return news
 
-        leagues = self.find_leagues(text)
-
-        if leagues:
-
-            setattr(
-                news,
-                "leagues",
-                leagues,
-            )
+        news.leagues = self.find_leagues(text)
 
         return news
 
@@ -40,34 +34,22 @@ class LeagueEntityExtractor:
         text: str,
     ) -> list[str]:
 
-        normalized_text = normalize_text(text)
-        normalized_lower = normalized_text.lower()
+        normalized_text = normalize_text(text).lower()
 
         found = []
 
         for canonical, aliases in FOOTBALL_LEAGUES.items():
 
-            names = [
-                canonical,
-                *aliases,
-            ]
+            for name in [canonical, *aliases]:
 
-            for name in names:
+                normalized_name = normalize_text(name).lower()
 
-                normalized_name = normalize_text(
-                    name
-                )
-
-                if not normalized_name:
-                    continue
-
-                if normalized_name.lower() in normalized_lower:
-
+                if (
+                    normalized_name
+                    and normalized_name in normalized_text
+                ):
                     if canonical not in found:
-
-                        found.append(
-                            canonical
-                        )
+                        found.append(canonical)
 
                     break
 
@@ -87,37 +69,13 @@ class LeagueEntityExtractor:
 
         parts = []
 
-        title = getattr(
-            news,
-            "title",
-            None,
-        )
+        if news.title:
+            parts.append(news.title)
 
-        summary = getattr(
-            news,
-            "summary",
-            None,
-        )
+        if news.summary:
+            parts.append(news.summary)
 
-        content = getattr(
-            news,
-            "content",
-            None,
-        )
-
-        if title:
-            parts.append(
-                str(title)
-            )
-
-        if summary:
-            parts.append(
-                str(summary)
-            )
-
-        if content:
-            parts.append(
-                str(content)
-            )
+        if news.content:
+            parts.append(news.content)
 
         return " ".join(parts)
