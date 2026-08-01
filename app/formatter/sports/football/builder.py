@@ -4,11 +4,12 @@ Football Builder
 
 from app.models.raw_news import RawNews
 
+from .match_info import MatchInfoBuilder
 from .result import ResultBuilder
+from .lineup import LineupBuilder
 from .goals import GoalsBuilder
 from .assists import AssistsBuilder
 from .cards import CardsBuilder
-from .lineup import LineupBuilder
 from .coach import CoachBuilder
 from .captain import CaptainBuilder
 from .interview import InterviewBuilder
@@ -23,11 +24,12 @@ class FootballBuilder:
 
     def __init__(self):
 
+        self.match_info = MatchInfoBuilder()
         self.result = ResultBuilder()
+        self.lineup = LineupBuilder()
         self.goals = GoalsBuilder()
         self.assists = AssistsBuilder()
         self.cards = CardsBuilder()
-        self.lineup = LineupBuilder()
         self.coach = CoachBuilder()
         self.captain = CaptainBuilder()
         self.interview = InterviewBuilder()
@@ -45,6 +47,8 @@ class FootballBuilder:
         lines = []
 
         builders = [
+
+            self.match_info,
 
             self.result,
 
