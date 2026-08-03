@@ -635,6 +635,5 @@ def is_basketball_news(
         or result.players
         or result.league
         or result.tournament
-        or result.event_type
-        != EVENT_UNKNOWN
-  )
+        or result.event_type != EVENT_UNKNOWN
+    )
