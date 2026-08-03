@@ -22,8 +22,8 @@ from typing import List, Optional
 
 from .teams import find_teams_in_text
 from .players import find_players_in_text
-from .leagues import find_league
-from .tournament import find_tournament
+from .leagues import find_league_in_text
+from .tournament import find_tournament_in_text
 
 
 # ============================================================
@@ -507,16 +507,16 @@ def detect_basketball(
     # LEAGUE
     # --------------------------------------------------------
 
-    result.league = find_league(
-        normalized
+    result.league = find_league_in_text(
+    normalized
     )
 
     # --------------------------------------------------------
     # TOURNAMENT
     # --------------------------------------------------------
 
-    result.tournament = find_tournament(
-        normalized
+    result.tournament = find_tournament_in_text(
+    normalized
     )
 
     # --------------------------------------------------------
