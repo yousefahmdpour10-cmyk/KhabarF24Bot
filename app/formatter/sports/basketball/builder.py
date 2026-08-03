@@ -2,21 +2,29 @@
 Basketball Builder
 KhabarF24
 
-جمع‌آوری و آماده‌سازی اطلاعات اختصاصی اخبار بسکتبال.
+لایه اتصال اطلاعات تشخیص داده‌شده بسکتبال
+به Formatter.
 
-این فایل مسئول ساخت متن نهایی تلگرام نیست.
-وظیفه آن فقط استخراج و مرتب‌سازی اطلاعات بسکتبال
-از RawNews است تا Formatter بتواند از آن استفاده کند.
+این فایل:
+    - اطلاعات موجود در raw_data را می‌خواند
+    - در صورت نبود اطلاعات، از Basketball Detector استفاده می‌کند
+    - اطلاعات بسکتبال را به بخش‌های قابل نمایش تبدیل می‌کند
+
+این فایل مسئول ساخت Header/Footer اصلی تلگرام نیست.
 """
 
 from typing import Any, Dict, List, Optional
 
 from app.models.raw_news import RawNews
 
+from .detector import (
+    detect_basketball_from_parts,
+)
+
 
 class BasketballBuilder:
     """
-    Builder اطلاعات بسکتبال.
+    Builder اطلاعات اختصاصی بسکتبال.
     """
 
     def build(
@@ -24,11 +32,20 @@ class BasketballBuilder:
         news: RawNews,
     ) -> str:
         """
-        تمام اطلاعات قابل استفاده خبر بسکتبال را
-        جمع‌آوری و به متن قابل نمایش تبدیل می‌کند.
+        ساخت بخش تخصصی خبر بسکتبال.
         """
 
-        data = news.raw_data or {}
+        data = self._data(news)
+
+        # ----------------------------------------------------
+        # DETECTION
+        # ----------------------------------------------------
+
+        detection = detect_basketball_from_parts(
+            title=getattr(news, "title", ""),
+            summary=getattr(news, "summary", ""),
+            content=getattr(news, "content", ""),
+        )
 
         sections: List[str] = []
 
@@ -36,29 +53,38 @@ class BasketballBuilder:
         # LEAGUE
         # ====================================================
 
-        league = self.get_league(news)
+        league = (
+            self._clean(data.get("league"))
+            or detection.league
+        )
 
         if league:
             sections.append(
-                f"🏆 {league}"
+                f"🏆 لیگ: {league}"
             )
 
         # ====================================================
         # TOURNAMENT
         # ====================================================
 
-        tournament = self.get_tournament(news)
+        tournament = (
+            self._clean(data.get("tournament"))
+            or detection.tournament
+        )
 
         if tournament:
             sections.append(
-                f"🏆 {tournament}"
+                f"🏆 تورنمنت: {tournament}"
             )
 
         # ====================================================
         # MATCH
         # ====================================================
 
-        match = self.get_match(news)
+        match = self.get_match(
+            news,
+            detection.teams,
+        )
 
         if match:
             sections.append(
@@ -69,11 +95,14 @@ class BasketballBuilder:
         # RESULT
         # ====================================================
 
-        result = self.get_result(news)
+        result = self.get_result(
+            news,
+            detection.score,
+        )
 
         if result:
             sections.append(
-                f"🏁 {result}"
+                f"🏁 نتیجه: {result}"
             )
 
         # ====================================================
@@ -99,14 +128,14 @@ class BasketballBuilder:
             )
 
         # ====================================================
-        # LINEUP / STARTING FIVE
+        # LINEUP
         # ====================================================
 
         lineup = self.get_lineup(news)
 
         if lineup:
             sections.append(
-                f"👥\n{lineup}"
+                f"👥 ترکیب:\n{lineup}"
             )
 
         # ====================================================
@@ -117,7 +146,7 @@ class BasketballBuilder:
 
         if coach:
             sections.append(
-                f"👔 {coach}"
+                f"👔 سرمربی: {coach}"
             )
 
         # ====================================================
@@ -128,7 +157,7 @@ class BasketballBuilder:
 
         if captain:
             sections.append(
-                f"©️ {captain}"
+                f"©️ کاپیتان: {captain}"
             )
 
         # ====================================================
@@ -139,7 +168,7 @@ class BasketballBuilder:
 
         if referees:
             sections.append(
-                f"👨‍⚖️ {referees}"
+                f"👨‍⚖️ داوران: {referees}"
             )
 
         # ====================================================
@@ -150,7 +179,7 @@ class BasketballBuilder:
 
         if quarters:
             sections.append(
-                f"⏱️\n{quarters}"
+                f"⏱️ کوارترها:\n{quarters}"
             )
 
         # ====================================================
@@ -161,18 +190,21 @@ class BasketballBuilder:
 
         if stats:
             sections.append(
-                f"📊\n{stats}"
+                f"📊 آمار:\n{stats}"
             )
 
         # ====================================================
-        # TOP PLAYERS
+        # PLAYERS
         # ====================================================
 
-        players = self.get_players(news)
+        players = self.get_players(
+            news,
+            detection.players,
+        )
 
         if players:
             sections.append(
-                f"🏀\n{players}"
+                f"🏀 بازیکنان:\n{players}"
             )
 
         # ====================================================
@@ -183,7 +215,7 @@ class BasketballBuilder:
 
         if points:
             sections.append(
-                f"🎯 {points}"
+                f"🎯 امتیاز: {points}"
             )
 
         # ====================================================
@@ -194,7 +226,7 @@ class BasketballBuilder:
 
         if assists:
             sections.append(
-                f"🅰️ {assists}"
+                f"🅰️ پاس گل: {assists}"
             )
 
         # ====================================================
@@ -205,7 +237,7 @@ class BasketballBuilder:
 
         if rebounds:
             sections.append(
-                f"🔄 {rebounds}"
+                f"🔄 ریباند: {rebounds}"
             )
 
         # ====================================================
@@ -216,29 +248,35 @@ class BasketballBuilder:
 
         if fouls:
             sections.append(
-                f"🚫 {fouls}"
+                f"🚫 خطا: {fouls}"
             )
 
         # ====================================================
         # PRE-MATCH INTERVIEW
         # ====================================================
 
-        pre_interview = self.get_pre_match_interview(news)
+        pre_interview = (
+            self.get_pre_match_interview(news)
+        )
 
         if pre_interview:
             sections.append(
-                f"🎙️\n{pre_interview}"
+                f"🎙️ مصاحبه قبل از بازی:\n"
+                f"{pre_interview}"
             )
 
         # ====================================================
         # POST-MATCH INTERVIEW
         # ====================================================
 
-        post_interview = self.get_post_match_interview(news)
+        post_interview = (
+            self.get_post_match_interview(news)
+        )
 
         if post_interview:
             sections.append(
-                f"🎙️\n{post_interview}"
+                f"🎙️ مصاحبه بعد از بازی:\n"
+                f"{post_interview}"
             )
 
         # ====================================================
@@ -249,13 +287,15 @@ class BasketballBuilder:
 
         if transfer:
             sections.append(
-                f"🔄 {transfer}"
+                f"🔄 نقل‌وانتقال: {transfer}"
             )
 
-        return "\n\n".join(sections)
+        return "\n\n".join(
+            sections
+        )
 
     # ========================================================
-    # DATA ACCESS
+    # DATA
     # ========================================================
 
     @staticmethod
@@ -263,33 +303,16 @@ class BasketballBuilder:
         news: RawNews,
     ) -> Dict[str, Any]:
 
-        return news.raw_data or {}
+        raw_data = getattr(
+            news,
+            "raw_data",
+            None,
+        )
 
-    # ========================================================
-    # LEAGUE
-    # ========================================================
+        if isinstance(raw_data, dict):
+            return raw_data
 
-    def get_league(
-        self,
-        news: RawNews,
-    ) -> Optional[str]:
-
-        value = self._data(news).get("league")
-
-        return self._clean(value)
-
-    # ========================================================
-    # TOURNAMENT
-    # ========================================================
-
-    def get_tournament(
-        self,
-        news: RawNews,
-    ) -> Optional[str]:
-
-        value = self._data(news).get("tournament")
-
-        return self._clean(value)
+        return {}
 
     # ========================================================
     # MATCH
@@ -298,6 +321,7 @@ class BasketballBuilder:
     def get_match(
         self,
         news: RawNews,
+        detected_teams: Optional[List[str]] = None,
     ) -> Optional[str]:
 
         data = self._data(news)
@@ -310,10 +334,20 @@ class BasketballBuilder:
             data.get("away_team")
         )
 
+        if not home and detected_teams:
+            if len(detected_teams) >= 1:
+                home = detected_teams[0]
+
+        if not away and detected_teams:
+            if len(detected_teams) >= 2:
+                away = detected_teams[1]
+
         if not home or not away:
             return None
 
-        return f"{home} 🆚 {away}"
+        return (
+            f"{home} 🆚 {away}"
+        )
 
     # ========================================================
     # RESULT
@@ -322,11 +356,49 @@ class BasketballBuilder:
     def get_result(
         self,
         news: RawNews,
+        detected_score: Any = None,
     ) -> Optional[str]:
 
-        value = self._data(news).get("result")
+        data = self._data(news)
 
-        return self._clean(value)
+        value = self._clean(
+            data.get("result")
+        )
+
+        if value:
+            return value
+
+        if (
+            detected_score
+            and getattr(
+                detected_score,
+                "is_detected",
+                False,
+            )
+        ):
+
+            home_score = getattr(
+                detected_score,
+                "home_score",
+                None,
+            )
+
+            away_score = getattr(
+                detected_score,
+                "away_score",
+                None,
+            )
+
+            if (
+                home_score is not None
+                and away_score is not None
+            ):
+                return (
+                    f"{home_score} - "
+                    f"{away_score}"
+                )
+
+        return None
 
     # ========================================================
     # ARENA
@@ -337,11 +409,18 @@ class BasketballBuilder:
         news: RawNews,
     ) -> Optional[str]:
 
-        value = self._data(news).get("arena")
+        data = self._data(news)
+
+        value = data.get("arena")
 
         if not value:
-            value = self._data(news).get(
+            value = data.get(
                 "stadium"
+            )
+
+        if not value:
+            value = data.get(
+                "venue"
             )
 
         return self._clean(value)
@@ -357,10 +436,19 @@ class BasketballBuilder:
 
         data = self._data(news)
 
-        value = data.get("match_time")
+        value = data.get(
+            "match_time"
+        )
 
         if not value:
-            value = data.get("date_time")
+            value = data.get(
+                "date_time"
+            )
+
+        if not value:
+            value = data.get(
+                "scheduled_at"
+            )
 
         return self._clean(value)
 
@@ -375,21 +463,65 @@ class BasketballBuilder:
 
         data = self._data(news)
 
-        lineup = data.get("lineup")
+        lineup = data.get(
+            "lineup"
+        )
 
         if not lineup:
             lineup = data.get(
                 "starting_five"
             )
 
-        if isinstance(lineup, list):
+        if isinstance(
+            lineup,
+            dict,
+        ):
+
+            lines = []
+
+            for team, players in (
+                lineup.items()
+            ):
+
+                if isinstance(
+                    players,
+                    list,
+                ):
+
+                    names = "، ".join(
+                        str(player)
+                        for player in players
+                        if player
+                    )
+
+                    if names:
+                        lines.append(
+                            f"{team}: {names}"
+                        )
+
+                elif players:
+
+                    lines.append(
+                        f"{team}: {players}"
+                    )
+
+            if lines:
+                return "\n".join(lines)
+
+        if isinstance(
+            lineup,
+            list,
+        ):
+
             return "\n".join(
                 str(player)
                 for player in lineup
                 if player
             )
 
-        return self._clean(lineup)
+        return self._clean(
+            lineup
+        )
 
     # ========================================================
     # COACH
@@ -400,7 +532,9 @@ class BasketballBuilder:
         news: RawNews,
     ) -> Optional[str]:
 
-        value = self._data(news).get("coach")
+        value = self._data(
+            news
+        ).get("coach")
 
         return self._clean(value)
 
@@ -409,6 +543,320 @@ class BasketballBuilder:
     # ========================================================
 
     def get_captain(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("captain")
+
+        return self._clean(value)
+
+    # ========================================================
+    # REFEREES
+    # ========================================================
+
+    def get_referees(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("referees")
+
+        if isinstance(
+            value,
+            list,
+        ):
+
+            return "، ".join(
+                str(referee)
+                for referee in value
+                if referee
+            )
+
+        return self._clean(value)
+
+    # ========================================================
+    # QUARTERS
+    # ========================================================
+
+    def get_quarters(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("quarters")
+
+        if isinstance(
+            value,
+            dict,
+        ):
+
+            ordered = []
+
+            for quarter in (
+                "Q1",
+                "Q2",
+                "Q3",
+                "Q4",
+            ):
+
+                if quarter in value:
+
+                    ordered.append(
+                        f"{quarter}: "
+                        f"{value[quarter]}"
+                    )
+
+            if ordered:
+                return "\n".join(
+                    ordered
+                )
+
+        if isinstance(
+            value,
+            list,
+        ):
+
+            return "\n".join(
+                str(item)
+                for item in value
+                if item
+            )
+
+        return self._clean(
+            value
+        )
+
+    # ========================================================
+    # STATS
+    # ========================================================
+
+    def get_stats(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("stats")
+
+        if isinstance(
+            value,
+            dict,
+        ):
+
+            lines = []
+
+            for key, item in (
+                value.items()
+            ):
+
+                if item is None:
+                    continue
+
+                lines.append(
+                    f"{key}: {item}"
+                )
+
+            if lines:
+                return "\n".join(
+                    lines
+                )
+
+        if isinstance(
+            value,
+            list,
+        ):
+
+            return "\n".join(
+                str(item)
+                for item in value
+                if item
+            )
+
+        return self._clean(
+            value
+        )
+
+    # ========================================================
+    # PLAYERS
+    # ========================================================
+
+    def get_players(
+        self,
+        news: RawNews,
+        detected_players: Optional[List[str]] = None,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("players")
+
+        if isinstance(
+            value,
+            list,
+        ):
+
+            return "\n".join(
+                str(player)
+                for player in value
+                if player
+            )
+
+        cleaned = self._clean(
+            value
+        )
+
+        if cleaned:
+            return cleaned
+
+        if detected_players:
+            return "\n".join(
+                detected_players
+            )
+
+        return None
+
+    # ========================================================
+    # POINTS
+    # ========================================================
+
+    def get_points(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("points")
+
+        return self._clean(value)
+
+    # ========================================================
+    # ASSISTS
+    # ========================================================
+
+    def get_assists(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("assists")
+
+        return self._clean(value)
+
+    # ========================================================
+    # REBOUNDS
+    # ========================================================
+
+    def get_rebounds(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("rebounds")
+
+        return self._clean(value)
+
+    # ========================================================
+    # FOULS
+    # ========================================================
+
+    def get_fouls(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("fouls")
+
+        return self._clean(value)
+
+    # ========================================================
+    # PRE-MATCH INTERVIEW
+    # ========================================================
+
+    def get_pre_match_interview(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get(
+            "pre_match_interview"
+        )
+
+        return self._clean(value)
+
+    # ========================================================
+    # POST-MATCH INTERVIEW
+    # ========================================================
+
+    def get_post_match_interview(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get(
+            "post_match_interview"
+        )
+
+        return self._clean(value)
+
+    # ========================================================
+    # TRANSFER
+    # ========================================================
+
+    def get_transfer(
+        self,
+        news: RawNews,
+    ) -> Optional[str]:
+
+        value = self._data(
+            news
+        ).get("transfer")
+
+        return self._clean(value)
+
+    # ========================================================
+    # CLEAN
+    # ========================================================
+
+    @staticmethod
+    def _clean(
+        value: Any,
+    ) -> Optional[str]:
+
+        if value is None:
+            return None
+
+        if isinstance(
+            value,
+            str,
+        ):
+
+            value = value.strip()
+
+            if not value:
+                return None
+
+            return value
+
+        return str(value) def get_captain(
         self,
         news: RawNews,
     ) -> Optional[str]:
