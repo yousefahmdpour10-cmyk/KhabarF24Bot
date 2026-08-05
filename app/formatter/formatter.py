@@ -1,5 +1,5 @@
 """
-Smart Formatter Manager
+Smart Formatter Manager - KhabarF24
 """
 
 from app.models.raw_news import RawNews
@@ -15,33 +15,20 @@ from app.formatter.templates.sport import SportTemplate
 class Formatter:
 
     def __init__(self):
-
         self.templates = {
-
             "world": WorldTemplate(),
-
             "iran": IranTemplate(),
-
             "economy": EconomyTemplate(),
-
             "technology": TechnologyTemplate(),
-
             "health": HealthTemplate(),
-
             "sport": SportTemplate(),
-
+            "politics": WorldTemplate(),      # fallback
+            "gaming": TechnologyTemplate(),
         }
 
-    async def format(
-        self,
-        news: RawNews,
-    ) -> str:
+    async def format(self, news: RawNews) -> str:
+        category = getattr(news, "category", "world") or "world"
+        category = category.lower().strip()
 
-        category = getattr(news, "category", "world")
-
-        template = self.templates.get(
-            category,
-            WorldTemplate(),
-        )
-
+        template = self.templates.get(category, WorldTemplate())
         return await template.format(news)
