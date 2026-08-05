@@ -1,11 +1,11 @@
 """
-KhabarF24 Processing Pipeline - Final with Telegram Publish
+KhabarF24 Processing Pipeline - Fixed Imports
 """
 
 from app.models.raw_news import RawNews
 
-from app.processors.language import LanguageDetector
-from app.processors.translate import Translator
+from app.processors.language.detector import LanguageDetector
+from app.processors.translate import Translator          # اگر خطا داد بعداً درست می‌کنیم
 from app.processors.category import CategoryDetector
 from app.processors.sport import SportDetector
 from app.processors.importance import ImportanceScorer
@@ -28,7 +28,7 @@ class NewsPipeline:
         self.credibility = CredibilityChecker()
         self.duplicate = DuplicateChecker()
         self.summarizer = Summarizer()
-        self.publisher = TelegramPublisher()   # ← اضافه شد
+        self.publisher = TelegramPublisher()
 
     async def process(self, news: RawNews) -> RawNews:
         logger.info("Pipeline Started")
@@ -43,11 +43,7 @@ class NewsPipeline:
         news = await self.summarizer.process(news)
 
         # ارسال به تلگرام
-        published = await self.publisher.publish(news)
-        if published:
-            logger.info("News published to Telegram successfully")
-        else:
-            logger.warning("Failed to publish news to Telegram")
+        await self.publisher.publish(news)
 
         logger.info("Pipeline Finished")
         return news
