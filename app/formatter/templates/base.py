@@ -46,10 +46,14 @@ def render_general_news(news) -> str:
         news.hashtags       -> list[str] | None
     """
     icon = get_category_icon(getattr(news, "category", None))
+    # News.emoji is set by the upstream AI/processing stage when it has
+    # picked a more specific emoji than the category default (e.g. a
+    # subcategory- or keyword-level choice). It always wins when present.
+    emoji = (getattr(news, "emoji", None) or "").strip() or icon.emoji
 
     header = (
         f"{DIVIDER}\n"
-        f"🔴 KhabarF24 | {icon.emoji} {icon.label_fa}\n"
+        f"🔴 KhabarF24 | {emoji} {icon.label_fa}\n"
         f"{DIVIDER}"
     )
 
