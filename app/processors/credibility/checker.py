@@ -17,7 +17,7 @@ class CredibilityChecker:
     ) -> RawNews:
 
         score = SOURCE_REPUTATION.get(
-            news.source_name,
+            news.source,
             50,
         )
 
