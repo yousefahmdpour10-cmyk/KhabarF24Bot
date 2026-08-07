@@ -13,7 +13,7 @@ nothing platform-specific is hardcoded in code. It's read from config
 from .env.
 """
 
-from app.config.settings import settings
+from app.config import settings
 
 DIVIDER = "━" * 16
 
