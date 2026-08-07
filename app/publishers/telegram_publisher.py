@@ -5,7 +5,7 @@ Telegram Publisher - KhabarF24
 
 from telegram import Bot
 
-from app.config import settings
+from config import settings
 from app.models.raw_news import RawNews
 from app.formatter.formatter import format_news
 from app.formatter.sports.football.builder import FootballBuilder
