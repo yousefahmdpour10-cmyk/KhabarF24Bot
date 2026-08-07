@@ -16,7 +16,7 @@ from typing import Optional
 
 import aiohttp
 
-from app.config import settings
+from config import settings
 from app.utils.logger import logger
 
 GEMINI_ENDPOINT = (
