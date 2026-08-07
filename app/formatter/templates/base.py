@@ -43,7 +43,7 @@ def render_general_news(news) -> str:
         news.summary       -> str
         news.category       -> str
         news.source         -> str (parser key, e.g. "irna", "bbc")
-        news.hashtags       -> list[str] | None
+        news.hashtags       -> list[str] | None   (actual field: news.tags)
     """
     icon = get_category_icon(getattr(news, "category", None))
     # News.emoji is set by the upstream AI/processing stage when it has
@@ -61,7 +61,7 @@ def render_general_news(news) -> str:
     summary = getattr(news, "summary", "").strip()
     source_line = format_source_line(getattr(news, "source", None))
 
-    body_parts = [f"📰 {title}"]
+    body_parts = [f"📰 *{title}*"]
     if summary:
         body_parts.append(f"✍️ {summary}")
     body_parts.append(source_line)
@@ -71,7 +71,7 @@ def render_general_news(news) -> str:
 
     hashtag_line = format_hashtag_line(
         getattr(news, "category", None),
-        getattr(news, "hashtags", None),
+        getattr(news, "tags", None),
     )
 
     sections = [header, body, footer]
