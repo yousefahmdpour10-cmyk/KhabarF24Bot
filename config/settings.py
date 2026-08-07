@@ -38,13 +38,13 @@ CHANNEL_ID = os.getenv("CHANNEL_ID", "")
 
 # نام کاربری عمومی کانال برای نمایش در پست‌ها (بدون @)، جدا از CHANNEL_ID
 # که آیدی عددی/chat id مخصوص فراخوانی API تلگرام است.
-CHANNEL_ID= = os.getenv("CHANNEL_ID=", "KhabarF24")
+CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "KhabarF24")
 
 # ==========================================================
 # تنظیمات هوش مصنوعی (Gemini)
 # ==========================================================
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "Ab8RN6LVvUrZY9DdZeSkdfLL2sXcdAxFZbuOoVbPr6eyPVhmUQ")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
