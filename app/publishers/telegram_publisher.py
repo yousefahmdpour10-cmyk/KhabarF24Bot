@@ -7,8 +7,7 @@ from telegram import Bot
 
 from config import settings
 from app.models.raw_news import RawNews
-from app.formatter.formatter import format_news
-from app.formatter.sports.football.builder import FootballBuilder
+from app.formatter.formatter import Formatter
 from app.utils.logger import logger
 
 
@@ -21,28 +20,18 @@ class TelegramPublisher:
             raise ValueError("CHANNEL_ID تنظیم نشده است")
 
         self.bot = Bot(token=settings.BOT_TOKEN)
-        self.football_builder = FootballBuilder()
-
-    def _build_text(self, news: RawNews) -> str:
-        """
-        تصمیم می‌گیرد کدام formatter/builder متن نهایی پست را بسازد.
-
-        - category == "sports" و sport == "football" -> FootballBuilder
-          (گزارش کامل بازی: ترکیب، داور، ورزشگاه و غیره)
-        - هر خبر دیگری (سیاست/جهان/اقتصاد/... و رشته‌های ورزشی که هنوز
-          builder اختصاصی ندارند) -> قالب عمومی format_news
-        """
-        if news.category == "sports" and news.sport == "football":
-            return self.football_builder.build(news)
-
-        return format_news(news)
+        self.formatter = Formatter()
 
     async def publish(self, news: RawNews) -> bool:
         """
-        یک خبر را به کانال ارسال می‌کند
+        یک خبر را به کانال ارسال می‌کند.
+
+        مسیریابی بین دسته‌ها (سیاست/ایران/جهان/... و رشته‌های ورزشی مثل
+        فوتبال/بسکتبال/...) کاملاً داخل Formatter انجام می‌شود؛ این فایل
+        هیچ تصمیمی درباره‌ی نوع خبر نمی‌گیرد.
         """
         try:
-            text = self._build_text(news)
+            text = await self.formatter.format(news)
 
             await self.bot.send_message(
                 chat_id=settings.CHANNEL_ID,
