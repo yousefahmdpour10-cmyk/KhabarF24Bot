@@ -1,5 +1,3 @@
-# app/processors/category/keywords.py
-
 """
 Category Keywords
 
@@ -50,13 +48,33 @@ CATEGORY_KEYWORDS = {
         "اسرائیل",
         "اوکراین",
         "روسیه",
-        "Iran",
         "Israel",
         "Missile",
         "Drone",
         "Airstrike",
         "Army",
         "Military"
+    ],
+
+    # هر خبری که به ایران مربوط باشد (فارغ از موضوع)؛ اگر خبر هم‌زمان
+    # کلیدواژه‌های سیاسی/جنگی قوی‌تری داشته باشد، بر اساس تعداد تطبیق
+    # کلیدواژه‌ها به‌طور طبیعی همان دسته (politics/war) انتخاب می‌شود.
+    "iran": [
+        "ایران",
+        "ایرانی",
+        "تهران",
+        "تهرانی",
+        "اصفهان",
+        "شیراز",
+        "مشهد",
+        "تبریز",
+        "یزد",
+        "کرمان",
+        "اهواز",
+        "قم",
+        "Iran",
+        "Iranian",
+        "Tehran"
     ],
 
     "economy": [
@@ -124,7 +142,8 @@ CATEGORY_KEYWORDS = {
         "Earthquake"
     ],
 
-    "sports": [
+    # مفرد، چون Formatter و SportDetector هر دو با کلید "sport" کار می‌کنند
+    "sport": [
         "فوتبال",
         "بسکتبال",
         "والیبال",
