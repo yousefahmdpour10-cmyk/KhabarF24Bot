@@ -1,32 +1,37 @@
 """
-app/formatter/formatter.py
-
-Entry point used by the publishing layer for GENERAL (non-football)
-news items:
-
-    from app.formatter.formatter import format_news
-    text = format_news(news)   # news is a processed News object
-
-Routing note (per project decision):
-  Football/sports live-match posts do NOT go through this file. The
-  publisher itself checks `category == "sports"` BEFORE the item ever
-  reaches here, and calls FootballBuilder directly on the RawNews object:
-
-      # inside the publisher, e.g. app/publishers/telegram_publisher.py
-      if raw_news.category == "sports":
-          text = FootballBuilder().build(raw_news)
-      else:
-          news = <processed News from the pipeline>
-          text = format_news(news)
-
-  This file therefore only ever receives a processed `News` object for
-  politics/world/economy/technology/health/weather/social/iran, and just
-  delegates to the generic template.
+Smart Formatter Manager
 """
 
-from app.formatter.templates.base import render_general_news
+from app.models.raw_news import RawNews
+from app.formatter.templates.world import WorldTemplate
+from app.formatter.templates.iran import IranTemplate
+from app.formatter.templates.politics import PoliticsTemplate
+from app.formatter.templates.economy import EconomyTemplate
+from app.formatter.templates.technology import TechnologyTemplate
+from app.formatter.templates.health import HealthTemplate
+from app.formatter.templates.sport import SportTemplate
 
 
-def format_news(news) -> str:
-    """Render a processed (non-sports) News object into post text."""
-    return render_general_news(news)
+class Formatter:
+
+    def __init__(self):
+        self.templates = {
+            "world": WorldTemplate(),
+            "iran": IranTemplate(),
+            "politics": PoliticsTemplate(),
+            "economy": EconomyTemplate(),
+            "technology": TechnologyTemplate(),
+            "health": HealthTemplate(),
+            "sport": SportTemplate(),
+        }
+
+    async def format(
+        self,
+        news: RawNews,
+    ) -> str:
+        category = getattr(news, "category", "world")
+        template = self.templates.get(
+            category,
+            WorldTemplate(),
+        )
+        return await template.format(news)
