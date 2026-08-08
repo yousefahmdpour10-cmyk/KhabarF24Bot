@@ -1,9 +1,15 @@
 """
-World News Template - Final Design
+World News Template
 """
 
 from app.models.raw_news import RawNews
 from app.formatter.templates.base import BaseTemplate
+from app.formatter.icons import (
+    TITLE,
+    SUMMARY,
+    SOURCE,
+)
+from app.formatter.footer import build_footer
 from app.formatter.source_flags import get_flag
 from app.formatter.hashtags import HashtagBuilder
 
@@ -13,27 +19,28 @@ class WorldTemplate(BaseTemplate):
     def __init__(self):
         self.hashtags = HashtagBuilder()
 
-    async def format(self, news: RawNews) -> str:
+    async def format(
+        self,
+        news: RawNews,
+    ) -> str:
+
         flag = get_flag(news.source)
         hashtags = self.hashtags.build(news)
 
-        # دسته‌بندی
-        category_name = "جهان"
-        category_emoji = "🌍"
+        text = ""
+        text += "━━━━━━━━━━━━━━━━\n"
+        text += "🔴 KhabarF24 | 🌍 جهان\n"
+        text += "━━━━━━━━━━━━━━━━\n\n"
+        text += f"{TITLE} {news.title}\n\n"
 
-        text = f"""━━━━━━━━━━━━━━━━
-🔴 KhabarF24 | {category_emoji} {category_name}
-━━━━━━━━━━━━━━━━
+        if getattr(news, "summary", None):
+            text += f"{SUMMARY} {news.summary}\n\n"
 
-📰 **{news.title}**
+        text += f"{SOURCE} {flag} {news.source}\n"
+        text += build_footer()
 
-✍️ {news.summary or ""}
-
-• 🗞️ {flag} {news.source}
-━━━━━━━━━━━━━━━━
-📢 @KhabarF24
-"""
         if hashtags:
-            text += f"\n{hashtags}"
+            text += "\n\n"
+            text += hashtags
 
-        return text.strip()
+        return text
