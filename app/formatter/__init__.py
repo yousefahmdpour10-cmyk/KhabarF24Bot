@@ -1,9 +1,5 @@
 """
-KhabarF24 Formatter
+Formatter package
 """
 
 from .formatter import Formatter
-
-__all__ = [
-    "Formatter",
-]
