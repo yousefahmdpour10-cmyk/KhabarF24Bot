@@ -9,6 +9,15 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
+# --- DEBUG موقت: ببینیم واقعاً چه فایل‌هایی تو کانتینر هست ---
+import os
+print("DEBUG contents of app/processors:", os.listdir(BASE_DIR / "app" / "processors"))
+processors_language_path = BASE_DIR / "app" / "processors" / "language"
+print("DEBUG language folder exists:", processors_language_path.exists())
+if processors_language_path.exists():
+    print("DEBUG contents of app/processors/language:", os.listdir(processors_language_path))
+# --- پایان DEBUG ---
+
 import asyncio
 from config.settings import CHECK_INTERVAL
 from config.sources import load_sources
