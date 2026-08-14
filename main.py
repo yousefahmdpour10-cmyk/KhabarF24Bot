@@ -1,134 +1,57 @@
 """
-KhabarF24 Main Engine v8.2 - Final Stable Version
+KhabarF24 Main Engine
 """
 
+import sys
+import time
+from pathlib import Path
+
+# اضافه کردن مسیر پروژه به sys.path
+BASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BASE_DIR))
+
 import asyncio
-import random
-import logging
+from config.settings import CHECK_INTERVAL
+from config.sources import load_sources
+from app.services.fetch_service import FetchService
+from app.processors.pipeline import NewsPipeline
+from app.utils.logger import logger
 
-from config import CHECK_INTERVAL, MAX_NEWS_PER_CYCLE, LOG_LEVEL
-
-from news_fetcher import get_latest_news
-from ai_processor import process_news
-from formatter import format_news
-from category_engine import detect_smart_category
-from sport_formatter import format_sport_news
-from quality_engine import is_high_quality
-from importance_engine import is_important
-from news_db import init_db, is_published, mark_as_published
-from telegram_bot import send_to_telegram
-
-# ====================== LOGGING ======================
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, "INFO"),
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-
-def normalize_category(category: str) -> str:
-    cat = str(category).lower().strip()
-    sports = {"football", "basketball", "volleyball", "tennis", "wrestling", "formula1", "combat", "sport"}
-    return "sport" if cat in sports or any(s in cat for s in sports) else cat
-
-
-async def process_and_publish(item: dict) -> bool:
-    link = item.get("link") or item.get("url") or str(item.get("title", ""))
-    title = item.get("title", "").strip()
-
-    if not title:
-        return False
-
-    if is_published(link):
-        logger.debug(f"Duplicate skipped: {title[:60]}...")
-        return False
-
-    try:
-        # Category Detection
-        raw_category = detect_smart_category(
-            title=title, 
-            summary=item.get("summary", ""), 
-            source=item.get("source", "")
-        )
-        category = normalize_category(raw_category)
-
-        logger.info(f"📂 Category: {category} | {title[:70]}...")
-
-        # AI Processing
-        processed = process_news({
-            "title": title,
-            "summary": item.get("summary", ""),
-            "content": item.get("content", ""),
-            "source": item.get("source", "نامشخص"),
-            "category": category,
-            "image_url": item.get("image_url") or item.get("image")
-        })
-
-        # Sport Handling
-        if category == "sport":
-            sport_result = format_sport_news(processed["title"], processed["summary"])
-            if sport_result.get("blocked"):
-                logger.info(f"🚫 Sport blocked: {title[:50]}...")
-                return False
-            processed["title"] = sport_result.get("title", processed["title"])
-            processed["summary"] = sport_result.get("summary", processed["summary"])
-
-        # Quality & Importance
-        if not is_high_quality(processed["title"], processed["summary"], category):
-            logger.info(f"❌ Low quality skipped")
-            return False
-
-        if not is_important(processed["title"], processed["summary"], category):
-            logger.info(f"❌ Low importance skipped")
-            return False
-
-        # Send to Telegram
-        success = await send_to_telegram(processed)
-
-        if success:
-            mark_as_published(link, processed["title"], processed.get("source"), category)
-            logger.info(f"✅ Published: {processed['title'][:80]}...")
-            return True
-
-        return False
-
-    except Exception as e:
-        logger.error(f"Error processing news '{title[:60]}...': {e}", exc_info=True)
-        return False
-
-
-async def check_news():
-    news_list = get_latest_news()
-    if not news_list:
-        logger.info("No new news found.")
-        return
-
-    random.shuffle(news_list)
-    published_count = 0
-
-    for item in news_list:
-        if published_count >= MAX_NEWS_PER_CYCLE:
-            break
-
-        if await process_and_publish(item):
-            published_count += 1
-            await asyncio.sleep(8)   # جلوگیری از Rate Limit تلگرام
-
-    logger.info(f"✅ Cycle finished - Published {published_count} news")
+# حداکثر مدت هر اجرا، کمی کمتر از سقف ۶ ساعته‌ی GitHub Actions
+# تا وقت کافی برای بسته‌شدن تمیز و شروع اجرای بعدی باقی بماند.
+MAX_RUNTIME_SECONDS = 5 * 3600 + 50 * 60  # 5h50m
 
 
 async def main():
-    init_db()
-    logger.info("🚀 KhabarF24 Main Engine v8.2 Started")
+    logger.info("KhabarF24 Bot Started Successfully")
+
+    start_time = time.monotonic()
+
+    fetch_service = FetchService()
+    pipeline = NewsPipeline()
+    sources = load_sources()
+
+    logger.info(f"Loaded {len(sources)} sources")
 
     while True:
+        if time.monotonic() - start_time > MAX_RUNTIME_SECONDS:
+            logger.info("Max runtime reached, exiting cleanly for next scheduled run")
+            break
+
         try:
-            await check_news()
+            logger.info("Checking for new news...")
+            all_news = await fetch_service.fetch_all(sources)
+
+            if all_news:
+                for news in all_news[:3]:  # فعلاً حداکثر ۳ خبر در هر چرخه
+                    await pipeline.process(news)
+                    await asyncio.sleep(5)
+
+            await asyncio.sleep(CHECK_INTERVAL)
+
         except Exception as e:
-            logger.error(f"Critical error in main loop: {e}", exc_info=True)
-            await asyncio.sleep(60)
-        
-        await asyncio.sleep(CHECK_INTERVAL)
+            logger.error(f"Error: {e}", exc_info=True)
+            await asyncio.sleep(30)
 
 
 if __name__ == "__main__":
