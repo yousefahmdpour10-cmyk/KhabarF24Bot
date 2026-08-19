@@ -1,0 +1,42 @@
+name: KhabarF24 Bot
+
+on:
+  schedule:
+    # هر ۶ ساعت یک‌بار یک session جدید شروع می‌شود (خود اجرا داخلش
+    # هر ۶۰ ثانیه چک می‌کند، طبق CHECK_INTERVAL در main.py)
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+# جلوگیری از اجرای هم‌زمان دو session (تا خبر تکراری منتشر نشود)
+concurrency:
+  group: khabarf24-bot
+  cancel-in-progress: false
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          # کد واقعی روی برنچ KhabarF24-v2 است، نه main
+          ref: KhabarF24-v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+        run: python main.py
