@@ -22,7 +22,7 @@ from typing import List, Optional
 
 from .teams import find_teams_in_text
 from .players import find_players_in_text
-from .leagues import find_league_in_text
+from .league import find_league_in_text
 from .tournament import find_tournament_in_text
 
 
@@ -526,6 +526,113 @@ def detect_basketball(
     # --------------------------------------------------------
     # FLAGS
     # --------------------------------------------------------
+
+    result.is_match_news = (
+        result.event_type
+        in {
+            EVENT_MATCH,
+            EVENT_RESULT,
+            EVENT_LINEUP,
+            EVENT_PRE_MATCH_INTERVIEW,
+            EVENT_POST_MATCH_INTERVIEW,
+        }
+    )
+
+    result.is_interview = (
+        result.event_type
+        in {
+            EVENT_PRE_MATCH_INTERVIEW,
+            EVENT_POST_MATCH_INTERVIEW,
+        }
+    )
+
+    result.is_lineup_news = (
+        result.event_type
+        == EVENT_LINEUP
+    )
+
+    result.is_transfer_news = (
+        result.event_type
+        == EVENT_TRANSFER
+    )
+
+    result.is_injury_news = (
+        result.event_type
+        == EVENT_INJURY
+    )
+
+    result.is_performance_news = (
+        result.event_type
+        == EVENT_PLAYER_PERFORMANCE
+    )
+
+    # --------------------------------------------------------
+    # SCORE
+    # --------------------------------------------------------
+
+    result.score = detect_score(
+        normalized,
+        result.teams,
+    )
+
+    if result.score.is_detected:
+
+        result.event_type = EVENT_RESULT
+        result.is_match_news = True
+
+    return result
+
+
+# ============================================================
+# CONVENIENCE HELPERS
+# ============================================================
+
+def detect_basketball_from_parts(
+    title: str = "",
+    summary: str = "",
+    content: str = "",
+) -> BasketballDetection:
+    """
+    تحلیل خبر با ترکیب عنوان، خلاصه و متن.
+    """
+
+    combined = "\n".join(
+        part
+        for part in (
+            title,
+            summary,
+            content,
+        )
+        if part
+    )
+
+    return detect_basketball(
+        combined
+    )
+
+
+def is_basketball_news(
+    text: str,
+) -> bool:
+    """
+    بررسی اولیه اینکه متن نشانه‌های
+    خبر بسکتبال دارد یا خیر.
+
+    این تابع جای Category Engine را نمی‌گیرد.
+    """
+
+    result = detect_basketball(
+        text
+    )
+
+    return bool(
+        result.teams
+        or result.players
+        or result.league
+        or result.tournament
+        or result.event_type
+        != EVENT_UNKNOWN
+    )------------------
 
     result.is_match_news = (
         result.event_type
