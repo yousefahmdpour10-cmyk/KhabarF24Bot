@@ -1,1 +1,30 @@
-
+[
+  {
+    "id": "aljazeera_politics",
+    "name": "Al Jazeera",
+    "source_type": "rss",
+    "url": "https://www.aljazeera.com/xml/rss/all.xml",
+    "country": "QA",
+    "flag": "🇶🇦",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["politics"],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "bbc_politics",
+    "name": "BBC News World",
+    "source_type": "rss",
+    "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["politics"],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": true
+  }
+]
