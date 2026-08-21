@@ -1,1 +1,72 @@
-
+[
+  {
+    "id": "bbc_world",
+    "name": "BBC News World",
+    "source_type": "rss",
+    "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["international", "world"],
+    "priority": 90,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "aljazeera_all",
+    "name": "Al Jazeera",
+    "source_type": "rss",
+    "url": "https://www.aljazeera.com/xml/rss/all.xml",
+    "country": "QA",
+    "flag": "🇶🇦",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["international", "world", "politics"],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "cnn_world",
+    "name": "CNN World",
+    "source_type": "rss",
+    "url": "http://rss.cnn.com/rss/edition_world.rss",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["international", "world"],
+    "priority": 80,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "guardian_world",
+    "name": "The Guardian World",
+    "source_type": "rss",
+    "url": "https://www.theguardian.com/world/rss",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["international", "world"],
+    "priority": 80,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "nytimes_world",
+    "name": "The New York Times World",
+    "source_type": "rss",
+    "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["international", "world"],
+    "priority": 80,
+    "check_interval": 60,
+    "enabled": true
+  }
+]
