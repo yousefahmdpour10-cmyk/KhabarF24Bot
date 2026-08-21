@@ -1,1 +1,16 @@
-
+[
+  {
+    "id": "bbc_technology",
+    "name": "BBC News Technology",
+    "source_type": "rss",
+    "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["technology"],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": true
+  }
+]
