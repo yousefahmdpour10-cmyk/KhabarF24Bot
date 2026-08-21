@@ -1,1 +1,16 @@
-
+[
+  {
+    "id": "bbc_health",
+    "name": "BBC News Health",
+    "source_type": "rss",
+    "url": "https://feeds.bbci.co.uk/news/health/rss.xml",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["health"],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": true
+  }
+]
