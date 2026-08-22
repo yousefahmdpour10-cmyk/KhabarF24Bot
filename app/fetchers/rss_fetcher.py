@@ -44,8 +44,7 @@ class RSSFetcher(BaseFetcher):
 
                 news = RawNews(
                     source_id=self.source.id,
-                    source_name=self.source.name,
-                    source_url=self.source.url,
+                    source=self.source.name,
                     title=getattr(entry, "title", ""),
                     summary=getattr(entry, "summary", ""),
                     url=getattr(entry, "link", ""),
