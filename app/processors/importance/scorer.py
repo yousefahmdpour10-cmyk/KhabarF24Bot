@@ -22,9 +22,7 @@ class ImportanceScorer:
         text = f"{news.title} {news.summary}".lower()
 
         for keyword, value in KEYWORD_SCORES.items():
-
             if keyword.lower() in text:
-
                 score += value
 
         score += CATEGORY_SCORES.get(
@@ -33,7 +31,7 @@ class ImportanceScorer:
         )
 
         score += SOURCE_SCORES.get(
-            news.source_name,
+            news.source,
             0,
         )
 
