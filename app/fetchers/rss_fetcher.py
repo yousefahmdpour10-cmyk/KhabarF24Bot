@@ -52,9 +52,7 @@ class RSSFetcher(BaseFetcher):
                     language=self.source.language,
                 )
 
-                if await self.validate(news):
-                    news = await self.normalize(news)
-                    news_list.append(news)
+                news_list.append(news)
 
             except Exception as e:
 
