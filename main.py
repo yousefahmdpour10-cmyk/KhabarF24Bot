@@ -18,8 +18,14 @@ from app.processors.pipeline import NewsPipeline
 from app.utils.logger import logger
 
 # حداکثر مدت هر اجرا، کمی کمتر از سقف ۶ ساعته‌ی GitHub Actions
-# تا وقت کافی برای بسته‌شدن تمیز و شروع اجرای بعدی باقی بماند.
 MAX_RUNTIME_SECONDS = 5 * 3600 + 50 * 60  # 5h50m
+
+# حداکثر خبر واقعاً جدید (غیرتکراری) که در هر چرخه منتشر می‌شود
+MAX_PUBLISH_PER_CYCLE = 3
+
+# حداکثر تعداد خبر خامی که در هر چرخه بررسی می‌شود (برای جلوگیری از
+# پردازش کل ۵۰۰+ خبر هر بار، حتی وقتی هیچ‌کدام جدید نیستند)
+MAX_CANDIDATES_PER_CYCLE = 50
 
 
 async def main():
@@ -42,10 +48,22 @@ async def main():
             logger.info("Checking for new news...")
             all_news = await fetch_service.fetch_all(sources)
 
-            if all_news:
-                for news in all_news[:3]:  # فعلاً حداکثر ۳ خبر در هر چرخه
-                    await pipeline.process(news)
-                    await asyncio.sleep(5)
+            published = 0
+
+            for news in all_news[:MAX_CANDIDATES_PER_CYCLE]:
+
+                if published >= MAX_PUBLISH_PER_CYCLE:
+                    break
+
+                result = await pipeline.process(news)
+
+                # اگر خبر تکراری بود یا رد شد (اعتبار پایین و ...)،
+                # سراغ کاندید بعدی برو، این یکی را نشمار.
+                if getattr(result, "is_duplicate", False):
+                    continue
+
+                published += 1
+                await asyncio.sleep(5)
 
             await asyncio.sleep(CHECK_INTERVAL)
 
@@ -56,3 +74,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+    
