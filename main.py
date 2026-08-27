@@ -4,9 +4,9 @@ KhabarF24 Main Engine
 
 import sys
 import time
+import random
 from pathlib import Path
 
-# اضافه کردن مسیر پروژه به sys.path
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
@@ -17,14 +17,8 @@ from app.services.fetch_service import FetchService
 from app.processors.pipeline import NewsPipeline
 from app.utils.logger import logger
 
-# حداکثر مدت هر اجرا، کمی کمتر از سقف ۶ ساعته‌ی GitHub Actions
 MAX_RUNTIME_SECONDS = 5 * 3600 + 50 * 60  # 5h50m
-
-# حداکثر خبر واقعاً جدید (غیرتکراری) که در هر چرخه منتشر می‌شود
 MAX_PUBLISH_PER_CYCLE = 3
-
-# حداکثر تعداد خبر خامی که در هر چرخه بررسی می‌شود (برای جلوگیری از
-# پردازش کل ۵۰۰+ خبر هر بار، حتی وقتی هیچ‌کدام جدید نیستند)
 MAX_CANDIDATES_PER_CYCLE = 50
 
 
@@ -48,6 +42,11 @@ async def main():
             logger.info("Checking for new news...")
             all_news = await fetch_service.fetch_all(sources)
 
+            # به‌هم‌ریختن ترتیب تا همه‌ی منابع شانس برابر داشته باشند
+            # (وگرنه چون فایل‌های JSON به ترتیب حروف الفبا خوانده می‌شوند،
+            # همیشه اول همان چند منبع اول بررسی می‌شدند)
+            random.shuffle(all_news)
+
             published = 0
 
             for news in all_news[:MAX_CANDIDATES_PER_CYCLE]:
@@ -57,9 +56,10 @@ async def main():
 
                 result = await pipeline.process(news)
 
-                # اگر خبر تکراری بود یا رد شد (اعتبار پایین و ...)،
-                # سراغ کاندید بعدی برو، این یکی را نشمار.
                 if getattr(result, "is_duplicate", False):
+                    continue
+
+                if not getattr(result, "content_generated", False):
                     continue
 
                 published += 1
@@ -74,4 +74,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
