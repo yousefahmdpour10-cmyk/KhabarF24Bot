@@ -4,14 +4,10 @@ app/ai/content_generator.py
 تولید تیتر فارسیِ روان و کامل + خلاصه‌ی فارسی برای یک خبر، با استفاده از
 GeminiClient و پرامپت app/ai/prompts.py.
 
-استفاده (هم‌سبک با app/processors/sport/detector.py):
-
-    generator = ContentGenerator()
-    news = await generator.process(news)   # news.title و news.summary پر می‌شوند
-
 اگر فراخوانی AI به هر دلیلی شکست بخورد (کلید نامعتبر، rate limit، پاسخ
-غیرمنتظره)، این فایل خبر را دست‌نخورده برمی‌گرداند تا publish کلاً متوقف
-نشود — عنوان/خلاصه‌ی خام قبلی همچنان روی News باقی می‌ماند.
+غیرمنتظره)، این فایل خبر را دست‌نخورده برمی‌گرداند ولی `news.content_generated`
+را False می‌گذارد — تا لایه‌ی بالاتر (pipeline) تصمیم بگیرد که خبر
+ترجمه‌نشده اصلاً منتشر نشود.
 """
 
 import json
@@ -22,7 +18,6 @@ from app.ai.prompts import build_content_prompt
 from app.models.raw_news import RawNews
 from app.utils.logger import logger
 
-# پاک‌سازی fenceهای ```json ... ``` که مدل‌ها گاهی دور JSON اضافه می‌کنند
 _CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE | re.MULTILINE)
 
 
@@ -34,6 +29,9 @@ class ContentGenerator:
 
     async def process(self, news: RawNews) -> RawNews:
         source_text = news.content or news.summary or ""
+
+        # پیش‌فرض: تا وقتی موفق نشده‌ایم ثابت‌شده، تولید محتوا ناموفق است
+        news.content_generated = False
 
         if not news.title and not source_text:
             logger.warning("ContentGenerator: خبر بدون عنوان/متن، رد شد")
@@ -53,10 +51,15 @@ class ContentGenerator:
         headline = (parsed.get("headline") or "").strip()
         summary = (parsed.get("summary") or "").strip()
 
-        if headline:
-            news.title = headline
+        if not headline:
+            logger.error("ContentGenerator: تیتر خالی از Gemini برگشت")
+            return news
+
+        news.title = headline
         if summary:
             news.summary = summary
+
+        news.content_generated = True
 
         logger.info(f"ContentGenerator: تیتر تولید شد -> {headline[:60]}")
 
@@ -64,10 +67,6 @@ class ContentGenerator:
 
     @staticmethod
     def _parse_json(raw_text: str) -> dict | None:
-        """
-        Parse کردن خروجی مدل به‌عنوان JSON.
-        مدل‌ها گاهی JSON را داخل ```json ... ``` می‌فرستند؛ اول پاک می‌شود.
-        """
         cleaned = _CODE_FENCE_RE.sub("", raw_text).strip()
 
         try:
