@@ -27,8 +27,6 @@ class NewsPipeline:
         self.duplicate = DuplicateChecker()
         self.credibility = CredibilityChecker()
         self.importance = ImportanceScorer()
-        # ترجمه + خلاصه‌نویسی + تیتر، هر سه با یک فراخوانی Gemini
-        # (جایگزین Translator و Summarizer قدیمی)
         self.content_generator = ContentGenerator()
         self.publisher = TelegramPublisher()
 
@@ -39,21 +37,22 @@ class NewsPipeline:
         news = await self.category.process(news)
         news = await self.sport.process(news)
 
-        # فیلترهای ارزان قبل از هر کاری که سهمیه/زمان مصرف می‌کند
         news = await self.duplicate.process(news)
-        if news.is_duplicate:
+        if getattr(news, "is_duplicate", False):
             logger.info("Pipeline Stopped: duplicate news")
             return news
 
         news = await self.credibility.process(news)
-        if not news.is_verified:
+        if not getattr(news, "is_verified", True):
             logger.info("Pipeline Stopped: low credibility")
             return news
 
         news = await self.importance.process(news)
 
-        # فقط برای خبرهایی که تا اینجا رد شدند، سهمیه‌ی رایگان Gemini مصرف می‌شود
         news = await self.content_generator.process(news)
+        if not getattr(news, "content_generated", False):
+            logger.info("Pipeline Stopped: AI content generation failed, not publishing raw/untranslated text")
+            return news
 
         await self.publisher.publish(news)
 
