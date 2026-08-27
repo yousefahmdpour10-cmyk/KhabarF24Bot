@@ -1,14 +1,17 @@
 [
   {
     "id": "bbc_world",
-    "name": "BBC News World",
+    "name": "BBC",
     "source_type": "rss",
     "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
-    "categories": ["international", "world"],
+    "categories": [
+      "international",
+      "world"
+    ],
     "priority": 90,
     "check_interval": 60,
     "enabled": true
@@ -22,7 +25,11 @@
     "flag": "🇶🇦",
     "language": "en",
     "has_rss": true,
-    "categories": ["international", "world", "politics"],
+    "categories": [
+      "international",
+      "world",
+      "politics"
+    ],
     "priority": 85,
     "check_interval": 60,
     "enabled": true
@@ -36,7 +43,10 @@
     "flag": "🇺🇸",
     "language": "en",
     "has_rss": true,
-    "categories": ["international", "world"],
+    "categories": [
+      "international",
+      "world"
+    ],
     "priority": 80,
     "check_interval": 60,
     "enabled": true
@@ -50,7 +60,10 @@
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
-    "categories": ["international", "world"],
+    "categories": [
+      "international",
+      "world"
+    ],
     "priority": 80,
     "check_interval": 60,
     "enabled": true
@@ -64,7 +77,10 @@
     "flag": "🇺🇸",
     "language": "en",
     "has_rss": true,
-    "categories": ["international", "world"],
+    "categories": [
+      "international",
+      "world"
+    ],
     "priority": 80,
     "check_interval": 60,
     "enabled": true
