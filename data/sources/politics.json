@@ -8,21 +8,25 @@
     "flag": "🇶🇦",
     "language": "en",
     "has_rss": true,
-    "categories": ["politics"],
+    "categories": [
+      "politics"
+    ],
     "priority": 85,
     "check_interval": 60,
     "enabled": true
   },
   {
     "id": "bbc_politics",
-    "name": "BBC News World",
+    "name": "BBC",
     "source_type": "rss",
     "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
-    "categories": ["politics"],
+    "categories": [
+      "politics"
+    ],
     "priority": 85,
     "check_interval": 60,
     "enabled": true
