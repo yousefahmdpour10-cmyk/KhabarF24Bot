@@ -28,25 +28,19 @@ FLAGS = {
     "Kicker": "🇩🇪",
     "Bild": "🇩🇪",
     "Al Jazeera": "🇶🇦",
-    "Tasnim": "🇮🇷",
+    "Tasnim News": "🇮🇷",
     "Fars": "🇮🇷",
     "ISNA": "🇮🇷",
     "IRNA": "🇮🇷",
-    "Mehr": "🇮🇷",
-    "Khabar Fouri": "🇮🇷",
-    "KhabarFoori": "🇮🇷",
-    "خبر فوری": "🇮🇷",
-    "Vahid": "🇮🇷",
+    "Mehr News": "🇮🇷",
+    "Khabar Online": "🇮🇷",
+    "Tabnak": "🇮🇷",
+    "YJC": "🇮🇷",
     "Vahid Online": "🇮🇷",
-    "وحید آنلاین": "🇮🇷",
     "Hengaw": "🇳🇴",
-    "هنگاو": "🇳🇴",
     "Iran International": "🇬🇧",
-    "ایران اینترنشنال": "🇬🇧",
 }
 
-# نگاشت با حروف کوچک، تا تفاوت بزرگ/کوچک حروف (BBC در برابر bbc) باعث
-# نشود منبعی که واقعاً تعریف شده، به‌اشتباه به پرچم پیش‌فرض بیفتد.
 _NORMALIZED_FLAGS = {key.lower(): value for key, value in FLAGS.items()}
 
 
