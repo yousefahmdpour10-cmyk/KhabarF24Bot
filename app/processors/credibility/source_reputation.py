@@ -13,10 +13,9 @@ SOURCE_REPUTATION = {
     "AFP": 98,
     "BBC": 96,
     "CNN": 94,
-    "CNN World": 94,
     "Al Jazeera": 92,
-    "The Guardian World": 90,
-    "The New York Times World": 92,
+    "Guardian": 90,
+    "The New York Times": 92,
 
     # ========================================================
     # ایران
@@ -24,15 +23,11 @@ SOURCE_REPUTATION = {
 
     "IRNA": 85,
     "ISNA": 84,
-    "ایسنا": 84,
-    "Tasnim": 82,
-    "خبرگزاری تسنیم": 82,
-    "Mehr": 82,
-    "خبرگزاری مهر": 82,
+    "Tasnim News": 82,
+    "Mehr News": 82,
     "Fars": 80,
-    "KhabarFoory": 75,
-    "خبرآنلاین": 78,
-    "تابناک": 75,
-    "باشگاه خبرنگاران جوان": 72,
+    "Khabar Online": 78,
+    "Tabnak": 75,
+    "YJC": 72,
 
 }
