@@ -36,7 +36,7 @@
   },
   {
     "id": "cnn_world",
-    "name": "CNN World",
+    "name": "CNN",
     "source_type": "rss",
     "url": "http://rss.cnn.com/rss/edition_world.rss",
     "country": "US",
@@ -53,7 +53,7 @@
   },
   {
     "id": "guardian_world",
-    "name": "The Guardian World",
+    "name": "Guardian",
     "source_type": "rss",
     "url": "https://www.theguardian.com/world/rss",
     "country": "GB",
@@ -70,7 +70,7 @@
   },
   {
     "id": "nytimes_world",
-    "name": "The New York Times World",
+    "name": "The New York Times",
     "source_type": "rss",
     "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
     "country": "US",
