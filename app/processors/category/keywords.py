@@ -6,8 +6,6 @@ Category Keywords
 
 CATEGORY_KEYWORDS = {
 
-    # سیاست + جنگ/درگیری (طبق تصمیم قبلی: هرچیز مرتبط با جنگ، مذاکرات،
-    # تحریم و... باید دسته و هشتگ سیاست بگیرد، نه یک دسته‌ی جدا)
     "politics": [
         "رئیس جمهور",
         "وزیر",
@@ -24,17 +22,22 @@ CATEGORY_KEYWORDS = {
         "کرملین",
         "وزارت خارجه",
         "NATO",
-        "UN",
+        "United Nations",
         "Pentagon",
         "White House",
+        "Kremlin",
         "President",
         "Prime Minister",
         "Government",
         "Election",
         "Parliament",
         "Diplomacy",
+        "Diplomatic",
         "Sanctions",
-        # کلیدواژه‌های جنگ/درگیری که قبلاً دسته‌ی جدا "war" بودند
+        "Ambassador",
+        "Foreign Ministry",
+        "Congress",
+        "Senate",
         "جنگ",
         "حمله",
         "موشک",
@@ -49,12 +52,16 @@ CATEGORY_KEYWORDS = {
         "اوکراین",
         "روسیه",
         "Israel",
+        "Ukraine",
+        "Russia",
         "Missile",
         "Drone",
         "Airstrike",
         "Army",
         "Military",
         "War",
+        "Ceasefire",
+        "Conflict",
     ],
 
     "iran": [
@@ -87,12 +94,21 @@ CATEGORY_KEYWORDS = {
         "گاز",
         "بازار",
         "Bitcoin",
+        "Cryptocurrency",
         "Oil",
         "Gold",
         "Inflation",
         "Economy",
+        "Economic",
         "Stock",
-        "Bank"
+        "Stock Market",
+        "Bank",
+        "Trade",
+        "Tariff",
+        "GDP",
+        "Recession",
+        "Investment",
+        "Currency",
     ],
 
     "technology": [
@@ -109,7 +125,16 @@ CATEGORY_KEYWORDS = {
         "Apple",
         "Microsoft",
         "Tesla",
-        "SpaceX"
+        "SpaceX",
+        "Technology",
+        "Tech",
+        "Software",
+        "App",
+        "Smartphone",
+        "Startup",
+        "Cybersecurity",
+        "Chip",
+        "Semiconductor",
     ],
 
     "health": [
@@ -122,7 +147,21 @@ CATEGORY_KEYWORDS = {
         "Hospital",
         "Health",
         "Medicine",
-        "COVID"
+        "Medical",
+        "COVID",
+        "Doctor",
+        "Physician",
+        "Patient",
+        "Pregnant",
+        "Pregnancy",
+        "Clinic",
+        "Disease",
+        "Vaccine",
+        "Nurse",
+        "Surgery",
+        "Mental Health",
+        "Diet",
+        "Nutrition",
     ],
 
     "weather": [
@@ -137,7 +176,12 @@ CATEGORY_KEYWORDS = {
         "Weather",
         "Storm",
         "Flood",
-        "Earthquake"
+        "Earthquake",
+        "Hurricane",
+        "Heatwave",
+        "Drought",
+        "Rainfall",
+        "Snowfall",
     ],
 
     "sport": [
@@ -150,10 +194,16 @@ CATEGORY_KEYWORDS = {
         "المپیک",
         "ورزش",
         "Football",
+        "Soccer",
         "Basketball",
         "Volleyball",
         "Tennis",
-        "Olympics"
+        "Olympics",
+        "Sport",
+        "Athlete",
+        "Championship",
+        "Tournament",
+        "League",
     ]
 
 }
