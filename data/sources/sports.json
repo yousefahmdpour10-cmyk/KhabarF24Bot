@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "id": "bbc_sport",
+    "name": "BBC",
+    "source_type": "rss",
+    "url": "https://feeds.bbci.co.uk/sport/rss.xml",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["sport"],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "bbc_football",
+    "name": "BBC",
+    "source_type": "rss",
+    "url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": ["sport"],
+    "priority": 88,
+    "check_interval": 60,
+    "enabled": true
+  }
+]
