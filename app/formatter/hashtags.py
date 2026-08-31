@@ -4,11 +4,13 @@ Smart Hashtag Engine
 
 CATEGORY_TAGS = {
     "world": "#جهان",
+    "general": "#جهان",
     "iran": "#ایران",
     "politics": "#سیاسی",
     "economy": "#اقتصاد",
     "technology": "#فناوری",
     "health": "#سلامت",
+    "weather": "#هواشناسی",
     "sport": "#ورزش",
 }
 
@@ -39,18 +41,13 @@ class HashtagBuilder:
         category = (getattr(news, "category", None) or "").lower()
         sport_hashtag = getattr(news, "sport_hashtag", None)
 
-        # دسته خبر
         if category == "sport" and sport_hashtag:
-            # به‌جای هشتگ کلی #ورزش، فقط هشتگ دقیق همون رشته
-            # (از SportDetector گرفته می‌شود، نه یک دیکشنری جدا اینجا،
-            # تا هیچ‌وقت این دو جا از هم عقب نیفتند)
             hashtags.append(sport_hashtag)
         elif category:
             tag = CATEGORY_TAGS.get(category)
             if tag:
                 hashtags.append(tag)
 
-        # لیگ یا تورنمنت
         if getattr(news, "league", None):
             tag = LEAGUE_TAGS.get(
                 news.league.lower()
@@ -58,7 +55,6 @@ class HashtagBuilder:
             if tag and tag not in hashtags:
                 hashtags.append(tag)
 
-        # خبر فوری
         if getattr(news, "is_breaking", False):
             hashtags.append(BREAKING_TAG)
 
