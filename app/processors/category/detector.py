@@ -9,12 +9,22 @@ from app.models.raw_news import RawNews
 from app.processors.category.keywords import CATEGORY_KEYWORDS
 from app.utils.logger import logger
 
-# حداقل امتیاز لازم برای اینکه به یک دسته اعتماد کنیم.
-# اگر بهترین دسته فقط با یک کلیدواژه‌ی ضعیف/عمومی انتخاب شده باشد
-# (مثلاً فقط یک بار "دولت" در کل متن آمده)، آن را نمی‌پذیریم و
-# به‌جایش خبر را "general" در نظر می‌گیریم (که در فرمتر پیش‌فرض
-# WorldTemplate را می‌گیرد) تا دسته‌بندی و هشتگ اشتباه نخورد.
 MIN_CATEGORY_SCORE = 2
+
+# منابعی که کاملاً داخلی/ایرانی هستند. اگر هیچ دسته‌ی دیگری با کلیدواژه
+# به‌درستی تشخیص داده نشود (خبر افتاد در general)، چون این منابع خودشان
+# رسانه‌ی داخلی ایران هستند، منطقی‌تر است پیش‌فرض به "iran" برود تا
+# "general" بی‌معنا -- حتی اگر متن خبر اسم صریح "ایران"/"تهران" نداشته باشد.
+IRANIAN_SOURCES = {
+    "isna",
+    "mehr news",
+    "tasnim news",
+    "khabar online",
+    "tabnak",
+    "yjc",
+    "irna",
+    "fars",
+}
 
 
 class CategoryDetector:
@@ -38,6 +48,8 @@ class CategoryDetector:
                 if keyword.lower() in text:
                     scores[category] += 1
 
+        final_category = "general"
+
         if scores:
 
             best_category = max(
@@ -48,26 +60,21 @@ class CategoryDetector:
             best_score = scores[best_category]
 
             if best_score >= MIN_CATEGORY_SCORE:
+                final_category = best_category
 
-                news.category = best_category
+        if final_category == "general":
 
+            source = (getattr(news, "source", None) or "").strip().lower()
+
+            if source in IRANIAN_SOURCES:
+                final_category = "iran"
                 logger.info(
-                    f"Category: {best_category} (score={best_score})"
+                    f"Category: iran (defaulted from general, source '{news.source}' is a domestic Iranian outlet)"
                 )
+                news.category = final_category
+                return news
 
-            else:
-
-                news.category = "general"
-
-                logger.info(
-                    f"Category: general (best guess '{best_category}' too weak, score={best_score})"
-                )
-
-        else:
-
-            news.category = "general"
-            logger.info(
-                "Category: general"
-            )
+        news.category = final_category
+        logger.info(f"Category: {final_category}")
 
         return news
