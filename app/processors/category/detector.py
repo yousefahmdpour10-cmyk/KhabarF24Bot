@@ -11,21 +11,6 @@ from app.utils.logger import logger
 
 MIN_CATEGORY_SCORE = 2
 
-# منابعی که کاملاً داخلی/ایرانی هستند. اگر هیچ دسته‌ی دیگری با کلیدواژه
-# به‌درستی تشخیص داده نشود (خبر افتاد در general)، چون این منابع خودشان
-# رسانه‌ی داخلی ایران هستند، منطقی‌تر است پیش‌فرض به "iran" برود تا
-# "general" بی‌معنا -- حتی اگر متن خبر اسم صریح "ایران"/"تهران" نداشته باشد.
-IRANIAN_SOURCES = {
-    "isna",
-    "mehr news",
-    "tasnim news",
-    "khabar online",
-    "tabnak",
-    "yjc",
-    "irna",
-    "fars",
-}
-
 
 class CategoryDetector:
     """
@@ -64,12 +49,17 @@ class CategoryDetector:
 
         if final_category == "general":
 
-            source = (getattr(news, "source", None) or "").strip().lower()
+            # اگر کلیدواژه‌ها ضعیف بودند، به دسته‌بندی‌ای که خودمان
+            # موقع تعریف این منبع در sources.json برایش مشخص کرده‌ایم
+            # اعتماد می‌کنیم -- فقط وقتی که منبع دقیقاً یک دسته دارد
+            # (یعنی بدون ابهام است، مثل یک فید اختصاصی فوتبال یا یک
+            # خبرگزاری کاملاً داخلی ایران).
+            hint = getattr(news, "source_category_hint", None)
 
-            if source in IRANIAN_SOURCES:
-                final_category = "iran"
+            if hint and len(hint) == 1:
+                final_category = hint[0]
                 logger.info(
-                    f"Category: iran (defaulted from general, source '{news.source}' is a domestic Iranian outlet)"
+                    f"Category: {final_category} (defaulted from general via source hint, source='{news.source}')"
                 )
                 news.category = final_category
                 return news
