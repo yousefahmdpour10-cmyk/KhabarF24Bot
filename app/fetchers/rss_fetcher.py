@@ -52,6 +52,14 @@ class RSSFetcher(BaseFetcher):
                     language=self.source.language,
                 )
 
+                # دسته‌بندی‌ای که خودمان برای این منبع در sources.json
+                # تعریف کرده‌ایم (مثلاً ["sport"] برای فید فوتبال BBC).
+                # اگر تشخیص با کلیدواژه ضعیف بود، CategoryDetector از این
+                # به‌عنوان راهنما استفاده می‌کند.
+                news.source_category_hint = getattr(
+                    self.source, "categories", None
+                )
+
                 news_list.append(news)
 
             except Exception as e:
