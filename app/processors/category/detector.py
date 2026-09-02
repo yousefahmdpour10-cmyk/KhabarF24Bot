@@ -8,6 +8,7 @@ from collections import defaultdict
 from app.models.raw_news import RawNews
 from app.processors.category.keywords import CATEGORY_KEYWORDS
 from app.utils.logger import logger
+from app.utils.text_matching import keyword_in_text
 
 MIN_CATEGORY_SCORE = 2
 
@@ -15,6 +16,12 @@ MIN_CATEGORY_SCORE = 2
 class CategoryDetector:
     """
     تشخیص دسته خبر
+
+    این کلاس باید بعد از SportDetector در pipeline اجرا شود، چون اگر
+    SportDetector قبلاً یک رشته‌ی ورزشی مشخص را تشخیص داده باشد (که
+    لیست کلیدواژه‌ی بسیار کامل‌تری دارد، شامل نام بازیکنان و اصطلاحات
+    تخصصی)، آن نتیجه معتبرتر از حدس دوباره با لیست عمومی‌تر این فایل
+    است.
     """
 
     async def process(
@@ -22,7 +29,16 @@ class CategoryDetector:
         news: RawNews,
     ) -> RawNews:
 
-        text = f"{news.title} {news.summary}".lower()
+        # اگر SportDetector از قبل رشته‌ای را تشخیص داده، همان را
+        # بپذیر -- نیازی به حدس دوباره نیست.
+        if getattr(news, "sport", None):
+            news.category = "sport"
+            logger.info(
+                f"Category: sport (trusted from SportDetector, sport='{news.sport}')"
+            )
+            return news
+
+        text = f"{news.title} {news.summary}"
 
         scores = defaultdict(int)
 
@@ -30,7 +46,7 @@ class CategoryDetector:
 
             for keyword in keywords:
 
-                if keyword.lower() in text:
+                if keyword_in_text(keyword, text):
                     scores[category] += 1
 
         final_category = "general"
@@ -49,11 +65,6 @@ class CategoryDetector:
 
         if final_category == "general":
 
-            # اگر کلیدواژه‌ها ضعیف بودند، به دسته‌بندی‌ای که خودمان
-            # موقع تعریف این منبع در sources.json برایش مشخص کرده‌ایم
-            # اعتماد می‌کنیم -- فقط وقتی که منبع دقیقاً یک دسته دارد
-            # (یعنی بدون ابهام است، مثل یک فید اختصاصی فوتبال یا یک
-            # خبرگزاری کاملاً داخلی ایران).
             hint = getattr(news, "source_category_hint", None)
 
             if hint and len(hint) == 1:
