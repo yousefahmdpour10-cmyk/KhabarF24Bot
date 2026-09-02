@@ -8,8 +8,8 @@ from app.ai.content_generator import ContentGenerator
 from app.models.raw_news import RawNews
 
 from app.processors.language.detector import LanguageDetector
-from app.processors.category import CategoryDetector
 from app.processors.sport import SportDetector
+from app.processors.category import CategoryDetector
 from app.processors.duplicate import DuplicateChecker
 from app.processors.credibility import CredibilityChecker
 from app.processors.importance import ImportanceScorer
@@ -22,8 +22,10 @@ class NewsPipeline:
 
     def __init__(self):
         self.language = LanguageDetector()
-        self.category = CategoryDetector()
+        # نکته: SportDetector باید قبل از CategoryDetector اجرا شود
+        # چون CategoryDetector به نتیجه‌ی آن اعتماد می‌کند.
         self.sport = SportDetector()
+        self.category = CategoryDetector()
         self.duplicate = DuplicateChecker()
         self.credibility = CredibilityChecker()
         self.importance = ImportanceScorer()
@@ -34,8 +36,8 @@ class NewsPipeline:
         logger.info("Pipeline Started")
 
         news = await self.language.process(news)
-        news = await self.category.process(news)
         news = await self.sport.process(news)
+        news = await self.category.process(news)
 
         news = await self.duplicate.process(news)
         if getattr(news, "is_duplicate", False):
