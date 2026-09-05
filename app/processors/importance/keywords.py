@@ -4,7 +4,6 @@ Keyword Importance Scores
 
 KEYWORD_SCORES = {
 
-    # جنگ
     "جنگ": 10,
     "حمله": 10,
     "موشک": 10,
@@ -20,8 +19,6 @@ KEYWORD_SCORES = {
     "attack": 10,
     "airstrike": 10,
 
-    # بحران
-
     "زلزله": 10,
     "سیل": 9,
     "طوفان": 8,
@@ -33,8 +30,6 @@ KEYWORD_SCORES = {
     "tsunami": 10,
     "wildfire": 8,
 
-    # سیاست
-
     "رئیس جمهور": 5,
     "انتخابات": 6,
     "تحریم": 7,
@@ -43,8 +38,6 @@ KEYWORD_SCORES = {
     "election": 6,
     "sanctions": 7,
 
-    # اقتصاد
-
     "دلار": 4,
     "طلا": 4,
     "بورس": 4,
@@ -52,8 +45,6 @@ KEYWORD_SCORES = {
     "bitcoin": 4,
     "oil": 5,
     "gold": 4,
-
-    # ورزش
 
     "گل": 2,
     "فینال": 5,
