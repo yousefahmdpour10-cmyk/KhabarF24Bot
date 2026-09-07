@@ -4,9 +4,12 @@ Category Importance
 
 CATEGORY_SCORES = {
 
-    "war": 10,
+    # نکته: "war" دیگر یک دسته‌ی جدا نیست (طبق تصمیم قبلی، در
+    # "politics" ادغام شد)، پس امتیاز فوریت جنگ را مستقیم به
+    # "politics" هم اضافه می‌کنیم تا از دست نرود.
+    "politics": 8,
 
-    "politics": 7,
+    "iran": 6,
 
     "economy": 5,
 
@@ -16,7 +19,8 @@ CATEGORY_SCORES = {
 
     "weather": 7,
 
-    "sports": 2,
+    # نکته: کلید درست "sport" است (مفرد)، نه "sports".
+    "sport": 3,
 
     "general": 1,
 }
