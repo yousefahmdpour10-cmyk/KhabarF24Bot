@@ -9,6 +9,7 @@ from collections import defaultdict
 from app.models.raw_news import RawNews
 from app.processors.sport.keywords import SPORTS
 from app.utils.logger import logger
+from app.utils.text_matching import keyword_in_text
 
 
 class SportDetector:
@@ -21,7 +22,7 @@ class SportDetector:
         news: RawNews,
     ) -> RawNews:
 
-        text = f"{news.title} {news.summary}".lower()
+        text = f"{news.title} {news.summary}"
 
         scores = defaultdict(int)
 
@@ -29,7 +30,7 @@ class SportDetector:
 
             for keyword in sport["keywords"]:
 
-                if keyword.lower() in text:
+                if keyword_in_text(keyword, text):
 
                     scores[sport_id] += 1
 
