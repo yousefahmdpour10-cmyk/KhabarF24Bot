@@ -9,6 +9,7 @@ from app.formatter.icons import (
     SUMMARY,
     SOURCE,
 )
+from app.formatter.header import build_header
 from app.formatter.footer import build_footer
 from app.formatter.source_flags import get_flag
 from app.formatter.hashtags import HashtagBuilder
@@ -28,9 +29,8 @@ class WorldTemplate(BaseTemplate):
         hashtags = self.hashtags.build(news)
 
         text = ""
-        text += "━━━━━━━━━━━━━━━━\n"
-        text += "🔴 KhabarF24 | 🌍 جهان\n"
-        text += "━━━━━━━━━━━━━━━━\n\n"
+        text += build_header("🌍 جهان", getattr(news, "is_breaking", False))
+        text += "\n\n"
         text += f"{TITLE} {news.title}\n\n"
 
         if getattr(news, "summary", None):
