@@ -1,15 +1,9 @@
 """
 Basketball Formatter
-KhabarF24
-
-Formatter سطح بالای بسکتبال.
-
-این فایل نقش رابط بین سیستم اصلی Sports
-و موتور اختصاصی بسکتبال را دارد.
 """
 
 from app.models.raw_news import RawNews
-
+from app.formatter.header import build_header
 from app.formatter.footer import build_footer
 from app.formatter.hashtags import HashtagBuilder
 from app.formatter.source_flags import get_flag
@@ -17,20 +11,12 @@ from app.formatter.icons import (
     TITLE,
     SOURCE,
 )
-
 from .builder import BasketballBuilder
 
 
 class BasketballFormatter:
-    """
-    Formatter اصلی اخبار بسکتبال.
-
-    این کلاس مانند FootballFormatter فقط
-    لایه اتصال به موتور تخصصی بسکتبال است.
-    """
 
     def __init__(self):
-
         self.hashtags = HashtagBuilder()
         self.builder = BasketballBuilder()
 
@@ -38,76 +24,24 @@ class BasketballFormatter:
         self,
         news: RawNews,
     ) -> str:
-        """
-        ساخت پست نهایی خبر بسکتبال.
-        """
 
         text = ""
-
-        # ====================================================
-        # HASHTAGS
-        # ====================================================
-
         hashtags = self.hashtags.build(news)
+        flag = get_flag(news.source)
 
-        # ====================================================
-        # SOURCE FLAG
-        # ====================================================
+        text += build_header("🏀 بسکتبال", getattr(news, "is_breaking", False))
+        text += "\n\n"
+        text += f"{TITLE} {news.title}\n\n"
 
-        flag = get_flag(
-            news.source
-        )
-
-        # ====================================================
-        # HEADER
-        # ====================================================
-
-        text += "━━━━━━━━━━━━━━━━\n"
-        text += "🔴 KhabarF24 | 🏀 بسکتبال\n"
-        text += "━━━━━━━━━━━━━━━━\n\n"
-
-        # ====================================================
-        # TITLE
-        # ====================================================
-
-        text += (
-            f"{TITLE} {news.title}\n\n"
-        )
-
-        # ====================================================
-        # BASKETBALL DETAILS
-        # ====================================================
-
-        details = self.build_details(
-            news
-        )
-
+        details = self.build_details(news)
         if details:
-
             text += details
             text += "\n\n"
 
-        # ====================================================
-        # SOURCE
-        # ====================================================
-
-        text += (
-            f"{SOURCE} {flag} "
-            f"{news.source}\n"
-        )
-
-        # ====================================================
-        # FOOTER
-        # ====================================================
-
+        text += f"{SOURCE} {flag} {news.source}\n"
         text += build_footer()
 
-        # ====================================================
-        # HASHTAGS
-        # ====================================================
-
         if hashtags:
-
             text += "\n\n"
             text += hashtags
 
@@ -117,11 +51,4 @@ class BasketballFormatter:
         self,
         news: RawNews,
     ) -> str:
-        """
-        ساخت بخش تخصصی خبر بسکتبال.
-        در BasketballBuilder مدیریت می‌شود.
-        """
-
-        return self.builder.build(
-            news
-        )
+        return self.builder.build(news)
