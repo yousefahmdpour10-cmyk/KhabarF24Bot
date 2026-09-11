@@ -3,6 +3,7 @@ Volleyball Formatter
 """
 
 from app.models.raw_news import RawNews
+from app.formatter.header import build_header
 from app.formatter.footer import build_footer
 from app.formatter.hashtags import HashtagBuilder
 from app.formatter.source_flags import get_flag
@@ -33,9 +34,8 @@ class VolleyballFormatter:
         label = getattr(news, "sport_name", None) or DEFAULT_LABEL
 
         text = ""
-        text += "━━━━━━━━━━━━━━━━\n"
-        text += f"🔴 KhabarF24 | {emoji} {label}\n"
-        text += "━━━━━━━━━━━━━━━━\n\n"
+        text += build_header(f"{emoji} {label}", getattr(news, "is_breaking", False))
+        text += "\n\n"
         text += f"{TITLE} {news.title}\n\n"
 
         if getattr(news, "summary", None):
