@@ -22,8 +22,6 @@ class NewsPipeline:
 
     def __init__(self):
         self.language = LanguageDetector()
-        # نکته: SportDetector باید قبل از CategoryDetector اجرا شود
-        # چون CategoryDetector به نتیجه‌ی آن اعتماد می‌کند.
         self.sport = SportDetector()
         self.category = CategoryDetector()
         self.duplicate = DuplicateChecker()
@@ -53,10 +51,21 @@ class NewsPipeline:
 
         news = await self.content_generator.process(news)
         if not getattr(news, "content_generated", False):
-            logger.info("Pipeline Stopped: AI content generation failed, not publishing raw/untranslated text")
+            logger.info(
+                "Pipeline Stopped: AI content generation failed "
+                "(will retry this item next cycle, not marked as seen)"
+            )
             return news
 
-        await self.publisher.publish(news)
+        published = await self.publisher.publish(news)
 
-        logger.info("Pipeline Finished")
+        if published:
+            # فقط حالا که واقعاً منتشر شد، به حافظه‌ی تکراری اضافه کن
+            self.duplicate.mark_seen(news)
+            logger.info("Pipeline Finished")
+        else:
+            logger.info(
+                "Pipeline Stopped: publish failed (will retry this item next cycle)"
+            )
+
         return news
