@@ -25,6 +25,14 @@ class DuplicateChecker:
             f"{news.title} {news.summary}"
         )
 
+        # این متن را برای مرحله‌ی بعد (mark_seen) نگه می‌داریم، ولی
+        # هنوز به کش اضافه نمی‌کنیم -- چون هنوز معلوم نیست این خبر
+        # واقعاً منتشر می‌شود یا در مراحل بعدی (مثلاً شکست AI) رد
+        # می‌شود. اگر همین‌جا اضافه‌اش کنیم، خبری که فقط به‌خاطر
+        # محدودیت موقت Gemini شکست خورده، برای همیشه "دیده‌شده"
+        # علامت می‌خورد و دیگر هیچ‌وقت دوباره امتحان نمی‌شود.
+        news._dedup_text = text
+
         news.is_duplicate = False
         news.duplicate_score = 0
 
@@ -46,8 +54,21 @@ class DuplicateChecker:
 
                 return news
 
-        self.cache.append(text)
-
         logger.info("Unique News")
 
         return news
+
+    def mark_seen(
+        self,
+        news: RawNews,
+    ) -> None:
+        """
+        فقط بعد از انتشار موفق خبر صدا زده می‌شود -- تا خبری که
+        هنوز واقعاً منتشر نشده (مثلاً به‌خاطر شکست AI)، بتواند در
+        چرخه‌ی بعدی دوباره امتحان شود.
+        """
+
+        text = getattr(news, "_dedup_text", None)
+
+        if text and text not in self.cache:
+            self.cache.append(text)
