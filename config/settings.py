@@ -52,7 +52,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 # تنظیمات بررسی خبر
 # ==========================================================
 
-CHECK_INTERVAL = 60
+CHECK_INTERVAL = 180
 
 MAX_POSTS_PER_HOUR = 100
 
