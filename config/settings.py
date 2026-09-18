@@ -54,6 +54,8 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 CHECK_INTERVAL = 180
 
+SPORTS_API_KEY = os.getenv("SPORTS_API_KEY", "")
+
 MAX_POSTS_PER_HOUR = 100
 
 MIN_POST_DELAY = 5
