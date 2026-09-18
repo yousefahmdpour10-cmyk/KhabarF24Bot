@@ -1,5 +1,3 @@
-# app/services/fetch_service.py
-
 """
 Fetch Service
 
@@ -10,6 +8,7 @@ from typing import List
 
 from app.fetchers.rss_fetcher import RSSFetcher
 from app.fetchers.website_fetcher import WebsiteFetcher
+from app.fetchers.sports_api_fetcher import SportsApiFetcher
 from app.models.news_source import NewsSource
 from app.models.raw_news import RawNews
 from app.utils.logger import logger
@@ -32,7 +31,11 @@ class FetchService:
 
         try:
 
-            if source.has_rss:
+            if source.has_api:
+
+                fetcher = SportsApiFetcher(source)
+
+            elif source.has_rss:
 
                 fetcher = RSSFetcher(source)
 
