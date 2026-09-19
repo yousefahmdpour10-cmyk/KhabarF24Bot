@@ -2,12 +2,9 @@ name: KhabarF24 Bot
 
 on:
   schedule:
-    # هر ۶ ساعت یک‌بار یک session جدید شروع می‌شود (خود اجرا داخلش
-    # هر ۶۰ ثانیه چک می‌کند، طبق CHECK_INTERVAL در main.py)
     - cron: "0 */6 * * *"
   workflow_dispatch: {}
 
-# جلوگیری از اجرای هم‌زمان دو session (تا خبر تکراری منتشر نشود)
 concurrency:
   group: khabarf24-bot
   cancel-in-progress: false
@@ -20,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: KhabarF24-v2
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -36,4 +35,5 @@ jobs:
           CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          SPORTS_API_KEY: ${{ secrets.SPORTS_API_KEY }}
         run: python main.py
