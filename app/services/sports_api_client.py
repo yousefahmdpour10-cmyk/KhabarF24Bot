@@ -4,7 +4,7 @@ Sports API Client (api-football.com)
 اتصال به API-Football برای گرفتن نتیجه‌ی بازی‌ها و گلزنان.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import aiohttp
 
@@ -13,7 +13,6 @@ from app.utils.logger import logger
 
 BASE_URL = "https://v3.football.api-sports.io"
 
-# لیگ‌های دنبال‌شده (شناسه‌ی رسمی API-Football)
 FOLLOWED_LEAGUES: Dict[int, str] = {
     39: "Premier League",
     140: "La Liga",
@@ -47,7 +46,15 @@ class SportsApiClient:
             ) as session:
                 async with session.get(url, params=params) as response:
                     if response.status == 200:
-                        return await response.json()
+                        data = await response.json()
+
+                        errors = data.get("errors")
+                        if errors:
+                            logger.error(
+                                f"SportsApiClient API error -> {errors}"
+                            )
+
+                        return data
 
                     body = await response.text()
                     logger.error(
@@ -60,10 +67,6 @@ class SportsApiClient:
         return None
 
     async def get_finished_fixtures(self, date: str) -> List[dict]:
-        """
-        بازی‌های تمام‌شده در یک تاریخ مشخص (YYYY-MM-DD)، فقط از
-        لیگ‌های دنبال‌شده.
-        """
 
         fixtures: List[dict] = []
 
@@ -79,18 +82,24 @@ class SportsApiClient:
             )
 
             if not data:
+                logger.warning(
+                    f"SportsApiClient: پاسخی برای لیگ {league_name} دریافت نشد"
+                )
                 continue
 
-            for item in data.get("response", []):
+            found = data.get("response", [])
+
+            logger.info(
+                f"SportsApiClient: {league_name} -> {len(found)} بازی تمام‌شده در {date}"
+            )
+
+            for item in found:
                 item["_league_name"] = league_name
                 fixtures.append(item)
 
         return fixtures
 
     async def get_fixture_events(self, fixture_id: int) -> List[dict]:
-        """
-        رویدادهای یک بازی (گل‌ها، کارت‌ها و ...).
-        """
 
         data = await self._get(
             "/fixtures/events",
