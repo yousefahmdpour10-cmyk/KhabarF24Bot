@@ -1,57 +1,52 @@
 """
-Generic Sport Formatter
-
-برای هر رشته‌ی ورزشی که هنوز فرمتر اختصاصی ندارد (شنا، دوومیدانی،
-بوکس، فرمول یک، گلف، بیسبال و ...). قبلاً این رشته‌ها به‌اشتباه به
-FootballFormatter می‌افتادند (هدرشان همیشه "⚽ فوتبال" می‌شد)، در
-حالی که این فایل هدر را دقیقاً بر اساس رشته‌ی واقعی تشخیص‌داده‌شده
-می‌سازد.
+رشته‌های ورزشی
 """
 
-from app.models.raw_news import RawNews
-from app.formatter.header import build_header
-from app.formatter.footer import build_footer
-from app.formatter.hashtags import HashtagBuilder
-from app.formatter.source_flags import get_flag
-from app.formatter.icons import (
-    TITLE,
-    SUMMARY,
-    SOURCE,
-)
-
-DEFAULT_EMOJI = "🏅"
-DEFAULT_LABEL = "ورزش"
+from enum import Enum
 
 
-class GenericSportFormatter:
+class Sport(str, Enum):
+    """
+    رشته‌های ورزشی KhabarF24
+    """
 
-    def __init__(self):
-        self.hashtags = HashtagBuilder()
+    FOOTBALL = "football"
+    FUTSAL = "futsal"
 
-    async def format(
-        self,
-        news: RawNews,
-    ) -> str:
+    BASKETBALL = "basketball"
+    VOLLEYBALL = "volleyball"
 
-        flag = get_flag(news.source)
-        hashtags = self.hashtags.build(news)
+    TENNIS = "tennis"
+    TABLE_TENNIS = "table_tennis"
 
-        emoji = getattr(news, "sport_emoji", None) or DEFAULT_EMOJI
-        label = getattr(news, "sport_name", None) or DEFAULT_LABEL
+    WRESTLING = "wrestling"
+    BOXING = "boxing"
 
-        text = ""
-        text += build_header(f"{emoji} {label}", getattr(news, "is_breaking", False))
-        text += "\n\n"
-        text += f"{TITLE} {news.title}\n\n"
+    MMA = "mma"
+    UFC = "ufc"
 
-        if getattr(news, "summary", None):
-            text += f"{SUMMARY} {news.summary}\n\n"
+    JUDO = "judo"
+    TAEKWONDO = "taekwondo"
+    KARATE = "karate"
 
-        text += f"{SOURCE} {flag} {news.source}\n"
-        text += build_footer()
+    HANDBALL = "handball"
 
-        if hashtags:
-            text += "\n\n"
-            text += hashtags
+    ATHLETICS = "athletics"
 
-        return text
+    CYCLING = "cycling"
+
+    SWIMMING = "swimming"
+
+    GYMNASTICS = "gymnastics"
+
+    MOTORSPORT = "motorsport"
+
+    FORMULA1 = "formula1"
+
+    MOTOGP = "motogp"
+
+    CHESS = "chess"
+
+    ESPORTS = "esports"
+
+    OTHER = "other"
