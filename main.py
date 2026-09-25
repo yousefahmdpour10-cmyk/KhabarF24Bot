@@ -21,6 +21,11 @@ MAX_RUNTIME_SECONDS = 5 * 3600 + 50 * 60  # 5h50m
 MAX_PUBLISH_PER_CYCLE = 3
 MAX_CANDIDATES_PER_CYCLE = 50
 
+# فاصله‌ی حداقلی بین بررسی هر کاندید، حتی وقتی رد می‌شود (تکراری،
+# اعتبار کم و ...) -- تا درخواست‌های Gemini خیلی فشرده و پشت‌سرهم
+# نروند و به محدودیت نرخ (RPM) برخورد نکنیم.
+MIN_GAP_BETWEEN_CANDIDATES = 3
+
 
 async def main():
     logger.info("KhabarF24 Bot Started Successfully")
@@ -42,9 +47,6 @@ async def main():
             logger.info("Checking for new news...")
             all_news = await fetch_service.fetch_all(sources)
 
-            # به‌هم‌ریختن ترتیب تا همه‌ی منابع شانس برابر داشته باشند
-            # (وگرنه چون فایل‌های JSON به ترتیب حروف الفبا خوانده می‌شوند،
-            # همیشه اول همان چند منبع اول بررسی می‌شدند)
             random.shuffle(all_news)
 
             published = 0
@@ -57,9 +59,11 @@ async def main():
                 result = await pipeline.process(news)
 
                 if getattr(result, "is_duplicate", False):
+                    await asyncio.sleep(MIN_GAP_BETWEEN_CANDIDATES)
                     continue
 
                 if not getattr(result, "content_generated", False):
+                    await asyncio.sleep(MIN_GAP_BETWEEN_CANDIDATES)
                     continue
 
                 published += 1
