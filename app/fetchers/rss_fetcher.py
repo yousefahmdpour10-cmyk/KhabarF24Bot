@@ -5,7 +5,7 @@ RSS Fetcher
 """
 
 import feedparser
-from typing import List
+from typing import List, Optional
 
 from app.fetchers.base_fetcher import BaseFetcher
 from app.models.raw_news import RawNews
@@ -52,13 +52,11 @@ class RSSFetcher(BaseFetcher):
                     language=self.source.language,
                 )
 
-                # دسته‌بندی‌ای که خودمان برای این منبع در sources.json
-                # تعریف کرده‌ایم (مثلاً ["sport"] برای فید فوتبال BBC).
-                # اگر تشخیص با کلیدواژه ضعیف بود، CategoryDetector از این
-                # به‌عنوان راهنما استفاده می‌کند.
                 news.source_category_hint = getattr(
                     self.source, "categories", None
                 )
+
+                news.image_url = self._extract_image_url(entry)
 
                 news_list.append(news)
 
@@ -69,3 +67,32 @@ class RSSFetcher(BaseFetcher):
                 )
 
         return news_list
+
+    @staticmethod
+    def _extract_image_url(entry) -> Optional[str]:
+        """
+        تلاش برای پیدا کردن آدرس عکس خبر از فرمت‌های رایج RSS
+        (media:thumbnail, media:content, enclosure).
+        """
+
+        media_thumbnail = getattr(entry, "media_thumbnail", None)
+        if media_thumbnail:
+            url = media_thumbnail[0].get("url")
+            if url:
+                return url
+
+        media_content = getattr(entry, "media_content", None)
+        if media_content:
+            url = media_content[0].get("url")
+            if url:
+                return url
+
+        for link in getattr(entry, "links", []):
+            if link.get("rel") == "enclosure" and str(
+                link.get("type", "")
+            ).startswith("image"):
+                url = link.get("href")
+                if url:
+                    return url
+
+        return None
