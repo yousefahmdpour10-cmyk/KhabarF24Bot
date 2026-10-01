@@ -13,7 +13,7 @@ from PIL import Image
 
 from app.utils.logger import logger
 
-LOGO_PATH = Path("assets/watermark_logo.png")
+LOGO_PATH = Path("assets/IMG_20260720_162446_015.jpg")
 
 # عرض لوگو نسبت به عرض عکس اصلی (مثلاً ۱۸٪ عرض عکس) -- کوچک و
 # غیرآزاردهنده، نه بزرگ.
