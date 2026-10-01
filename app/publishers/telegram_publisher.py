@@ -3,12 +3,18 @@ Telegram Publisher - KhabarF24
 ارسال نهایی خبر به کانال تلگرام
 """
 
+import io
+
 from telegram import Bot
 
 from config import settings
 from app.models.raw_news import RawNews
 from app.formatter.formatter import Formatter
+from app.utils.watermark import build_watermarked_image
 from app.utils.logger import logger
+
+# محدودیت واقعی تلگرام برای توضیح زیر عکس/ویدیو (کوتاه‌تر از پیام متنی)
+CAPTION_LIMIT = 1024
 
 
 class TelegramPublisher:
@@ -26,12 +32,35 @@ class TelegramPublisher:
         """
         یک خبر را به کانال ارسال می‌کند.
 
-        مسیریابی بین دسته‌ها (سیاست/ایران/جهان/... و رشته‌های ورزشی مثل
-        فوتبال/بسکتبال/...) کاملاً داخل Formatter انجام می‌شود؛ این فایل
-        هیچ تصمیمی درباره‌ی نوع خبر نمی‌گیرد.
+        اگر خبر عکس داشته باشد و متن پست زیر محدودیت caption باشد،
+        به‌صورت عکس (با لوگوی کانال گوشه‌ی پایین) ارسال می‌شود؛ در
+        غیر این‌صورت مثل قبل به‌صورت پیام متنی ساده.
         """
         try:
             text = await self.formatter.format(news)
+
+            image_url = getattr(news, "image_url", None)
+
+            if image_url and len(text) <= CAPTION_LIMIT:
+
+                image_bytes = await build_watermarked_image(image_url)
+
+                if image_bytes:
+
+                    await self.bot.send_photo(
+                        chat_id=settings.CHANNEL_ID,
+                        photo=io.BytesIO(image_bytes),
+                        caption=text,
+                        parse_mode="Markdown",
+                    )
+
+                    logger.info(f"✅ Published (photo) to Telegram: {news.title[:70]}...")
+                    return True
+
+                # اگر واترمارک/دانلود شکست خورد، به حالت متن‌ساده برمی‌گردیم
+                logger.warning(
+                    "TelegramPublisher: ساخت عکس واترمارک‌دار ناموفق بود، به متن‌ساده برگشت شد"
+                )
 
             await self.bot.send_message(
                 chat_id=settings.CHANNEL_ID,
