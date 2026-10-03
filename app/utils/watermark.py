@@ -1,7 +1,6 @@
-"""
-Watermark Utility
 
-دانلود عکس خبر و اضافه‌کردن لوگوی کانال (کوچک، گوشه‌ی پایین) رویش.
+Watermark Utility
+اضافه‌کردن هدر نوشتاری KhabarF24 به گوشه پایین-چپ عکس خبر.
 """
 
 import io
@@ -13,18 +12,23 @@ from PIL import Image
 
 from app.utils.logger import logger
 
-LOGO_PATH = Path("assets/IMG_20260720_162446_015.jpg")
 
-# عرض لوگو نسبت به عرض عکس اصلی (مثلاً ۱۸٪ عرض عکس) -- کوچک و
-# غیرآزاردهنده، نه بزرگ.
+# هدر نوشتاری شفاف KhabarF24
+# این فایل را داخل پوشه assets قرار بده.
+LOGO_PATH = Path("assets/khabarf24_header.png")
+
+# اندازه هدر نسبت به عرض عکس.
+# 18٪ همان اندازه‌ای است که در نمونه نهایی مناسب بود.
 LOGO_WIDTH_RATIO = 0.18
+
+# فاصله کاملاً یکسان از پایین و چپ تصویر.
 MARGIN_RATIO = 0.03
 
 
 async def _download_image(url: str) -> Optional[bytes]:
-
     try:
         timeout = aiohttp.ClientTimeout(total=15)
+
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url) as response:
                 if response.status == 200:
@@ -41,35 +45,56 @@ async def _download_image(url: str) -> Optional[bytes]:
 
 
 def _add_watermark(image_bytes: bytes) -> Optional[bytes]:
-
     try:
         base = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
 
         if not LOGO_PATH.exists():
             logger.warning(
-                f"Watermark: فایل لوگو پیدا نشد -> {LOGO_PATH}"
+                f"Watermark: فایل هدر پیدا نشد -> {LOGO_PATH}"
             )
+
             fallback = io.BytesIO()
-            base.convert("RGB").save(fallback, format="JPEG", quality=90)
+            base.convert("RGB").save(
+                fallback,
+                format="JPEG",
+                quality=90,
+                optimize=True,
+            )
             return fallback.getvalue()
 
         logo = Image.open(LOGO_PATH).convert("RGBA")
 
-        logo_width = int(base.width * LOGO_WIDTH_RATIO)
-        logo_ratio = logo_width / logo.width
-        logo_height = int(logo.height * logo_ratio)
-        logo = logo.resize((logo_width, logo_height))
+        # اندازه هدر فقط بر اساس عرض عکس تعیین می‌شود.
+        # نسبت طول/ارتفاع خود هدر حفظ می‌شود تا کاملاً صاف و تراز بماند.
+        logo_width = max(1, int(base.width * LOGO_WIDTH_RATIO))
+        scale = logo_width / logo.width
+        logo_height = max(1, int(logo.height * scale))
 
-        margin = int(base.width * MARGIN_RATIO)
-        position = (
-            base.width - logo_width - margin,
-            base.height - logo_height - margin,
+        logo = logo.resize(
+            (logo_width, logo_height),
+            Image.Resampling.LANCZOS,
         )
 
-        base.paste(logo, position, logo)
+        # فاصله دقیق و مساوی از چپ و پایین
+        margin_x = int(base.width * MARGIN_RATIO)
+        margin_y = int(base.height * MARGIN_RATIO)
+
+        # پایین-چپ، بدون چرخش، بدون کشیدگی و بدون جابه‌جایی عمودی
+        position = (
+            margin_x,
+            base.height - logo_height - margin_y,
+        )
+
+        base.alpha_composite(logo, dest=position)
 
         output = io.BytesIO()
-        base.convert("RGB").save(output, format="JPEG", quality=90)
+        base.convert("RGB").save(
+            output,
+            format="JPEG",
+            quality=92,
+            optimize=True,
+        )
+
         return output.getvalue()
 
     except Exception as e:
@@ -79,9 +104,8 @@ def _add_watermark(image_bytes: bytes) -> Optional[bytes]:
 
 async def build_watermarked_image(url: str) -> Optional[bytes]:
     """
-    عکس خبر را از url دانلود می‌کند و لوگوی کانال را گوشه‌ی پایین
-    آن اضافه می‌کند. اگر هر مرحله شکست بخورد، None برمی‌گرداند تا
-    فراخوان بتواند به حالت متن‌ساده برگردد.
+    عکس خبر را دانلود می‌کند و هدر KhabarF24 را
+    دقیقاً در گوشه پایین-چپ تصویر قرار می‌دهد.
     """
 
     if not url:
