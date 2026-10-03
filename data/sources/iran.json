@@ -1,0 +1,98 @@
+[
+  {
+    "id": "isna",
+    "name": "ISNA",
+    "source_type": "rss",
+    "url": "https://www.isna.ir/rss",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "categories": [
+      "iran"
+    ],
+    "priority": 80,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "mehr",
+    "name": "Mehr News",
+    "source_type": "rss",
+    "url": "https://www.mehrnews.com/rss",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "categories": [
+      "iran"
+    ],
+    "priority": 80,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "tasnim",
+    "name": "Tasnim News",
+    "source_type": "rss",
+    "url": "https://www.tasnimnews.com/fa/rss",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "categories": [
+      "iran"
+    ],
+    "priority": 80,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "khabaronline",
+    "name": "Khabar Online",
+    "source_type": "rss",
+    "url": "https://www.khabaronline.ir/rss",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "categories": [
+      "iran"
+    ],
+    "priority": 75,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "tabnak",
+    "name": "Tabnak",
+    "source_type": "rss",
+    "url": "https://www.tabnak.ir/fa/rss/allnews",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "categories": [
+      "iran"
+    ],
+    "priority": 75,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "yjc",
+    "name": "YJC",
+    "source_type": "rss",
+    "url": "https://www.yjc.ir/fa/rss/allnews",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "categories": [
+      "iran"
+    ],
+    "priority": 70,
+    "check_interval": 60,
+    "enabled": true
+  }
+    ]
