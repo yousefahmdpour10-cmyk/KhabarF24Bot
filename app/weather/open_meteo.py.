@@ -1,0 +1,132 @@
+"""
+KhabarF24 Weather - Open-Meteo Client
+
+ارتباط با Open-Meteo برای دریافت وضعیت فعلی و پیش‌بینی هوا.
+بدون نیاز به API Key.
+"""
+
+from typing import Any, Dict, Optional
+
+import aiohttp
+
+from app.utils.logger import logger
+
+
+OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+class OpenMeteoClient:
+    """Client برای Open-Meteo API."""
+
+    def __init__(self, timeout: int = 15):
+        self.timeout = timeout
+
+    async def get_weather(
+        self,
+        latitude: float,
+        longitude: float,
+        forecast_days: int = 7,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        دریافت وضعیت فعلی و پیش‌بینی هوا.
+
+        Args:
+            latitude: عرض جغرافیایی
+            longitude: طول جغرافیایی
+            forecast_days: تعداد روزهای پیش‌بینی
+
+        Returns:
+            داده خام Open-Meteo یا None در صورت خطا.
+        """
+
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "current": (
+                "temperature_2m,"
+                "relative_humidity_2m,"
+                "apparent_temperature,"
+                "is_day,"
+                "precipitation,"
+                "rain,"
+                "weather_code,"
+                "cloud_cover,"
+                "pressure_msl,"
+                "wind_speed_10m,"
+                "wind_direction_10m"
+            ),
+            "hourly": (
+                "temperature_2m,"
+                "apparent_temperature,"
+                "precipitation_probability,"
+                "precipitation,"
+                "weather_code,"
+                "wind_speed_10m"
+            ),
+            "daily": (
+                "weather_code,"
+                "temperature_2m_max,"
+                "temperature_2m_min,"
+                "apparent_temperature_max,"
+                "apparent_temperature_min,"
+                "sunrise,"
+                "sunset,"
+                "precipitation_sum,"
+                "rain_sum,"
+                "precipitation_probability_max,"
+                "wind_speed_10m_max,"
+                "wind_direction_10m_dominant"
+            ),
+            "forecast_days": max(1, min(forecast_days, 16)),
+            "timezone": "auto",
+        }
+
+        timeout = aiohttp.ClientTimeout(
+            total=self.timeout
+        )
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=timeout
+            ) as session:
+
+                async with session.get(
+                    OPEN_METEO_URL,
+                    params=params,
+                ) as response:
+
+                    if response.status != 200:
+                        logger.warning(
+                            "Open-Meteo: HTTP %s",
+                            response.status,
+                        )
+                        return None
+
+                    data = await response.json()
+
+                    if not isinstance(data, dict):
+                        logger.warning(
+                            "Open-Meteo: پاسخ نامعتبر دریافت شد."
+                        )
+                        return None
+
+                    return data
+
+        except aiohttp.ClientError as e:
+            logger.warning(
+                "Open-Meteo: خطای ارتباطی -> %s",
+                e,
+            )
+
+        except TimeoutError:
+            logger.warning(
+                "Open-Meteo: درخواست timeout شد."
+            )
+
+        except Exception as e:
+            logger.warning(
+                "Open-Meteo: خطای غیرمنتظره -> %s",
+                e,
+            )
+
+        return None
