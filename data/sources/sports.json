@@ -1,13 +1,16 @@
 [
   {
     "id": "bbc_sport",
-    "name": "BBC",
+    "name": "BBC Sport",
     "source_type": "rss",
     "url": "https://feeds.bbci.co.uk/sport/rss.xml",
+    "rss_url": "https://feeds.bbci.co.uk/sport/rss.xml",
+    "website_url": "https://www.bbc.com/sport",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
+    "supports_scraping": true,
     "categories": [
       "sport"
     ],
@@ -17,18 +20,84 @@
   },
   {
     "id": "bbc_football",
-    "name": "BBC",
+    "name": "BBC Football",
     "source_type": "rss",
     "url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
+    "rss_url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
+    "website_url": "https://www.bbc.com/sport/football",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
+    "supports_scraping": true,
     "categories": [
-      "sport"
+      "sport",
+      "football"
     ],
-    "priority": 88,
+    "priority": 90,
     "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "espn_soccer",
+    "name": "ESPN Soccer",
+    "source_type": "rss",
+    "url": "https://www.espn.com/espn/rss/soccer/news",
+    "rss_url": "https://www.espn.com/espn/rss/soccer/news",
+    "website_url": "https://www.espn.com/soccer/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "supports_scraping": true,
+    "categories": [
+      "sport",
+      "football"
+    ],
+    "priority": 90,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "di_marzio",
+    "name": "Gianluca Di Marzio",
+    "source_type": "rss",
+    "url": "https://www.gianlucadimarzio.com/rss",
+    "rss_url": "https://www.gianlucadimarzio.com/rss",
+    "website_url": "https://www.gianlucadimarzio.com/",
+    "country": "IT",
+    "flag": "🇮🇹",
+    "language": "it",
+    "has_rss": true,
+    "supports_scraping": true,
+    "categories": [
+      "sport",
+      "football",
+      "transfer"
+    ],
+    "priority": 96,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "transfermarkt",
+    "name": "Transfermarkt",
+    "source_type": "rss",
+    "url": "https://www.transfermarkt.com/rss/news",
+    "rss_url": "https://www.transfermarkt.com/rss/news",
+    "website_url": "https://www.transfermarkt.com/",
+    "country": "DE",
+    "flag": "🇩🇪",
+    "language": "en",
+    "has_rss": true,
+    "supports_scraping": true,
+    "categories": [
+      "sport",
+      "football",
+      "transfer"
+    ],
+    "priority": 90,
+    "check_interval": 120,
     "enabled": true
   },
   {
@@ -41,7 +110,8 @@
     "language": "en",
     "has_api": true,
     "categories": [
-      "sport"
+      "sport",
+      "football"
     ],
     "priority": 95,
     "check_interval": 180,
