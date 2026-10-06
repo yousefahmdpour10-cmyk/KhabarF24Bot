@@ -70,6 +70,14 @@ class SportsApiClient:
 
         fixtures: List[dict] = []
 
+        # API-Football برای این endpoint، فصل مسابقات را هم الزامی
+        # می‌داند. چون فصل اروپایی از تابستان شروع و تا تابستان بعد
+        # ادامه دارد، اگر الان قبل از ماه ژوئیه باشیم، فصل همان سال
+        # قبل است.
+        year = int(date.split("-")[0])
+        month = int(date.split("-")[1])
+        season = year if month >= 7 else year - 1
+
         for league_id, league_name in FOLLOWED_LEAGUES.items():
 
             data = await self._get(
@@ -77,6 +85,7 @@ class SportsApiClient:
                 {
                     "date": date,
                     "league": league_id,
+                    "season": season,
                     "status": "FT",
                 },
             )
