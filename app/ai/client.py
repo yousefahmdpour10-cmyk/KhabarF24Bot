@@ -2,13 +2,6 @@
 app/ai/client.py
 
 Gemini API Client
-
-مشابه سبک app/utils/http_client.py (retry, timeout, aiohttp session) ولی
-مخصوص درخواست POST/JSON به Gemini، چون HTTPClient فقط GET رو پوشش می‌دهد.
-
-نیازمند در .env:
-    GEMINI_API_KEY=...
-    GEMINI_MODEL=gemini-2.0-flash   (اختیاری، مقدار پیش‌فرض همین است)
 """
 
 import asyncio
@@ -25,18 +18,13 @@ GEMINI_ENDPOINT = (
 
 
 class GeminiClient:
-    """
-    کلاینت ساده برای فراخوانی Gemini API (free tier).
-    فقط یک وظیفه دارد: گرفتن یک prompt متنی و برگرداندن پاسخ خام متنی مدل.
-    Parse کردن JSON خروجی مدل، مسئولیت لایه‌ی بالاتر (content_generator) است.
-    """
 
     DEFAULT_TIMEOUT = 30
 
     def __init__(
         self,
         timeout: int = DEFAULT_TIMEOUT,
-        retries: int = 3,
+        retries: int = 2,
     ):
         self.timeout = timeout
         self.retries = retries
@@ -46,9 +34,6 @@ class GeminiClient:
     async def generate(self, prompt: str) -> Optional[str]:
         """
         ارسال یک prompt به Gemini و بازگرداندن متن خروجی مدل.
-
-        Returns:
-            متن پاسخ مدل یا None در صورت خطا/عدم موفقیت پس از retries.
         """
         if not self.api_key:
             logger.error("GEMINI_API_KEY تنظیم نشده است")
@@ -75,10 +60,15 @@ class GeminiClient:
                             data = await response.json()
                             return self._extract_text(data)
 
-                        # Rate limit: بی‌فایده است بلافاصله retry کنیم، کمی صبر می‌کنیم.
+                        # محدودیت نرخ: معمولاً محدودیت "در هر دقیقه" است،
+                        # پس باید حداقل حدود یک دقیقه صبر کنیم، نه چند
+                        # ثانیه -- وگرنه retry هم بلافاصله همان خطا را
+                        # می‌گیرد چون هنوز داخل همان پنجره‌ی زمانی هستیم.
                         if response.status == 429:
-                            logger.warning("Gemini rate limit hit, waiting...")
-                            await asyncio.sleep(5)
+                            logger.warning(
+                                "Gemini rate limit hit, waiting 65s before retry..."
+                            )
+                            await asyncio.sleep(65)
                             continue
 
                         body = await response.text()
@@ -90,13 +80,12 @@ class GeminiClient:
             except Exception as e:
                 logger.error(f"Gemini error -> {e}")
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
 
         return None
 
     @staticmethod
     def _extract_text(data: dict) -> Optional[str]:
-        """استخراج متن ساده از ساختار پاسخ Gemini."""
         try:
             return data["candidates"][0]["content"]["parts"][0]["text"]
         except (KeyError, IndexError, TypeError):
