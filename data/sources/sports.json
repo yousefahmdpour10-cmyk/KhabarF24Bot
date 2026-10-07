@@ -101,6 +101,31 @@
     "enabled": true
   },
   {
+    "id": "fabrizio_romano_telegram",
+    "name": "Fabrizio Romano",
+    "source_type": "social",
+    "url": "https://t.me/fabrizioromanotg",
+    "social_url": "https://t.me/fabrizioromanotg",
+    "website_url": "https://www.fabrizioromano.com/",
+    "social_platform": "telegram",
+    "country": "IT",
+    "flag": "🇮🇹",
+    "language": "en",
+    "has_rss": false,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "transfer"
+    ],
+    "priority": 98,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
     "id": "api_football_results",
     "name": "API-Football",
     "source_type": "sports_api",
