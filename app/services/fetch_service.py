@@ -9,6 +9,7 @@ from typing import List
 from app.fetchers.rss_fetcher import RSSFetcher
 from app.fetchers.website_fetcher import WebsiteFetcher
 from app.fetchers.api_fetcher import APIFetcher
+from app.fetchers.social_fetcher import SocialFetcher
 from app.fetchers.sports_api_fetcher import SportsApiFetcher
 
 from app.models.news_source import NewsSource
@@ -79,12 +80,7 @@ class FetchService:
 
             elif source_type == "social":
 
-                logger.warning(
-                    f"Social fetcher is not implemented yet: "
-                    f"{source.name}"
-                )
-
-                return []
+                fetcher = SocialFetcher(source)
 
             # ==================================================
             # Fallback برای منابع قدیمی
