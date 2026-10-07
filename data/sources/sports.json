@@ -126,7 +126,6 @@
     "enabled": true
   },
   {
-      {
     "id": "sky_sports_football",
     "name": "Sky Sports Football",
     "source_type": "website",
@@ -219,6 +218,7 @@
     "check_interval": 120,
     "enabled": true
   },
+  {
     "id": "api_football_results",
     "name": "API-Football",
     "source_type": "sports_api",
