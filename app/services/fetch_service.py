@@ -8,7 +8,9 @@ from typing import List
 
 from app.fetchers.rss_fetcher import RSSFetcher
 from app.fetchers.website_fetcher import WebsiteFetcher
+from app.fetchers.api_fetcher import APIFetcher
 from app.fetchers.sports_api_fetcher import SportsApiFetcher
+
 from app.models.news_source import NewsSource
 from app.models.raw_news import RawNews
 from app.utils.logger import logger
@@ -30,16 +32,88 @@ class FetchService:
         logger.info(f"Fetching: {source.name}")
 
         try:
+            source_type = (
+                getattr(source, "source_type", "")
+                or ""
+            ).lower().strip()
 
-            if source.has_api:
+            # ==================================================
+            # RSS
+            # ==================================================
 
-                fetcher = SportsApiFetcher(source)
-
-            elif source.has_rss:
+            if source_type == "rss":
 
                 fetcher = RSSFetcher(source)
 
-            elif source.supports_scraping:
+            # ==================================================
+            # Website
+            # ==================================================
+
+            elif source_type == "website":
+
+                fetcher = WebsiteFetcher(source)
+
+            # ==================================================
+            # Sports API
+            # ==================================================
+
+            elif source_type in (
+                "sports_api",
+                "sports-api",
+                "sportsapi",
+            ):
+
+                fetcher = SportsApiFetcher(source)
+
+            # ==================================================
+            # General API
+            # ==================================================
+
+            elif source_type == "api":
+
+                fetcher = APIFetcher(source)
+
+            # ==================================================
+            # Social
+            # ==================================================
+
+            elif source_type == "social":
+
+                logger.warning(
+                    f"Social fetcher is not implemented yet: "
+                    f"{source.name}"
+                )
+
+                return []
+
+            # ==================================================
+            # Fallback برای منابع قدیمی
+            # ==================================================
+
+            elif getattr(source, "has_rss", False):
+
+                logger.warning(
+                    f"{source.name}: source_type is not 'rss'. "
+                    f"Using RSS fallback."
+                )
+
+                fetcher = RSSFetcher(source)
+
+            elif getattr(source, "has_api", False):
+
+                logger.warning(
+                    f"{source.name}: source_type is not 'api'. "
+                    f"Using API fallback."
+                )
+
+                fetcher = APIFetcher(source)
+
+            elif getattr(source, "supports_scraping", False):
+
+                logger.warning(
+                    f"{source.name}: source_type is not 'website'. "
+                    f"Using website fallback."
+                )
 
                 fetcher = WebsiteFetcher(source)
 
@@ -55,7 +129,9 @@ class FetchService:
 
         except Exception as e:
 
-            logger.exception(e)
+            logger.exception(
+                f"Fetch error for {source.name}: {e}"
+            )
 
             return []
 
@@ -71,12 +147,19 @@ class FetchService:
 
         for source in sources:
 
+            if not getattr(source, "enabled", True):
+                logger.info(
+                    f"Source disabled: {source.name}"
+                )
+                continue
+
             news = await self.fetch_source(source)
 
             all_news.extend(news)
 
         logger.info(
-            f"Fetched {len(all_news)} news from {len(sources)} sources."
+            f"Fetched {len(all_news)} news "
+            f"from {len(sources)} sources."
         )
 
         return all_news
