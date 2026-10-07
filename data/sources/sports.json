@@ -103,7 +103,7 @@
   {
     "id": "api_football_results",
     "name": "API-Football",
-    "source_type": "api",
+    "source_type": "sports_api",
     "url": "",
     "country": "GB",
     "flag": "⚽",
