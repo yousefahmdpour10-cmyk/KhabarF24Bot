@@ -16,12 +16,19 @@ class SportDetector:
     """
     تشخیص رشته ورزشی
 
-    تشخیص بر اساس:
-    1. عنوان خبر
-    2. خلاصه خبر
-    3. متن خبر
-    4. دسته‌بندی منبع
-    5. نام منبع
+    اولویت تشخیص:
+
+    1. متن واقعی خبر
+       - عنوان
+       - خلاصه
+       - متن
+
+    2. اطلاعات منبع
+       - نام منبع
+       - دسته‌بندی منبع
+
+    نکته مهم:
+    اطلاعات منبع به تنهایی نمی‌توانند یک خبر را ورزشی کنند.
     """
 
     async def process(
@@ -29,8 +36,11 @@ class SportDetector:
         news: RawNews,
     ) -> RawNews:
 
-        # متن اصلی خبر
-        text = " ".join(
+        # ---------------------------------------------------------
+        # 1. متن واقعی خبر
+        # ---------------------------------------------------------
+
+        article_text = " ".join(
             [
                 str(getattr(news, "title", "") or ""),
                 str(getattr(news, "summary", "") or ""),
@@ -38,7 +48,10 @@ class SportDetector:
             ]
         )
 
-        # اطلاعات منبع
+        # ---------------------------------------------------------
+        # 2. اطلاعات منبع
+        # ---------------------------------------------------------
+
         source_name = str(
             getattr(news, "source", "") or ""
         )
@@ -47,31 +60,49 @@ class SportDetector:
             getattr(news, "category", "") or ""
         )
 
-        # برای تشخیص بهتر، نام منبع و دسته منبع
-        # نیز به متن تشخیص اضافه می‌شوند.
-        detection_text = " ".join(
-            [
-                text,
-                source_name,
-                source_category,
-            ]
-        )
-
-        scores = defaultdict(int)
-
         # ---------------------------------------------------------
-        # 1. تشخیص بر اساس کلیدواژه‌های ورزشی
+        # 3. تشخیص رشته ورزشی فقط از متن خبر
         # ---------------------------------------------------------
+
+        text_scores = defaultdict(int)
 
         for sport_id, sport in SPORTS.items():
 
             for keyword in sport["keywords"]:
 
-                if keyword_in_text(keyword, detection_text):
-                    scores[sport_id] += 1
+                if keyword_in_text(keyword, article_text):
+                    text_scores[sport_id] += 1
 
         # ---------------------------------------------------------
-        # 2. تقویت تشخیص فوتبال بر اساس منابع تخصصی فوتبال
+        # اگر هیچ نشانه ورزشی در خود خبر وجود ندارد،
+        # اطلاعات منبع نباید باعث تشخیص اشتباه شود.
+        # ---------------------------------------------------------
+
+        if not text_scores:
+
+            news.sport = None
+            news.sport_name = None
+            news.sport_emoji = None
+            news.sport_hashtag = None
+
+            logger.info("Sport: not detected")
+
+            return news
+
+        # ---------------------------------------------------------
+        # 4. امتیاز پایه از متن خبر
+        # ---------------------------------------------------------
+
+        scores = defaultdict(int)
+
+        for sport_id, score in text_scores.items():
+            scores[sport_id] = score
+
+        # ---------------------------------------------------------
+        # 5. تقویت بسیار محدود بر اساس منبع
+        #
+        # منبع فقط می‌تواند رشته‌ای را که از متن تشخیص داده شده
+        # تقویت کند؛ هرگز نمی‌تواند یک رشته جدید ایجاد کند.
         # ---------------------------------------------------------
 
         football_source_keywords = [
@@ -86,13 +117,21 @@ class SportDetector:
             "fifa",
         ]
 
-        for keyword in football_source_keywords:
+        football_source_match = any(
+            keyword_in_text(keyword, source_name)
+            for keyword in football_source_keywords
+        )
 
-            if keyword_in_text(keyword, source_name):
-                scores["football"] += 3
+        if (
+            football_source_match
+            and "football" in scores
+        ):
+            scores["football"] += 1
 
         # ---------------------------------------------------------
-        # 3. دسته‌بندی منبع
+        # 6. تقویت محدود بر اساس دسته‌بندی منبع
+        #
+        # فقط برای رشته‌ای که قبلاً از متن شناسایی شده.
         # ---------------------------------------------------------
 
         football_categories = [
@@ -104,41 +143,40 @@ class SportDetector:
             "international",
         ]
 
-        for category in football_categories:
+        source_is_football = any(
+            category in source_category.lower()
+            for category in football_categories
+        )
 
-            if category in source_category.lower():
-                scores["football"] += 3
+        if (
+            source_is_football
+            and "football" in scores
+        ):
+            scores["football"] += 1
 
         # ---------------------------------------------------------
-        # 4. نتیجه نهایی
+        # 7. انتخاب بهترین رشته
         # ---------------------------------------------------------
 
-        if scores:
+        best = max(
+            scores,
+            key=scores.get,
+        )
 
-            best = max(
-                scores,
-                key=scores.get,
-            )
+        best_score = scores[best]
 
-            best_score = scores[best]
+        # ---------------------------------------------------------
+        # 8. ذخیره نتیجه
+        # ---------------------------------------------------------
 
-            news.sport = best
-            news.sport_name = SPORTS[best]["name"]
-            news.sport_emoji = SPORTS[best]["emoji"]
-            news.sport_hashtag = SPORTS[best]["hashtag"]
+        news.sport = best
+        news.sport_name = SPORTS[best]["name"]
+        news.sport_emoji = SPORTS[best]["emoji"]
+        news.sport_hashtag = SPORTS[best]["hashtag"]
 
-            logger.info(
-                f"Sport: {news.sport_name} "
-                f"(score={best_score})"
-            )
-
-        else:
-
-            news.sport = None
-            news.sport_name = None
-            news.sport_emoji = None
-            news.sport_hashtag = None
-
-            logger.info("Sport: not detected")
+        logger.info(
+            f"Sport: {news.sport_name} "
+            f"(score={best_score})"
+        )
 
         return news
