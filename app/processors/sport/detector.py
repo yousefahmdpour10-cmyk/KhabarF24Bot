@@ -13,9 +13,10 @@ from app.utils.logger import logger
 from app.utils.text_matching import keyword_in_text
 
 
-# این منابع مشخصاً روی فوتبال تمرکز دارند.
+# منابع خبری اختصاصی یا متمرکز بر فوتبال
 FOOTBALL_SOURCES = (
     "bbc football",
+    "bbc sport",
     "sky sports football",
     "espn soccer",
     "gianluca di marzio",
@@ -24,7 +25,6 @@ FOOTBALL_SOURCES = (
     "transfermarkt",
     "premier league",
 )
-
 
 FOOTBALL_SOURCE_CATEGORIES = (
     "football",
@@ -45,11 +45,11 @@ class SportDetector:
 
         source_name = str(
             getattr(news, "source", "") or ""
-        ).lower()
+        ).strip().lower()
 
         source_category = str(
             getattr(news, "category", "") or ""
-        ).lower()
+        ).strip().lower()
 
         article_text = " ".join(
             (title, summary, content)
@@ -57,13 +57,13 @@ class SportDetector:
 
         text_scores = defaultdict(int)
 
-        # مرحله اول: تشخیص بر اساس متن واقعی خبر
+        # مرحله اول: تشخیص بر اساس کلمات متن خبر
         for sport_id, sport in SPORTS.items():
-            for keyword in sport["keywords"]:
+            for keyword in sport.get("keywords", []):
                 if keyword_in_text(keyword, article_text):
                     text_scores[sport_id] += 1
 
-        # مرحله دوم: تقویت تشخیص بر اساس منبع اختصاصی فوتبال
+        # مرحله دوم: تشخیص منبع اختصاصی فوتبال
         source_is_football = any(
             keyword in source_name
             for keyword in FOOTBALL_SOURCES
@@ -74,19 +74,31 @@ class SportDetector:
             for keyword in FOOTBALL_SOURCE_CATEGORIES
         )
 
-        # اگر متن رشته ورزشی را مشخص کرده، همان تشخیص حفظ می‌شود.
-        # منبع اختصاصی فوتبال فقط در نبود تشخیص متنی،
-        # به‌عنوان راهکار جایگزین استفاده می‌شود.
-        if not text_scores:
-            if (
-                source_is_football
-                or category_is_football
-            ):
-                if "football" in SPORTS:
-                    text_scores["football"] = 1
+        football_available = "football" in SPORTS
+
+        # اگر منبع اختصاصی فوتبال است و متن شواهد کافی
+        # برای رشته ورزشی دیگری ندارد، فوتبال را تقویت کن.
+        if source_is_football or category_is_football:
+            if football_available:
+                football_score = text_scores.get("football", 0)
+                other_scores = {
+                    sport_id: score
+                    for sport_id, score in text_scores.items()
+                    if sport_id != "football"
+                }
+
+                if not other_scores or football_score >= max(
+                    other_scores.values()
+                ):
+                    text_scores["football"] = max(
+                        football_score,
+                        1,
+                    )
 
                     logger.info(
-                        "Sport detected from football source/category"
+                        "Sport source boost: source=%s category=%s",
+                        source_name,
+                        source_category,
                     )
 
         if not text_scores:
@@ -98,9 +110,13 @@ class SportDetector:
             logger.info("Sport: not detected")
             return news
 
+        # بیشترین امتیاز؛ در تساوی، فوتبال اولویت دارد
         best = max(
             text_scores,
-            key=text_scores.get,
+            key=lambda sport_id: (
+                text_scores[sport_id],
+                sport_id == "football",
+            ),
         )
 
         sport_info = SPORTS[best]
