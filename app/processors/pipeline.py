@@ -1,7 +1,6 @@
 """
-app/processors/pipeline.py
-
 KhabarF24 Processing Pipeline
+Detailed diagnostics for news processing and publishing.
 """
 
 from app.ai.content_generator import ContentGenerator
@@ -31,41 +30,114 @@ class NewsPipeline:
         self.publisher = TelegramPublisher()
 
     async def process(self, news: RawNews) -> RawNews:
-        logger.info("Pipeline Started")
+        source = str(getattr(news, "source", "") or "Unknown")
+        original_title = str(getattr(news, "title", "") or "")
+        title_preview = original_title[:100]
 
-        news = await self.language.process(news)
-        news = await self.sport.process(news)
-        news = await self.category.process(news)
+        logger.info(
+            "Pipeline Started | source=%s | title=%s",
+            source,
+            title_preview,
+        )
 
-        news = await self.duplicate.process(news)
-        if getattr(news, "is_duplicate", False):
-            logger.info("Pipeline Stopped: duplicate news")
-            return news
+        try:
+            news = await self.language.process(news)
+            news = await self.sport.process(news)
+            news = await self.category.process(news)
 
-        news = await self.credibility.process(news)
-        if not getattr(news, "is_verified", True):
-            logger.info("Pipeline Stopped: low credibility")
-            return news
+            sport_name = getattr(news, "sport_name", None)
+            category = getattr(news, "category", "unknown")
 
-        news = await self.importance.process(news)
-
-        news = await self.content_generator.process(news)
-        if not getattr(news, "content_generated", False):
             logger.info(
-                "Pipeline Stopped: AI content generation failed "
-                "(will retry this item next cycle, not marked as seen)"
-            )
-            return news
-
-        published = await self.publisher.publish(news)
-
-        if published:
-            # فقط حالا که واقعاً منتشر شد، به حافظه‌ی تکراری اضافه کن
-            self.duplicate.mark_seen(news)
-            logger.info("Pipeline Finished")
-        else:
-            logger.info(
-                "Pipeline Stopped: publish failed (will retry this item next cycle)"
+                "Classification | source=%s | category=%s | sport=%s",
+                source,
+                category,
+                sport_name or "not detected",
             )
 
-        return news
+            news = await self.duplicate.process(news)
+
+            if getattr(news, "is_duplicate", False):
+                logger.info(
+                    "Pipeline Stopped: duplicate | source=%s | title=%s",
+                    source,
+                    title_preview,
+                )
+                return news
+
+            news = await self.credibility.process(news)
+
+            credibility_score = getattr(
+                news,
+                "credibility_score",
+                None,
+            )
+
+            if not getattr(news, "is_verified", True):
+                logger.warning(
+                    "Pipeline Stopped: low credibility | "
+                    "source=%s | score=%s | title=%s",
+                    source,
+                    credibility_score,
+                    title_preview,
+                )
+                return news
+
+            news = await self.importance.process(news)
+
+            logger.info(
+                "News passed filters | source=%s | "
+                "credibility=%s | importance=%s | category=%s | sport=%s",
+                source,
+                credibility_score,
+                getattr(news, "importance_score", None),
+                category,
+                sport_name or "not detected",
+            )
+
+            news = await self.content_generator.process(news)
+
+            if not getattr(news, "content_generated", False):
+                logger.warning(
+                    "Pipeline Stopped: AI content generation failed | "
+                    "source=%s | category=%s | sport=%s | title=%s",
+                    source,
+                    category,
+                    sport_name or "not detected",
+                    str(getattr(news, "title", "") or "")[:100],
+                )
+                return news
+
+            published = await self.publisher.publish(news)
+
+            if published:
+                self.duplicate.mark_seen(news)
+
+                logger.info(
+                    "Pipeline Finished: PUBLISHED | "
+                    "source=%s | category=%s | sport=%s | title=%s",
+                    source,
+                    category,
+                    sport_name or "not detected",
+                    str(getattr(news, "title", "") or "")[:100],
+                )
+            else:
+                logger.warning(
+                    "Pipeline Stopped: Telegram publish failed | "
+                    "source=%s | category=%s | sport=%s | title=%s",
+                    source,
+                    category,
+                    sport_name or "not detected",
+                    str(getattr(news, "title", "") or "")[:100],
+                )
+
+            return news
+
+        except Exception:
+            logger.exception(
+                "Pipeline Exception | source=%s | title=%s",
+                source,
+                title_preview,
+            )
+            raise
+                
