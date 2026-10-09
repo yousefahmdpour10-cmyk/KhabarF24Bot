@@ -28,7 +28,11 @@ class ContentGenerator:
         self.client = GeminiClient()
 
     async def process(self, news: RawNews) -> RawNews:
-        source_text = news.content or news.summary or ""
+        content = str(getattr(news, "content", "") or "").strip()
+summary = str(getattr(news, "summary", "") or "").strip()
+
+# اگر متن کامل خبر موجود است، آن را به خلاصه کوتاه ترجیح بده.
+source_text = content if len(content) >= len(summary) else summary
 
         # پیش‌فرض: تا وقتی موفق نشده‌ایم ثابت‌شده، تولید محتوا ناموفق است
         news.content_generated = False
