@@ -1,4 +1,3 @@
-```python
 """
 Source Reputation Database
 """
@@ -38,4 +37,4 @@ SOURCE_REPUTATION = {
     "Premier League": 96,
     "API-Football": 80,
 }
-```
+
