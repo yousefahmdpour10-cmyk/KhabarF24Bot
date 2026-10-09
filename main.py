@@ -1,4 +1,3 @@
-```python
 """
 KhabarF24 Main Engine
 Balanced news selection with dedicated sports coverage.
