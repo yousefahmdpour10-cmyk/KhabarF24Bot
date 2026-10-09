@@ -1,4 +1,3 @@
-```python
 """
 Country Flags For News Sources
 پرچم کشور منابع خبری KhabarF24
