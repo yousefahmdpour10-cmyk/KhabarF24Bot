@@ -109,6 +109,7 @@ class NewsPipeline:
                 return news
 
             published = await self.publisher.publish(news)
+            news.published = bool(published)
 
             if published:
                 self.duplicate.mark_seen(news)
