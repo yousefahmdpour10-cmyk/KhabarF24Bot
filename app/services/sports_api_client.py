@@ -1,9 +1,14 @@
 """
 Sports API Client (api-football.com)
 
-اتصال به API-Football برای گرفتن نتیجه‌ی بازی‌ها و گلزنان.
+پلن رایگان: ۱۰۰ درخواست در روز (ریست ساعت ۰۰:۰۰ UTC) و ۱۰ درخواست در دقیقه.
+برای همین همه‌ی درخواست‌ها از یک شمارنده‌ی مشترک عبور می‌کنند و بین
+درخواست‌ها فاصله‌ی زمانی رعایت می‌شود.
 """
 
+import asyncio
+import time
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 import aiohttp
@@ -23,6 +28,23 @@ FOLLOWED_LEAGUES: Dict[int, str] = {
     3: "Europa League",
 }
 
+FREE_DAILY_LIMIT = 100
+DAILY_REQUEST_CAP = 90          # ۱۰ درخواست ذخیره برای اطمینان
+REQUEST_SPACING_SECONDS = 6.5   # زیر سقف ۱۰ درخواست در دقیقه
+
+# شمارنده‌ی مشترک بین همه‌ی نمونه‌ها (هر چرخه یک نمونه‌ی جدید ساخته می‌شود)
+_usage = {"day": "", "count": 0}
+_last_request_at: float = 0.0
+
+
+def budget_left() -> int:
+    """تعداد درخواست‌های باقی‌مانده‌ی امروز (UTC)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if _usage["day"] != today:
+        _usage["day"] = today
+        _usage["count"] = 0
+    return DAILY_REQUEST_CAP - _usage["count"]
+
 
 class SportsApiClient:
 
@@ -30,13 +52,24 @@ class SportsApiClient:
         self.api_key = getattr(settings, "SPORTS_API_KEY", "")
 
     async def _get(self, path: str, params: dict) -> Optional[dict]:
+        global _last_request_at
 
         if not self.api_key:
             logger.error("SportsApiClient: SPORTS_API_KEY تنظیم نشده است")
             return None
 
+        if budget_left() <= 0:
+            logger.warning("SportsApiClient: سقف درخواست امروز پر شده است")
+            return None
+
+        wait = REQUEST_SPACING_SECONDS - (time.monotonic() - _last_request_at)
+        if wait > 0:
+            await asyncio.sleep(wait)
+
+        _last_request_at = time.monotonic()
+        _usage["count"] += 1
+
         headers = {"x-apisports-key": self.api_key}
-        url = f"{BASE_URL}{path}"
 
         try:
             timeout = aiohttp.ClientTimeout(total=20)
@@ -44,22 +77,43 @@ class SportsApiClient:
                 timeout=timeout,
                 headers=headers,
             ) as session:
-                async with session.get(url, params=params) as response:
-                    if response.status == 200:
-                        data = await response.json()
+                async with session.get(
+                    f"{BASE_URL}{path}", params=params
+                ) as response:
 
-                        errors = data.get("errors")
-                        if errors:
-                            logger.error(
-                                f"SportsApiClient API error -> {errors}"
-                            )
-
-                        return data
-
-                    body = await response.text()
-                    logger.error(
-                        f"SportsApiClient HTTP {response.status} -> {body[:300]}"
+                    # شمارنده‌ی واقعیِ سرور را با شمارنده‌ی خودمان هماهنگ
+                    # می‌کنیم (ری‌استارت ربات شمارنده‌ی ما را صفر می‌کند،
+                    # ولی مصرف واقعی امروز روی سرور باقی می‌ماند).
+                    remaining = response.headers.get(
+                        "x-ratelimit-requests-remaining"
                     )
+                    if remaining is not None:
+                        try:
+                            used = FREE_DAILY_LIMIT - int(remaining)
+                            _usage["count"] = max(_usage["count"], used)
+                            logger.info(
+                                f"SportsApiClient: باقی‌مانده امروز طبق سرور = {remaining}"
+                            )
+                        except ValueError:
+                            pass
+
+                    if response.status != 200:
+                        body = await response.text()
+                        logger.error(
+                            f"SportsApiClient HTTP {response.status} -> {body[:300]}"
+                        )
+                        return None
+
+                    data = await response.json()
+
+                    errors = data.get("errors")
+                    if errors:
+                        logger.error(f"SportsApiClient API error -> {errors}")
+                        if isinstance(errors, dict) and "requests" in errors:
+                            _usage["count"] = DAILY_REQUEST_CAP
+                        return None
+
+                    return data
 
         except Exception as e:
             logger.error(f"SportsApiClient error -> {e}")
@@ -67,46 +121,35 @@ class SportsApiClient:
         return None
 
     async def get_finished_fixtures(self, date: str) -> List[dict]:
+        """
+        همه‌ی بازی‌های تمام‌شده‌ی یک تاریخ (UTC) را با «یک» درخواست
+        می‌گیرد و خودمان فقط لیگ‌های دنبال‌شده را نگه می‌داریم.
+        """
 
-        fixtures: List[dict] = []
+        data = await self._get(
+            "/fixtures",
+            {"date": date, "status": "FT-AET-PEN"},
+        )
 
-        # API-Football برای این endpoint، فصل مسابقات را هم الزامی
-        # می‌داند. چون فصل اروپایی از تابستان شروع و تا تابستان بعد
-        # ادامه دارد، اگر الان قبل از ماه ژوئیه باشیم، فصل همان سال
-        # قبل است.
-        year = int(date.split("-")[0])
-        month = int(date.split("-")[1])
-        season = year if month >= 7 else year - 1
+        if not data:
+            return []
 
-        for league_id, league_name in FOLLOWED_LEAGUES.items():
+        results: List[dict] = []
+        total = 0
 
-            data = await self._get(
-                "/fixtures",
-                {
-                    "date": date,
-                    "league": league_id,
-                    "season": season,
-                    "status": "FT",
-                },
-            )
+        for item in data.get("response", []):
+            total += 1
+            league_id = (item.get("league") or {}).get("id")
+            if league_id in FOLLOWED_LEAGUES:
+                item["_league_name"] = FOLLOWED_LEAGUES[league_id]
+                results.append(item)
 
-            if not data:
-                logger.warning(
-                    f"SportsApiClient: پاسخی برای لیگ {league_name} دریافت نشد"
-                )
-                continue
+        logger.info(
+            f"SportsApiClient: {date} -> {total} بازی تمام‌شده در دنیا، "
+            f"{len(results)} بازی در لیگ‌های دنبال‌شده"
+        )
 
-            found = data.get("response", [])
-
-            logger.info(
-                f"SportsApiClient: {league_name} -> {len(found)} بازی تمام‌شده در {date}"
-            )
-
-            for item in found:
-                item["_league_name"] = league_name
-                fixtures.append(item)
-
-        return fixtures
+        return results
 
     async def get_fixture_events(self, fixture_id: int) -> List[dict]:
 
