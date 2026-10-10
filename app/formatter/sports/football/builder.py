@@ -46,6 +46,10 @@ class FootballBuilder:
 
         lines = []
 
+        # referee / stadium / tournament عمداً در این فهرست نیستند:
+        # MatchInfoBuilder همان‌ها را (داور، ورزشگاه، مسابقات) از قبل
+        # چاپ می‌کند و اگر اینجا هم بیایند، همان خط‌ها دوبار در پست
+        # می‌آمدند. کلاس‌هایشان دست‌نخورده باقی مانده‌اند.
         builders = [
 
             self.match_info,
@@ -66,15 +70,9 @@ class FootballBuilder:
 
             self.interview,
 
-            self.referee,
-
-            self.stadium,
-
             self.stats,
 
             self.transfer,
-
-            self.tournament,
 
         ]
 
