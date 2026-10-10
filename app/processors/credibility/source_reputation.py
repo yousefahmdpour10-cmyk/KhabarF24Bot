@@ -35,6 +35,6 @@ SOURCE_REPUTATION = {
     "UEFA": 96,
     "FIFA": 96,
     "Premier League": 96,
-    "API-Football": 80,
+    "API-Football": 95,
 }
 
