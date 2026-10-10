@@ -1,0 +1,155 @@
+name: Weather Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-weather:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install aiohttp
+
+      - name: Test Weather System
+        run: |
+          python - <<'PY'
+          import asyncio
+
+          from app.weather.geocoding import GeocodingClient
+          from app.weather.weather_service import WeatherService
+
+
+          async def main():
+              city = "تهران"
+
+              print("=" * 60)
+              print("KhabarF24 Weather Test")
+              print("=" * 60)
+              print(f"شهر مورد آزمایش: {city}")
+              print()
+
+              # --------------------------------------------------
+              # مرحله 1: پیدا کردن مختصات شهر
+              # --------------------------------------------------
+
+              geocoder = GeocodingClient()
+
+              location = await geocoder.get_city(
+                  city=city,
+                  language="fa",
+                  country_code="IR",
+              )
+
+              if not location:
+                  print("❌ شهر پیدا نشد.")
+                  raise SystemExit(1)
+
+              print("✅ Geocoding موفق بود")
+              print(f"نام شهر: {location.get('name')}")
+              print(f"کشور: {location.get('country')}")
+              print(f"کد کشور: {location.get('country_code')}")
+              print(f"Latitude: {location.get('latitude')}")
+              print(f"Longitude: {location.get('longitude')}")
+              print(f"Timezone: {location.get('timezone')}")
+              print()
+
+              # --------------------------------------------------
+              # مرحله 2: دریافت وضعیت هوا
+              # --------------------------------------------------
+
+              service = WeatherService()
+
+              weather = await service.get_weather(
+                  latitude=location["latitude"],
+                  longitude=location["longitude"],
+                  forecast_days=3,
+              )
+
+              if not weather:
+                  print("❌ دریافت اطلاعات هواشناسی ناموفق بود.")
+                  raise SystemExit(1)
+
+              print("✅ Open-Meteo موفق بود")
+              print()
+
+              # --------------------------------------------------
+              # وضعیت فعلی
+              # --------------------------------------------------
+
+              current = weather.get("current", {})
+
+              print("🌤️ وضعیت فعلی")
+              print("-" * 40)
+
+              print(
+                  f"وضعیت: "
+                  f"{current.get('icon')} "
+                  f"{current.get('description')}"
+              )
+
+              print(
+                  f"دما: "
+                  f"{current.get('temperature')} °C"
+              )
+
+              print(
+                  f"دمای احساس‌شده: "
+                  f"{current.get('apparent_temperature')} °C"
+              )
+
+              print(
+                  f"رطوبت: "
+                  f"{current.get('humidity')}%"
+              )
+
+              print(
+                  f"باد: "
+                  f"{current.get('wind_speed')} km/h"
+              )
+
+              print(
+                  f"پوشش ابر: "
+                  f"{current.get('cloud_cover')}%"
+              )
+
+              print()
+
+              # --------------------------------------------------
+              # پیش‌بینی سه روز
+              # --------------------------------------------------
+
+              daily = weather.get("daily", [])
+
+              print("📅 پیش‌بینی")
+              print("-" * 40)
+
+              for day in daily[:3]:
+                  print(
+                      f"{day.get('date')} | "
+                      f"{day.get('icon')} "
+                      f"{day.get('description')} | "
+                      f"حداکثر: "
+                      f"{day.get('temperature_max')}°C | "
+                      f"حداقل: "
+                      f"{day.get('temperature_min')}°C"
+                  )
+
+              print()
+              print("=" * 60)
+              print("✅ تمام تست‌های هواشناسی با موفقیت انجام شد.")
+              print("=" * 60)
+
+
+          asyncio.run(main())
+          PY

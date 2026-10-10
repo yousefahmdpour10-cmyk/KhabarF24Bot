@@ -1,0 +1,18 @@
+[
+  {
+    "id": "bbc_business",
+    "name": "BBC",
+    "source_type": "rss",
+    "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "categories": [
+      "economy"
+    ],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": true
+  }
+]

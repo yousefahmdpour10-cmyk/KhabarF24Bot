@@ -1,134 +1,234 @@
 """
-KhabarF24 Main Engine v8.2 - Final Stable Version
+KhabarF24 Main Engine
+Balanced news selection with sports priority and safe publishing.
 """
 
-import asyncio
+import sys
+import time
 import random
-import logging
+import asyncio
+from pathlib import Path
 
-from config import CHECK_INTERVAL, MAX_NEWS_PER_CYCLE, LOG_LEVEL
+BASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BASE_DIR))
 
-from news_fetcher import get_latest_news
-from ai_processor import process_news
-from formatter import format_news
-from category_engine import detect_smart_category
-from sport_formatter import format_sport_news
-from quality_engine import is_high_quality
-from importance_engine import is_important
-from news_db import init_db, is_published, mark_as_published
-from telegram_bot import send_to_telegram
+from config.settings import CHECK_INTERVAL
+from config.sources import load_sources
+from app.services.fetch_service import FetchService
+from app.processors.pipeline import NewsPipeline
+from app.utils.logger import logger
 
-# ====================== LOGGING ======================
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, "INFO"),
-    format='%(asctime)s - %(levelname)s - %(message)s'
+
+MAX_RUNTIME_SECONDS = 5 * 3600 + 50 * 60
+MAX_PUBLISH_PER_CYCLE = 3
+MAX_CANDIDATES_PER_CYCLE = 50
+SPORTS_CANDIDATE_TARGET = 20
+MIN_GAP_BETWEEN_CANDIDATES = 3
+
+
+SPORTS_SOURCE_KEYWORDS = (
+    "bbc sport",
+    "bbc football",
+    "espn soccer",
+    "gianluca di marzio",
+    "di marzio",
+    "transfermarkt",
+    "fabrizio romano",
+    "sky sports football",
+    "uefa",
+    "fifa",
+    "premier league",
+    "api-football",
 )
-logger = logging.getLogger(__name__)
+
+SPORTS_CATEGORY_KEYWORDS = (
+    "sport",
+    "football",
+    "soccer",
+    "basketball",
+    "volleyball",
+    "tennis",
+    "transfer",
+    "premier_league",
+    "champions_league",
+    "europa_league",
+)
 
 
-def normalize_category(category: str) -> str:
-    cat = str(category).lower().strip()
-    sports = {"football", "basketball", "volleyball", "tennis", "wrestling", "formula1", "combat", "sport"}
-    return "sport" if cat in sports or any(s in cat for s in sports) else cat
+def is_sports_candidate(news):
+    source = str(getattr(news, "source", "") or "").lower()
+    category = str(getattr(news, "category", "") or "").lower()
+
+    return (
+        any(word in source for word in SPORTS_SOURCE_KEYWORDS)
+        or any(word in category for word in SPORTS_CATEGORY_KEYWORDS)
+    )
 
 
-async def process_and_publish(item: dict) -> bool:
-    link = item.get("link") or item.get("url") or str(item.get("title", ""))
-    title = item.get("title", "").strip()
+def select_candidates(all_news):
+    if not all_news:
+        return []
 
-    if not title:
-        return False
+    sports_news = []
+    other_news = []
 
-    if is_published(link):
-        logger.debug(f"Duplicate skipped: {title[:60]}...")
-        return False
+    for news in all_news:
+        if is_sports_candidate(news):
+            sports_news.append(news)
+        else:
+            other_news.append(news)
 
-    try:
-        # Category Detection
-        raw_category = detect_smart_category(
-            title=title, 
-            summary=item.get("summary", ""), 
-            source=item.get("source", "")
-        )
-        category = normalize_category(raw_category)
+    random.shuffle(sports_news)
+    random.shuffle(other_news)
 
-        logger.info(f"📂 Category: {category} | {title[:70]}...")
+    limit = min(MAX_CANDIDATES_PER_CYCLE, len(all_news))
+    sports_target = min(
+        SPORTS_CANDIDATE_TARGET,
+        len(sports_news),
+        limit,
+    )
 
-        # AI Processing
-        processed = process_news({
-            "title": title,
-            "summary": item.get("summary", ""),
-            "content": item.get("content", ""),
-            "source": item.get("source", "نامشخص"),
-            "category": category,
-            "image_url": item.get("image_url") or item.get("image")
-        })
+    sports_news = sports_news[:sports_target]
+    remaining_slots = limit - len(sports_news)
+    other_news = other_news[:remaining_slots]
 
-        # Sport Handling
-        if category == "sport":
-            sport_result = format_sport_news(processed["title"], processed["summary"])
-            if sport_result.get("blocked"):
-                logger.info(f"🚫 Sport blocked: {title[:50]}...")
-                return False
-            processed["title"] = sport_result.get("title", processed["title"])
-            processed["summary"] = sport_result.get("summary", processed["summary"])
+    # نوبتی: یک خبر ورزشی، سپس یک خبر عمومی.
+    # خبرهای باقی‌مانده هم در انتهای فهرست قرار می‌گیرند.
+    selected = []
+    sport_index = 0
+    other_index = 0
 
-        # Quality & Importance
-        if not is_high_quality(processed["title"], processed["summary"], category):
-            logger.info(f"❌ Low quality skipped")
-            return False
+    while len(selected) < limit:
+        if sport_index < len(sports_news):
+            selected.append(sports_news[sport_index])
+            sport_index += 1
 
-        if not is_important(processed["title"], processed["summary"], category):
-            logger.info(f"❌ Low importance skipped")
-            return False
-
-        # Send to Telegram
-        success = await send_to_telegram(processed)
-
-        if success:
-            mark_as_published(link, processed["title"], processed.get("source"), category)
-            logger.info(f"✅ Published: {processed['title'][:80]}...")
-            return True
-
-        return False
-
-    except Exception as e:
-        logger.error(f"Error processing news '{title[:60]}...': {e}", exc_info=True)
-        return False
-
-
-async def check_news():
-    news_list = get_latest_news()
-    if not news_list:
-        logger.info("No new news found.")
-        return
-
-    random.shuffle(news_list)
-    published_count = 0
-
-    for item in news_list:
-        if published_count >= MAX_NEWS_PER_CYCLE:
+        if len(selected) >= limit:
             break
 
-        if await process_and_publish(item):
-            published_count += 1
-            await asyncio.sleep(8)   # جلوگیری از Rate Limit تلگرام
+        if other_index < len(other_news):
+            selected.append(other_news[other_index])
+            other_index += 1
 
-    logger.info(f"✅ Cycle finished - Published {published_count} news")
+        if (
+            sport_index >= len(sports_news)
+            and other_index >= len(other_news)
+        ):
+            break
+
+    logger.info(
+        "Candidate selection: "
+        f"{len(sports_news)} sports, "
+        f"{len(other_news)} general, "
+        f"{len(selected)} selected"
+    )
+
+    return selected
 
 
 async def main():
-    init_db()
-    logger.info("🚀 KhabarF24 Main Engine v8.2 Started")
+    logger.info("KhabarF24 Bot Started Successfully")
+
+    start_time = time.monotonic()
+    fetch_service = FetchService()
+    pipeline = NewsPipeline()
+    sources = load_sources()
+
+    logger.info(f"Loaded {len(sources)} sources")
 
     while True:
+        if time.monotonic() - start_time > MAX_RUNTIME_SECONDS:
+            logger.info("Maximum runtime reached; exiting cleanly")
+            break
+
         try:
-            await check_news()
-        except Exception as e:
-            logger.error(f"Critical error in main loop: {e}", exc_info=True)
-            await asyncio.sleep(60)
-        
-        await asyncio.sleep(CHECK_INTERVAL)
+            logger.info("Checking for new news...")
+
+            all_news = await fetch_service.fetch_all(sources)
+            logger.info(f"Fetched {len(all_news)} news")
+
+            candidates = select_candidates(all_news)
+
+            published_count = 0
+            processed_count = 0
+
+            for news in candidates:
+                if published_count >= MAX_PUBLISH_PER_CYCLE:
+                    break
+
+                source = str(
+                    getattr(news, "source", "Unknown") or "Unknown"
+                )
+                title = str(
+                    getattr(news, "title", "") or ""
+                )[:100]
+
+                try:
+                    result = await pipeline.process(news)
+                    processed_count += 1
+
+                    if getattr(result, "is_duplicate", False):
+                        logger.info(
+                            "Skipped duplicate | source=%s | title=%s",
+                            source,
+                            title,
+                        )
+                        await asyncio.sleep(
+                            MIN_GAP_BETWEEN_CANDIDATES
+                        )
+                        continue
+
+                    if not getattr(result, "content_generated", False):
+                        logger.info(
+                            "Skipped: content not generated | "
+                            "source=%s | title=%s",
+                            source,
+                            title,
+                        )
+                        await asyncio.sleep(
+                            MIN_GAP_BETWEEN_CANDIDATES
+                        )
+                        continue
+
+                    # این ویژگی باید در pipeline پس از ارسال تلگرام تنظیم شود.
+                    if getattr(result, "published", False):
+                        published_count += 1
+                        logger.info(
+                            "Successful publication: %s/%s",
+                            published_count,
+                            MAX_PUBLISH_PER_CYCLE,
+                        )
+                    else:
+                        logger.warning(
+                            "Not counted as published | "
+                            "source=%s | title=%s",
+                            source,
+                            title,
+                        )
+
+                except Exception:
+                    logger.exception(
+                        "Candidate failed; continuing | "
+                        "source=%s | title=%s",
+                        source,
+                        title,
+                    )
+
+                await asyncio.sleep(
+                    MIN_GAP_BETWEEN_CANDIDATES
+                )
+
+            logger.info(
+                "Cycle finished: "
+                f"processed={processed_count}, "
+                f"published={published_count}"
+            )
+
+            await asyncio.sleep(CHECK_INTERVAL)
+
+        except Exception:
+            logger.exception("Cycle failed")
+            await asyncio.sleep(30)
 
 
 if __name__ == "__main__":
