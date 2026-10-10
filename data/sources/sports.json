@@ -11,9 +11,7 @@
     "language": "en",
     "has_rss": true,
     "supports_scraping": true,
-    "categories": [
-      "sport"
-    ],
+    "categories": ["sport"],
     "priority": 85,
     "check_interval": 60,
     "enabled": true
@@ -30,10 +28,7 @@
     "language": "en",
     "has_rss": true,
     "supports_scraping": true,
-    "categories": [
-      "sport",
-      "football"
-    ],
+    "categories": ["sport", "football"],
     "priority": 90,
     "check_interval": 60,
     "enabled": true
@@ -50,10 +45,7 @@
     "language": "en",
     "has_rss": true,
     "supports_scraping": true,
-    "categories": [
-      "sport",
-      "football"
-    ],
+    "categories": ["sport", "football"],
     "priority": 90,
     "check_interval": 60,
     "enabled": true
@@ -70,11 +62,7 @@
     "language": "it",
     "has_rss": true,
     "supports_scraping": true,
-    "categories": [
-      "sport",
-      "football",
-      "transfer"
-    ],
+    "categories": ["sport", "football", "transfer"],
     "priority": 96,
     "check_interval": 60,
     "enabled": true
@@ -91,11 +79,7 @@
     "language": "en",
     "has_rss": true,
     "supports_scraping": true,
-    "categories": [
-      "sport",
-      "football",
-      "transfer"
-    ],
+    "categories": ["sport", "football", "transfer"],
     "priority": 90,
     "check_interval": 120,
     "enabled": true
@@ -116,11 +100,7 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": [
-      "sport",
-      "football",
-      "transfer"
-    ],
+    "categories": ["sport", "football", "transfer"],
     "priority": 98,
     "check_interval": 60,
     "enabled": true
@@ -139,11 +119,7 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": [
-      "sport",
-      "football",
-      "transfer"
-    ],
+    "categories": ["sport", "football", "transfer"],
     "priority": 94,
     "check_interval": 60,
     "enabled": true
@@ -162,12 +138,7 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": [
-      "sport",
-      "football",
-      "champions_league",
-      "europa_league"
-    ],
+    "categories": ["sport", "football", "champions_league", "europa_league"],
     "priority": 93,
     "check_interval": 120,
     "enabled": true
@@ -186,11 +157,7 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": [
-      "sport",
-      "football",
-      "international"
-    ],
+    "categories": ["sport", "football", "international"],
     "priority": 92,
     "check_interval": 120,
     "enabled": true
@@ -209,11 +176,7 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": [
-      "sport",
-      "football",
-      "premier_league"
-    ],
+    "categories": ["sport", "football", "premier_league"],
     "priority": 94,
     "check_interval": 120,
     "enabled": true
@@ -227,12 +190,11 @@
     "flag": "⚽",
     "language": "en",
     "has_api": true,
-    "categories": [
-      "sport",
-      "football"
-    ],
+    "categories": ["sport", "football"],
     "priority": 95,
     "check_interval": 180,
     "enabled": true
   }
 ]
+```
+    
