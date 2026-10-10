@@ -12,6 +12,7 @@ SOURCE_SCORES = {
     "Al Jazeera": 8,
     "Guardian": 8,
     "The New York Times": 8,
+    "API-Football": 8,
 
     "Tasnim News": 7,
     "IRNA": 7,
