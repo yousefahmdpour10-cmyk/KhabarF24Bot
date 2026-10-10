@@ -162,3 +162,29 @@ class SportsApiClient:
             return []
 
         return data.get("response", [])
+
+    async def get_fixture_lineups(self, fixture_id: int) -> List[dict]:
+        """ترکیب دو تیم و نام مربی‌ها."""
+
+        data = await self._get(
+            "/fixtures/lineups",
+            {"fixture": fixture_id},
+        )
+
+        if not data:
+            return []
+
+        return data.get("response", [])
+
+    async def get_fixture_statistics(self, fixture_id: int) -> List[dict]:
+        """آمار بازی (مالکیت توپ، شوت، کرنر و ...) برای هر دو تیم."""
+
+        data = await self._get(
+            "/fixtures/statistics",
+            {"fixture": fixture_id},
+        )
+
+        if not data:
+            return []
+
+        return data.get("response", [])
