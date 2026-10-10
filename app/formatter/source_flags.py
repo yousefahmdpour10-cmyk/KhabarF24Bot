@@ -43,6 +43,7 @@ FLAGS = {
     "L'Équipe": "🇫🇷",
     "AFP": "🇫🇷",
     "Euronews": "🇫🇷",
+    "API-Football": "🇫🇷",
 
     # Germany
     "Kicker": "🇩🇪",
