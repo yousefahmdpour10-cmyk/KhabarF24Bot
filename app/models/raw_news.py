@@ -44,6 +44,10 @@ class RawNews:
 
     source_id: str = ""
 
+    source_category_hint: List[str] = field(
+    default_factory=list
+)
+
     country: str = ""
 
     language: str = ""
