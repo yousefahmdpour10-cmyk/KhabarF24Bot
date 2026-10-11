@@ -2,6 +2,7 @@
 Sport Detector
 
 تشخیص رشته ورزشی با امتیازدهی به کلیدواژه‌ها
+و استفاده از دسته‌بندی منبع به‌عنوان سرنخ.
 """
 
 from collections import defaultdict
@@ -12,65 +13,40 @@ from app.utils.logger import logger
 from app.utils.text_matching import keyword_in_text
 
 
-# کلیدواژه‌های عمومی و مبهم که به‌تنهایی
-# برای تشخیص رشته ورزشی کافی نیستند.
 WEAK_KEYWORDS = {
-    "sport",
-    "sports",
-    "manager",
-    "coach",
-    "head coach",
-    "transfer",
-    "transfer news",
-    "transfer window",
-    "signing",
-    "fixtures",
-    "championship",
-    "tournament",
-    "league",
-    "match",
-    "club",
-    "captain",
-    "season",
-    "win",
-    "winner",
-    "final",
-    "finals",
-    "draw",
-    "goal",
-    "goals",
-    "player",
-    "players",
-    "athlete",
-    "athletes",
+    "sport", "sports", "manager", "coach", "head coach",
+    "transfer", "transfer news", "transfer window", "signing",
+    "fixtures", "championship", "tournament", "league", "match",
+    "club", "captain", "season", "win", "winner", "final",
+    "finals", "draw", "goal", "goals", "player", "players",
+    "athlete", "athletes",
 }
 
-
-# آستانه امتیاز برای تشخیص رشته
 MIN_SPORT_SCORE = 2
 
 
 class SportDetector:
-    """
-    تشخیص رشته ورزشی خبر.
-
-    نکته:
-    - رشته‌ای که از قبل توسط منبع معتبر مشخص شده حفظ می‌شود.
-    - کلمات عمومی به‌تنهایی باعث تشخیص رشته نمی‌شوند.
-    - نام رشته‌ها و نشانه‌های تخصصی امتیاز بیشتری می‌گیرند.
-    - اگر رشته مشخص نشود، sport برابر None باقی می‌ماند.
-      دسته اصلی خبر می‌تواند جداگانه در CategoryDetector تعیین شود.
-    """
 
     async def process(self, news: RawNews) -> RawNews:
+        existing_sport = getattr(news, "sport", None)
 
-        # اگر رشته قبلاً توسط یک منبع معتبر تعیین شده،
-        # آن را بازنویسی نمی‌کنیم.
-        if getattr(news, "sport", None):
+        if existing_sport and existing_sport in SPORTS:
+            selected = SPORTS[existing_sport]
+            news.sport_name = (
+                getattr(news, "sport_name", None)
+                or selected.get("name")
+            )
+            news.sport_emoji = (
+                getattr(news, "sport_emoji", None)
+                or selected.get("emoji")
+            )
+            news.sport_hashtag = (
+                getattr(news, "sport_hashtag", None)
+                or selected.get("hashtag")
+            )
             logger.info(
                 "Sport: %s (از قبل مشخص شده)",
-                getattr(news, "sport_name", None)
-                or news.sport,
+                news.sport_name,
             )
             return news
 
@@ -78,13 +54,13 @@ class SportDetector:
         summary = getattr(news, "summary", "") or ""
         content = getattr(news, "content", "") or ""
 
-        # عنوان و خلاصه وزن بیشتری در تصمیم دارند.
         title_summary = f"{title} {summary}"
         full_text = f"{title_summary} {content}"
 
         scores = defaultdict(int)
         matched_keywords = defaultdict(list)
 
+        # تشخیص رشته با استفاده از کلیدواژه‌ها
         for sport_id, sport_data in SPORTS.items():
             keywords = sport_data.get("keywords", [])
 
@@ -92,44 +68,70 @@ class SportDetector:
                 if not keyword:
                     continue
 
-                # ابتدا عنوان و خلاصه بررسی می‌شوند.
-                in_title_summary = keyword_in_text(
-                    keyword,
-                    title_summary,
+                in_title = keyword_in_text(
+                    keyword, title_summary
                 )
-
-                in_full_text = (
-                    in_title_summary
+                in_content = (
+                    in_title
                     or keyword_in_text(keyword, full_text)
                 )
 
-                if not in_full_text:
+                if not in_content:
                     continue
 
-                normalized_keyword = keyword.strip().lower()
+                normalized = keyword.strip().lower()
 
-                # کلمات عمومی امتیاز کمی دارند.
-                if normalized_keyword in WEAK_KEYWORDS:
-                    weight = 1
+                weight = (
+                    1 if normalized in WEAK_KEYWORDS else 2
+                )
 
-                # نام صریح رشته یا اصطلاح تخصصی ورزشی
-                # معمولاً از یک کلمه عمومی قابل‌اعتمادتر است.
-                else:
-                    weight = 2
-
-                # تطبیق در عنوان یا خلاصه مهم‌تر است.
-                if in_title_summary:
+                if in_title:
                     weight += 1
 
                 scores[sport_id] += weight
                 matched_keywords[sport_id].append(keyword)
 
+        # استفاده از دسته‌بندی منبع به‌عنوان سرنخ تکمیلی
+        source_hints = getattr(
+            news, "source_category_hint", []
+        ) or []
+
+        source_hints = {
+            str(hint).strip().lower()
+            for hint in source_hints
+            if hint
+        }
+
+        source_id = str(
+            getattr(news, "source_id", "") or ""
+        ).strip().lower()
+
+        football_hints = {
+            "football",
+            "soccer",
+            "premier_league",
+            "champions_league",
+            "europa_league",
+        }
+
+        # فقط برچسب‌های صریح فوتبال امتیاز می‌گیرند؛
+        # برچسب عمومی sport برای تعیین فوتبال کافی نیست.
+        if (
+            source_hints & football_hints
+            or source_id in {
+                "bbc_football",
+                "espn_soccer",
+            }
+        ):
+            scores["football"] += 2
+            matched_keywords["football"].append(
+                "source_category_hint"
+            )
+
         if not scores:
             self._clear_sport(news)
             return news
 
-        # مرتب‌سازی بر اساس امتیاز؛ در صورت مساوی بودن،
-        # نتیجه را بدون اختلاف معنادار قطعی اعلام نمی‌کنیم.
         ranked = sorted(
             scores.items(),
             key=lambda item: item[1],
@@ -137,20 +139,20 @@ class SportDetector:
         )
 
         best_sport, best_score = ranked[0]
-
         second_score = (
-            ranked[1][1]
-            if len(ranked) > 1
-            else 0
+            ranked[1][1] if len(ranked) > 1 else 0
         )
 
-        # یک واژه عمومی یا یک تطبیق ضعیف کافی نیست.
+        if best_sport not in SPORTS:
+            self._clear_sport(news)
+            return news
+
         if best_score < MIN_SPORT_SCORE:
             self._clear_sport(news)
             return news
 
-        # اگر چند رشته امتیاز یکسان گرفته‌اند،
-        # رشته را حدس نمی‌زنیم.
+        # اگر دو رشته امتیاز برابر داشته باشند،
+        # از انتخاب تصادفی رشته جلوگیری می‌کنیم.
         if second_score == best_score:
             logger.info(
                 "Sport: نامشخص (امتیاز برابر بین رشته‌ها: %s)",
@@ -181,10 +183,6 @@ class SportDetector:
 
     @staticmethod
     def _clear_sport(news: RawNews) -> None:
-        """
-        پاک‌کردن نتیجه رشته وقتی شواهد کافی نیست.
-        دسته اصلی خبر در CategoryDetector تعیین می‌شود.
-        """
         news.sport = None
         news.sport_name = None
         news.sport_emoji = None
