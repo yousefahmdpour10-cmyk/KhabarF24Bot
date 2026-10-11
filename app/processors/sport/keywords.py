@@ -13,7 +13,7 @@ SPORTS = {
         "keywords": [
             # واژه‌های عمومی فوتبال
             "football", "footballer", "footballers", "soccer",
-            "fifa", "uefa", "penalty", "penalties",
+            "fifa", "uefa", "penalty",
             "winger", "midfielder", "striker", "defender",
             "goalkeeper", "national team", "call-up",
             "transfer news", "transfer window", "manager",
