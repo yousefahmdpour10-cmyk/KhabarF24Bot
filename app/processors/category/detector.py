@@ -1,3 +1,4 @@
+
 """
 Category Detector
 تشخیص دسته‌بندی خبر
@@ -15,44 +16,41 @@ MIN_CATEGORY_SCORE = 2
 
 class CategoryDetector:
     """
-    تشخیص دسته خبر
+    تشخیص دسته خبر.
 
-    این کلاس باید بعد از SportDetector در pipeline اجرا شود، چون اگر
-    SportDetector قبلاً یک رشته‌ی ورزشی مشخص را تشخیص داده باشد (که
-    لیست کلیدواژه‌ی بسیار کامل‌تری دارد، شامل نام بازیکنان و اصطلاحات
-    تخصصی)، آن نتیجه معتبرتر از حدس دوباره با لیست عمومی‌تر این فایل
-    است.
+    این کلاس بعد از SportDetector اجرا می‌شود.
+    اگر SportDetector رشته ورزشی را تشخیص داده باشد،
+    دسته اصلی خبر برابر sport خواهد بود.
     """
 
-    async def process(
-        self,
-        news: RawNews,
-    ) -> RawNews:
+    async def process(self, news: RawNews) -> RawNews:
 
-        # اگر SportDetector از قبل رشته‌ای را تشخیص داده، همان را
-        # بپذیر -- نیازی به حدس دوباره نیست.
+        # اگر SportDetector رشته ورزشی را تشخیص داده باشد،
+        # نتیجه آن را حفظ می‌کنیم.
         if getattr(news, "sport", None):
             news.category = "sport"
             logger.info(
-                f"Category: sport (trusted from SportDetector, sport='{news.sport}')"
+                "Category: sport (detected sport='%s')",
+                news.sport,
             )
             return news
 
-        text = f"{news.title} {news.summary}"
+        text = (
+            f"{getattr(news, 'title', '') or ''} "
+            f"{getattr(news, 'summary', '') or ''}"
+        )
 
         scores = defaultdict(int)
 
+        # تشخیص دسته بر اساس محتوای خبر
         for category, keywords in CATEGORY_KEYWORDS.items():
-
             for keyword in keywords:
-
                 if keyword_in_text(keyword, text):
                     scores[category] += 1
 
         final_category = "general"
 
         if scores:
-
             best_category = max(
                 scores,
                 key=scores.get,
@@ -63,19 +61,53 @@ class CategoryDetector:
             if best_score >= MIN_CATEGORY_SCORE:
                 final_category = best_category
 
+        # اگر محتوا به اندازه کافی کلیدواژه نداشت،
+        # از دسته‌بندی تعریف‌شده برای منبع کمک می‌گیریم.
         if final_category == "general":
+            hint = getattr(
+                news,
+                "source_category_hint",
+                None,
+            ) or []
 
-            hint = getattr(news, "source_category_hint", None)
+            normalized_hint = {
+                str(item).strip().lower()
+                for item in hint
+                if item
+            }
 
-            if hint and len(hint) == 1:
-                final_category = hint[0]
+            # football یک زیرشاخه از sport است؛
+            # دسته اصلی خبر باید sport باشد.
+            if "sport" in normalized_hint or "football" in normalized_hint:
+                final_category = "sport"
+
                 logger.info(
-                    f"Category: {final_category} (defaulted from general via source hint, source='{news.source}')"
+                    "Category: sport (source hint, source='%s', hints=%s)",
+                    getattr(news, "source", "Unknown"),
+                    sorted(normalized_hint),
                 )
-                news.category = final_category
-                return news
+
+            elif "general" not in normalized_hint:
+                # دسته‌های دیگر فقط در صورتی پذیرفته می‌شوند
+                # که در دسته‌بندی‌های معتبر پروژه وجود داشته باشند.
+                valid_categories = set(CATEGORY_KEYWORDS.keys())
+                valid_hints = normalized_hint & valid_categories
+
+                if len(valid_hints) == 1:
+                    final_category = next(iter(valid_hints))
+
+                    logger.info(
+                        "Category: %s (source hint, source='%s')",
+                        final_category,
+                        getattr(news, "source", "Unknown"),
+                    )
 
         news.category = final_category
-        logger.info(f"Category: {final_category}")
+
+        logger.info(
+            "Category: %s | source=%s",
+            final_category,
+            getattr(news, "source", "Unknown"),
+        )
 
         return news
