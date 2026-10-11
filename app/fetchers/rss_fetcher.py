@@ -51,9 +51,13 @@ class RSSFetcher(BaseFetcher):
             try:
 
                 news = RawNews(
-                    source_id=self.source.id,
-                    source=self.source.name,
+                    
+                source_id=self.source.id,
+                source=self.source.name,
 
+                source_category_hint=list(
+                getattr(self.source, "categories", None) or []
+),
                     title=getattr(
                         entry,
                         "title",
