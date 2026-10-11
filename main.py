@@ -80,6 +80,11 @@ def select_candidates(all_news):
 
     random.shuffle(sports_news)
     random.shuffle(other_news)
+        # نتیجه‌ی ساخت‌یافته‌ی بازی‌ها (API-Football) همیشه جلوتر از بقیه‌ی
+    # خبرهای ورزشی بررسی شود. sort پایدار است و ترتیب بقیه را عوض نمی‌کند.
+    sports_news.sort(
+        key=lambda n: 0 if getattr(n, "source_id", "") == "api_football" else 1
+    )
 
     limit = min(MAX_CANDIDATES_PER_CYCLE, len(all_news))
     sports_target = min(
