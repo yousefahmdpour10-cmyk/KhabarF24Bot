@@ -1,3 +1,4 @@
+
 """
 RSS Fetcher
 
@@ -29,9 +30,11 @@ class RSSFetcher(BaseFetcher):
 
         news_list: List[RawNews] = []
 
-        # استفاده از rss_url در مدل جدید NewsSource
-        # و حفظ سازگاری با مدل قبلی که از url استفاده می‌کرد.
-        rss_url = getattr(self.source, "rss_url", None) or self.source.url
+        # استفاده از rss_url و حفظ سازگاری با url
+        rss_url = (
+            getattr(self.source, "rss_url", None)
+            or self.source.url
+        )
 
         if not rss_url:
             return news_list
@@ -47,17 +50,19 @@ class RSSFetcher(BaseFetcher):
             print(f"RSS Error: {self.source.name}")
 
         for entry in feed.entries:
-
             try:
+                # انتقال دسته‌بندی‌های تعریف‌شده برای منبع
+                source_categories = list(
+                    getattr(self.source, "categories", None) or []
+                )
 
                 news = RawNews(
-                    
-                source_id=self.source.id,
-                source=self.source.name,
+                    source_id=self.source.id,
+                    source=self.source.name,
 
-                source_category_hint=list(
-                getattr(self.source, "categories", None) or []
-),
+                    # برای تشخیص دسته‌بندی در مراحل بعدی
+                    source_category_hint=source_categories,
+
                     title=getattr(
                         entry,
                         "title",
@@ -83,12 +88,8 @@ class RSSFetcher(BaseFetcher):
                     language=self.source.language,
 
                     category=(
-                        self.source.categories[0]
-                        if getattr(
-                            self.source,
-                            "categories",
-                            None
-                        )
+                        source_categories[0]
+                        if source_categories
                         else ""
                     ),
 
@@ -108,7 +109,6 @@ class RSSFetcher(BaseFetcher):
                 news_list.append(news)
 
             except Exception as e:
-
                 print(
                     f"Error parsing news from "
                     f"{self.source.name}: {e}"
@@ -120,9 +120,6 @@ class RSSFetcher(BaseFetcher):
     def _extract_content(entry) -> str:
         """
         استخراج متن اصلی خبر از RSS.
-
-        بعضی RSSها متن خبر را در content
-        و بعضی در summary قرار می‌دهند.
         """
 
         content = getattr(
@@ -154,10 +151,6 @@ class RSSFetcher(BaseFetcher):
     def _extract_published_at(entry) -> Optional[datetime]:
         """
         تبدیل تاریخ RSS به datetime.
-
-        feedparser معمولاً تاریخ را در
-        published_parsed یا updated_parsed
-        به شکل time.struct_time قرار می‌دهد.
         """
 
         parsed_time = getattr(
@@ -191,8 +184,8 @@ class RSSFetcher(BaseFetcher):
     @staticmethod
     def _extract_image_url(entry) -> Optional[str]:
         """
-        تلاش برای پیدا کردن آدرس عکس خبر از فرمت‌های رایج RSS
-        (media:thumbnail, media:content, enclosure).
+        استخراج تصویر از media:thumbnail،
+        media:content یا enclosure.
         """
 
         media_thumbnail = getattr(
@@ -224,14 +217,12 @@ class RSSFetcher(BaseFetcher):
             "links",
             []
         ):
-
             if (
                 link.get("rel") == "enclosure"
                 and str(
                     link.get("type", "")
                 ).startswith("image")
             ):
-
                 url = link.get("href")
 
                 if url:
