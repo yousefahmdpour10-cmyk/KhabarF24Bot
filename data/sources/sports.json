@@ -106,25 +106,31 @@
     "enabled": true
   },
   {
-    "id": "sky_sports_football",
-    "name": "Sky Sports Football",
-    "source_type": "website",
-    "url": "https://www.skysports.com/football",
-    "website_url": "https://www.skysports.com/football",
-    "country": "GB",
-    "flag": "🇬🇧",
-    "language": "en",
-    "has_rss": false,
-    "has_api": false,
-    "supports_scraping": true,
-    "requires_browser": false,
-    "requires_auth": false,
-    "categories": ["sport", "football", "transfer"],
-    "priority": 94,
-    "check_interval": 60,
-    "enabled": true
-  },
-  {
+{
+  "id": "sky_sports_football",
+  "name": "Sky Sports Football",
+  "source_type": "rss",
+  "url": "https://www.skysports.com/rss/11095",
+  "rss_url": "https://www.skysports.com/rss/11095",
+  "website_url": "https://www.skysports.com/football",
+  "country": "GB",
+  "flag": "🇬🇧",
+  "language": "en",
+  "has_rss": true,
+  "has_api": false,
+  "supports_scraping": true,
+  "requires_browser": false,
+  "requires_auth": false,
+  "categories": [
+    "sport",
+    "football",
+    "transfer"
+  ],
+  "priority": 94,
+  "check_interval": 60,
+  "enabled": true
+}
+
     "id": "uefa",
     "name": "UEFA",
     "source_type": "website",
