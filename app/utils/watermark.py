@@ -20,6 +20,10 @@ LOGO_PATH = Path("assets/khabarf24_header_transparent_final.png")
 LOGO_WIDTH_RATIO = 0.30
 MARGIN_RATIO = 0.04
 
+# عکس‌های خیلی بزرگ منبع قبل از آپلود به تلگرام کوچک می‌شوند
+# (آپلود سریع‌تر، خطای Timed out کمتر)
+MAX_IMAGE_SIDE = 1600
+
 
 async def _download_image(url: str) -> Optional[bytes]:
 
@@ -44,6 +48,7 @@ def _add_watermark(image_bytes: bytes) -> Optional[bytes]:
 
     try:
         base = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        base.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE), Image.LANCZOS)
 
         if not LOGO_PATH.exists():
             logger.warning(f"Watermark: فایل لوگو پیدا نشد -> {LOGO_PATH}")
