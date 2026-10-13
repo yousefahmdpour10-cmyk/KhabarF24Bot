@@ -170,8 +170,17 @@ class GeminiClient:
                 return None
 
             if attempt < self.retries:
-                delay = min(2 ** attempt, 8) + random.uniform(0, 1)
+                # برای خطاهای موقت سرویس، فرصت بیشتری برای بازیابی بده
+                delay = min(15 * (2 ** (attempt - 1)), 60)
+                delay += random.uniform(0, 2)
+
+                logger.warning(
+                    "Gemini: تلاش مجدد پس از %.1f ثانیه",
+                    delay,
+                )
                 await asyncio.sleep(delay)
+```
+
 
         logger.error("Gemini: همه تلاش‌ها ناموفق بودند")
         return None
