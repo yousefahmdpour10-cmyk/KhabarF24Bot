@@ -179,7 +179,6 @@ class GeminiClient:
                     delay,
                 )
                 await asyncio.sleep(delay)
-```
 
 
         logger.error("Gemini: همه تلاش‌ها ناموفق بودند")
