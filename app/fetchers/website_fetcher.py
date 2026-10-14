@@ -36,10 +36,11 @@ class WebsiteFetcher(BaseFetcher):
         super().__init__(source)
 
         self.timeout = aiohttp.ClientTimeout(
-            total=15,
-            connect=5,
-            sock_read=10,
-        )
+    total=30,
+    connect=10,
+    sock_connect=10,
+    sock_read=20,
+)
 
         self.headers = {
             "User-Agent": (
@@ -80,9 +81,11 @@ class WebsiteFetcher(BaseFetcher):
 
         try:
             async with aiohttp.ClientSession(
-                timeout=self.timeout,
-                headers=self.headers,
-            ) as session:
+    timeout=self.timeout,
+    headers=self.headers,
+    max_field_size=16384,
+    max_headers=200,
+) as session:
                 html = await self._download_page(
                     session,
                     website_url,
