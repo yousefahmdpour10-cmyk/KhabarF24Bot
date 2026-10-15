@@ -1,3 +1,4 @@
+
 """
 app/ai/client.py
 
@@ -5,6 +6,7 @@ Gemini API Client
 """
 
 import asyncio
+import json
 import random
 from typing import Optional
 
@@ -23,6 +25,7 @@ GEMINI_ENDPOINT = (
 class GeminiClient:
     DEFAULT_TIMEOUT = 60
     DEFAULT_RETRIES = 2
+    MAX_RETRY_DELAY = 120
 
     def __init__(
         self,
@@ -93,7 +96,10 @@ class GeminiClient:
                                 data = await response.json(
                                     content_type=None
                                 )
-                            except (ValueError, aiohttp.ClientError):
+                            except (
+                                ValueError,
+                                aiohttp.ClientError,
+                            ):
                                 logger.error(
                                     "Gemini: پاسخ JSON قابل خواندن نیست"
                                 )
@@ -110,12 +116,23 @@ class GeminiClient:
                             return None
 
                         body = await response.text()
-                        body_preview = body[:500]
+                        body_preview = body[:1000]
 
                         if response.status == 429:
+                            # ثبت علت واقعی محدودیت؛ کلید API ثبت نمی‌شود.
+                            logger.warning(
+                                "Gemini HTTP 429 | model=%s | "
+                                "attempt=%s/%s | response=%s",
+                                self.model,
+                                attempt,
+                                self.retries,
+                                body_preview,
+                            )
+
                             if attempt >= self.retries:
                                 logger.warning(
-                                    "Gemini rate limit؛ تعداد تلاش‌ها تمام شد"
+                                    "Gemini rate limit؛ "
+                                    "تعداد تلاش‌ها تمام شد"
                                 )
                                 return None
 
@@ -126,23 +143,26 @@ class GeminiClient:
                             )
 
                             logger.warning(
-                                "Gemini rate limit (429); "
-                                "retry in %s seconds",
+                                "Gemini rate limit؛ "
+                                "تلاش مجدد پس از %s ثانیه",
                                 delay,
                             )
+
                             await asyncio.sleep(delay)
                             continue
 
                         if response.status in (400, 401, 403, 404):
                             logger.error(
-                                "Gemini permanent HTTP error %s -> %s",
+                                "Gemini permanent HTTP error %s | "
+                                "model=%s | response=%s",
                                 response.status,
+                                self.model,
                                 body_preview,
                             )
                             return None
 
                         logger.warning(
-                            "Gemini HTTP %s | attempt=%s/%s | %s",
+                            "Gemini HTTP %s | attempt=%s/%s | response=%s",
                             response.status,
                             attempt,
                             self.retries,
@@ -170,8 +190,10 @@ class GeminiClient:
                 return None
 
             if attempt < self.retries:
-                # برای خطاهای موقت سرویس، فرصت بیشتری برای بازیابی بده
-                delay = min(15 * (2 ** (attempt - 1)), 60)
+                delay = min(
+                    15 * (2 ** (attempt - 1)),
+                    60,
+                )
                 delay += random.uniform(0, 2)
 
                 logger.warning(
@@ -180,34 +202,50 @@ class GeminiClient:
                 )
                 await asyncio.sleep(delay)
 
-
         logger.error("Gemini: همه تلاش‌ها ناموفق بودند")
         return None
 
-    @staticmethod
+    @classmethod
     def _retry_delay(
-        headers: dict,
+        cls,
+        headers,
         body: str,
         attempt: int,
     ) -> int:
-        """محاسبه زمان انتظار برای محدودیت نرخ."""
+        """محاسبه زمان انتظار بر اساس پاسخ سرویس."""
 
         retry_after = headers.get("Retry-After")
 
         if retry_after:
             try:
-                return max(1, min(int(float(retry_after)), 120))
+                return max(
+                    1,
+                    min(
+                        int(float(retry_after)),
+                        cls.MAX_RETRY_DELAY,
+                    ),
+                )
             except (ValueError, TypeError):
                 pass
 
-        # در صورت وجود retryDelay در پاسخ Gemini
         try:
-            import json
-
             data = json.loads(body)
-            details = data.get("error", {}).get("details", [])
+            error = data.get("error", {})
+
+            # گاهی اطلاعات محدودیت در پیام خطا مشخص است.
+            message = str(error.get("message", ""))
+            if message:
+                logger.warning(
+                    "Gemini error message: %s",
+                    message[:500],
+                )
+
+            details = error.get("details", [])
 
             for item in details:
+                if not isinstance(item, dict):
+                    continue
+
                 retry_delay = item.get("retryDelay")
 
                 if retry_delay:
@@ -215,27 +253,60 @@ class GeminiClient:
 
                     if value.endswith("s"):
                         seconds = float(value[:-1])
-                        return max(1, min(int(seconds) + 1, 120))
-        except (ValueError, TypeError, AttributeError):
+                        return max(
+                            1,
+                            min(
+                                int(seconds) + 1,
+                                cls.MAX_RETRY_DELAY,
+                            ),
+                        )
+
+        except (
+            ValueError,
+            TypeError,
+            AttributeError,
+        ):
             pass
 
-        return min(10 * (2 ** (attempt - 1)), 60)
+        return min(
+            10 * (2 ** (attempt - 1)),
+            60,
+        )
 
     @staticmethod
     def _extract_text(data: dict) -> Optional[str]:
+        """استخراج متن از پاسخ Gemini."""
+
         try:
             candidates = data.get("candidates") or []
 
             if not candidates:
+                prompt_feedback = data.get(
+                    "promptFeedback",
+                    {},
+                )
+
+                block_reason = prompt_feedback.get(
+                    "blockReason",
+                    "unknown",
+                )
+
                 logger.warning(
-                    "Gemini: هیچ candidateای برنگشت؛ ممکن است "
-                    "پاسخ به دلیل محدودیت ایمنی یا پایان توکن متوقف شده باشد"
+                    "Gemini: هیچ candidateای برنگشت | "
+                    "block_reason=%s",
+                    block_reason,
                 )
                 return None
 
+            candidate = candidates[0]
+
+            finish_reason = candidate.get(
+                "finishReason",
+                "unknown",
+            )
+
             parts = (
-                candidates[0]
-                .get("content", {})
+                candidate.get("content", {})
                 .get("parts", [])
             )
 
@@ -247,8 +318,23 @@ class GeminiClient:
             ]
 
             result = "\n".join(texts).strip()
-            return result or None
 
-        except (KeyError, IndexError, TypeError, AttributeError):
-            logger.exception("Unexpected Gemini response structure")
+            if not result:
+                logger.warning(
+                    "Gemini: خروجی خالی است | finish_reason=%s",
+                    finish_reason,
+                )
+                return None
+
+            return result
+
+        except (
+            KeyError,
+            IndexError,
+            TypeError,
+            AttributeError,
+        ):
+            logger.exception(
+                "Unexpected Gemini response structure"
+            )
             return None
