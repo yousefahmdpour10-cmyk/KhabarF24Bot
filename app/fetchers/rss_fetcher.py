@@ -2,7 +2,7 @@
 """
 RSS Fetcher
 
-دریافت خبر از منابع RSS
+دریافت خبرها از منابع RSS
 """
 
 import feedparser
@@ -30,101 +30,97 @@ class RSSFetcher(BaseFetcher):
 
         news_list: List[RawNews] = []
 
-        # استفاده از rss_url و حفظ سازگاری با url
         rss_url = (
             getattr(self.source, "rss_url", None)
             or self.source.url
         )
 
         if not rss_url:
+            print(
+                f"RSS URL MISSING: {self.source.name}"
+            )
             return news_list
 
-        xml = await self.http.get(rss_url)
+        try:
+            xml = await self.http.get(rss_url)
+        except Exception as exc:
+            print(
+                f"RSS FETCH ERROR: {self.source.name} | "
+                f"url={rss_url} | error={exc}"
+            )
+            return news_list
 
-if not xml:
-    print(
-        f"RSS FETCH FAILED: {self.source.name} | "
-        f"url={rss_url} | response is empty"
-    )
-    return news_list
+        if not xml:
+            print(
+                f"RSS FETCH FAILED: {self.source.name} | "
+                f"url={rss_url} | response is empty"
+            )
+            return news_list
 
-feed = feedparser.parse(xml)
+        try:
+            feed = feedparser.parse(xml)
+        except Exception as exc:
+            print(
+                f"RSS PARSE ERROR: {self.source.name} | "
+                f"error={exc}"
+            )
+            return news_list
 
-if feed.bozo:
-    print(
-        f"RSS PARSE WARNING: {self.source.name} | "
-        f"{getattr(feed, 'bozo_exception', 'unknown error')}"
-    )
+        if feed.bozo:
+            print(
+                f"RSS PARSE WARNING: {self.source.name} | "
+                f"{getattr(feed, 'bozo_exception', 'unknown error')}"
+            )
 
-print(
-    f"RSS RESULT: {self.source.name} | "
-    f"entries={len(feed.entries)} | "
-    f"url={rss_url}"
-)
+        print(
+            f"RSS RESULT: {self.source.name} | "
+            f"entries={len(feed.entries)} | "
+            f"url={rss_url}"
+        )
+
+        source_categories = list(
+            getattr(self.source, "categories", None) or []
+        )
+
         for entry in feed.entries:
             try:
-                # انتقال دسته‌بندی‌های تعریف‌شده برای منبع
-                source_categories = list(
-                    getattr(self.source, "categories", None) or []
-                )
-
                 news = RawNews(
                     source_id=self.source.id,
                     source=self.source.name,
-
-                    # برای تشخیص دسته‌بندی در مراحل بعدی
                     source_category_hint=source_categories,
-
-                    title=getattr(
-                        entry,
-                        "title",
-                        ""
-                    ) or "",
-
+                    title=getattr(entry, "title", "") or "",
                     content=self._extract_content(entry),
-
-                    summary=getattr(
-                        entry,
-                        "summary",
-                        ""
-                    ) or "",
-
-                    url=getattr(
-                        entry,
-                        "link",
-                        ""
-                    ) or "",
-
+                    summary=getattr(entry, "summary", "") or "",
+                    url=getattr(entry, "link", "") or "",
                     published_at=self._extract_published_at(entry),
-
                     language=self.source.language,
-
                     category=(
                         source_categories[0]
                         if source_categories
                         else ""
                     ),
-
                     image_url=self._extract_image_url(entry),
-
                     raw_data=dict(entry),
-
                     tags=list(
-                        getattr(
-                            entry,
-                            "tags",
-                            []
-                        ) or []
+                        getattr(entry, "tags", []) or []
                     ),
                 )
 
+                if not news.title and not news.content and not news.url:
+                    continue
+
                 news_list.append(news)
 
-            except Exception as e:
+            except Exception as exc:
                 print(
-                    f"Error parsing news from "
-                    f"{self.source.name}: {e}"
+                    f"RSS ENTRY ERROR: {self.source.name} | "
+                    f"error={exc}"
                 )
+
+        print(
+            f"RSS PARSED: {self.source.name} | "
+            f"news={len(news_list)}"
+        )
 
         return news_list
 
@@ -134,33 +130,28 @@ print(
         استخراج متن اصلی خبر از RSS.
         """
 
-        content = getattr(
-            entry,
-            "content",
-            None
-        )
+        content = getattr(entry, "content", None)
 
         if content:
             try:
                 if isinstance(content, list):
                     for item in content:
-                        value = item.get("value", "")
-                        if value:
-                            return value
+                        if isinstance(item, dict):
+                            value = item.get("value", "")
+                            if value:
+                                return value
             except Exception:
                 pass
 
         return (
-            getattr(
-                entry,
-                "summary",
-                ""
-            )
+            getattr(entry, "summary", "")
             or ""
         )
 
     @staticmethod
-    def _extract_published_at(entry) -> Optional[datetime]:
+    def _extract_published_at(
+        entry,
+    ) -> Optional[datetime]:
         """
         تبدیل تاریخ RSS به datetime.
         """
@@ -168,14 +159,14 @@ print(
         parsed_time = getattr(
             entry,
             "published_parsed",
-            None
+            None,
         )
 
         if not parsed_time:
             parsed_time = getattr(
                 entry,
                 "updated_parsed",
-                None
+                None,
             )
 
         if parsed_time:
@@ -188,7 +179,7 @@ print(
                     parsed_time.tm_min,
                     parsed_time.tm_sec,
                 )
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 pass
 
         return None
@@ -203,40 +194,31 @@ print(
         media_thumbnail = getattr(
             entry,
             "media_thumbnail",
-            None
+            None,
         )
 
         if media_thumbnail:
             url = media_thumbnail[0].get("url")
-
             if url:
                 return url
 
         media_content = getattr(
             entry,
             "media_content",
-            None
+            None,
         )
 
         if media_content:
             url = media_content[0].get("url")
-
             if url:
                 return url
 
-        for link in getattr(
-            entry,
-            "links",
-            []
-        ):
+        for link in getattr(entry, "links", []) or []:
             if (
                 link.get("rel") == "enclosure"
-                and str(
-                    link.get("type", "")
-                ).startswith("image")
+                and str(link.get("type", "")).startswith("image")
             ):
                 url = link.get("href")
-
                 if url:
                     return url
 
