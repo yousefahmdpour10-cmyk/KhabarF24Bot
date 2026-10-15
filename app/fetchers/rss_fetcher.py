@@ -1,13 +1,12 @@
-
 """
 RSS Fetcher
 
-دریافت خبرها از منابع RSS
+دریافت خبرها از RSS، همراه با استخراج تصویر و ویدئوی مستقیم.
 """
 
 import feedparser
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from app.fetchers.base_fetcher import BaseFetcher
 from app.models.raw_news import RawNews
@@ -15,19 +14,13 @@ from app.utils.http_client import HTTPClient
 
 
 class RSSFetcher(BaseFetcher):
-    """
-    دریافت خبر از RSS
-    """
+    """دریافت خبر از RSS."""
 
     def __init__(self, source):
         super().__init__(source)
         self.http = HTTPClient()
 
     async def fetch(self) -> List[RawNews]:
-        """
-        دریافت خبرها از RSS
-        """
-
         news_list: List[RawNews] = []
 
         rss_url = (
@@ -36,9 +29,7 @@ class RSSFetcher(BaseFetcher):
         )
 
         if not rss_url:
-            print(
-                f"RSS URL MISSING: {self.source.name}"
-            )
+            print(f"RSS URL MISSING: {self.source.name}")
             return news_list
 
         try:
@@ -61,8 +52,7 @@ class RSSFetcher(BaseFetcher):
             feed = feedparser.parse(xml)
         except Exception as exc:
             print(
-                f"RSS PARSE ERROR: {self.source.name} | "
-                f"error={exc}"
+                f"RSS PARSE ERROR: {self.source.name} | error={exc}"
             )
             return news_list
 
@@ -72,18 +62,19 @@ class RSSFetcher(BaseFetcher):
                 f"{getattr(feed, 'bozo_exception', 'unknown error')}"
             )
 
-        print(
-            f"RSS RESULT: {self.source.name} | "
-            f"entries={len(feed.entries)} | "
-            f"url={rss_url}"
-        )
-
         source_categories = list(
             getattr(self.source, "categories", None) or []
         )
 
+        print(
+            f"RSS RESULT: {self.source.name} | "
+            f"entries={len(feed.entries)} | url={rss_url}"
+        )
+
         for entry in feed.entries:
             try:
+                video_url, video_type = self._extract_video(entry)
+
                 news = RawNews(
                     source_id=self.source.id,
                     source=self.source.name,
@@ -100,10 +91,10 @@ class RSSFetcher(BaseFetcher):
                         else ""
                     ),
                     image_url=self._extract_image_url(entry),
+                    video_url=video_url or "",
+                    video_content_type=video_type or "",
                     raw_data=dict(entry),
-                    tags=list(
-                        getattr(entry, "tags", []) or []
-                    ),
+                    tags=list(getattr(entry, "tags", []) or []),
                 )
 
                 if not news.title and not news.content and not news.url:
@@ -113,61 +104,33 @@ class RSSFetcher(BaseFetcher):
 
             except Exception as exc:
                 print(
-                    f"RSS ENTRY ERROR: {self.source.name} | "
-                    f"error={exc}"
+                    f"RSS ENTRY ERROR: {self.source.name} | error={exc}"
                 )
 
         print(
-            f"RSS PARSED: {self.source.name} | "
-            f"news={len(news_list)}"
+            f"RSS PARSED: {self.source.name} | news={len(news_list)}"
         )
-
         return news_list
 
     @staticmethod
     def _extract_content(entry) -> str:
-        """
-        استخراج متن اصلی خبر از RSS.
-        """
-
         content = getattr(entry, "content", None)
 
         if content:
-            try:
-                if isinstance(content, list):
-                    for item in content:
-                        if isinstance(item, dict):
-                            value = item.get("value", "")
-                            if value:
-                                return value
-            except Exception:
-                pass
+            for item in content:
+                if isinstance(item, dict):
+                    value = item.get("value", "")
+                    if value:
+                        return value
 
-        return (
-            getattr(entry, "summary", "")
-            or ""
-        )
+        return getattr(entry, "summary", "") or ""
 
     @staticmethod
-    def _extract_published_at(
-        entry,
-    ) -> Optional[datetime]:
-        """
-        تبدیل تاریخ RSS به datetime.
-        """
-
-        parsed_time = getattr(
-            entry,
-            "published_parsed",
-            None,
-        )
+    def _extract_published_at(entry) -> Optional[datetime]:
+        parsed_time = getattr(entry, "published_parsed", None)
 
         if not parsed_time:
-            parsed_time = getattr(
-                entry,
-                "updated_parsed",
-                None,
-            )
+            parsed_time = getattr(entry, "updated_parsed", None)
 
         if parsed_time:
             try:
@@ -186,40 +149,75 @@ class RSSFetcher(BaseFetcher):
 
     @staticmethod
     def _extract_image_url(entry) -> Optional[str]:
-        """
-        استخراج تصویر از media:thumbnail،
-        media:content یا enclosure.
-        """
+        for field in ("media_thumbnail", "media_content"):
+            items = getattr(entry, field, None) or []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
 
-        media_thumbnail = getattr(
-            entry,
-            "media_thumbnail",
-            None,
-        )
+                url = item.get("url")
+                media_type = str(item.get("type", "")).lower()
 
-        if media_thumbnail:
-            url = media_thumbnail[0].get("url")
-            if url:
-                return url
-
-        media_content = getattr(
-            entry,
-            "media_content",
-            None,
-        )
-
-        if media_content:
-            url = media_content[0].get("url")
-            if url:
-                return url
-
-        for link in getattr(entry, "links", []) or []:
-            if (
-                link.get("rel") == "enclosure"
-                and str(link.get("type", "")).startswith("image")
-            ):
-                url = link.get("href")
-                if url:
+                if url and (
+                    field == "media_thumbnail"
+                    or media_type.startswith("image/")
+                ):
                     return url
 
+        for link in getattr(entry, "links", []) or []:
+            rel = str(link.get("rel", "")).lower()
+            media_type = str(link.get("type", "")).lower()
+            href = link.get("href")
+
+            if (
+                href
+                and rel == "enclosure"
+                and media_type.startswith("image/")
+            ):
+                return href
+
         return None
+
+    @staticmethod
+    def _extract_video(entry) -> Tuple[Optional[str], Optional[str]]:
+        """
+        فقط لینک‌هایی را برمی‌گرداند که RSS آن‌ها را به‌عنوان
+        ویدئو یا فایل رسانه‌ای ویدئویی معرفی کرده باشد.
+        """
+
+        candidates = []
+
+        for field in ("media_content", "media_thumbnail"):
+            items = getattr(entry, field, None) or []
+            for item in items:
+                if isinstance(item, dict):
+                    candidates.append(item)
+
+        for link in getattr(entry, "links", []) or []:
+            candidates.append(link)
+
+        for item in candidates:
+            url = item.get("url") or item.get("href")
+            media_type = str(item.get("type", "")).lower()
+            medium = str(item.get("medium", "")).lower()
+            rel = str(item.get("rel", "")).lower()
+
+            if not url:
+                continue
+
+            is_video = (
+                media_type.startswith("video/")
+                or medium == "video"
+                or (
+                    rel == "enclosure"
+                    and media_type in (
+                        "application/mp4",
+                        "application/x-mpegurl",
+                    )
+                )
+            )
+
+            if is_video:
+                return url, media_type
+
+        return None, None
