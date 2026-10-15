@@ -1,202 +1,427 @@
 """
-Video Watermark Utility - KhabarF24
+Watermark Utility
 
-دانلود ویدئوی مستقیم و قراردادن هدر PNG روی گوشه پایین‌چپ.
-نیازمند FFmpeg و FFprobe است.
+دانلود عکس خبر و چسباندن لوگوی شفاف KhabarF24 (گوشه‌ی پایین‌چپ،
+بدون پس‌زمینه‌ی مشکی -- چون خودِ فایل لوگو از قبل PNG شفاف است).
 """
 
-import asyncio
-import os
-import tempfile
+import io
 from pathlib import Path
 from typing import Optional
 
 import aiohttp
+from PIL import Image
 
 from app.utils.logger import logger
 
 LOGO_PATH = Path("assets/khabarf24_header_transparent_final.png")
 
-DOWNLOAD_TIMEOUT = 90
-MAX_VIDEO_BYTES = 150 * 1024 * 1024
-MAX_VIDEO_SECONDS = 180
+# عرض لوگو نسبت به عرض عکس خبر
+LOGO_WIDTH_RATIO = 0.30
+MARGIN_RATIO = 0.04
+
+# عکس‌های خیلی بزرگ منبع قبل از آپلود به تلگرام کوچک می‌شوند
+# (آپلود سریع‌تر، خطای Timed out کمتر)
+MAX_IMAGE_SIDE = 1600
 
 
-async def _download_video(url: str, destination: str) -> bool:
-    timeout = aiohttp.ClientTimeout(
-        total=DOWNLOAD_TIMEOUT,
-        connect=15,
-        sock_read=30,
-    )
+async def _download_image(url: str) -> Optional[bytes]:
 
     try:
+        timeout = aiohttp.ClientTimeout(total=15)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(
-                url,
-                allow_redirects=True,
-                headers={"User-Agent": "Mozilla/5.0 KhabarF24Bot"},
-            ) as response:
-                if response.status != 200:
-                    logger.warning(
-                        f"Video watermark: download HTTP {response.status}"
-                    )
-                    return False
+            async with session.get(url) as response:
+                if response.status == 200:
+                    return await response.read()
 
-                content_type = response.headers.get(
-                    "Content-Type", ""
-                ).lower()
+                logger.warning(
+                    f"Watermark: دانلود عکس ناموفق، HTTP {response.status} -> {url}"
+                )
 
-                if (
-                    content_type
-                    and not (
-                        content_type.startswith("video/")
-                        or "octet-stream" in content_type
-                        or "application/mp4" in content_type
-                    )
-                ):
-                    logger.warning(
-                        "Video watermark: URL did not return a video "
-                        f"(Content-Type={content_type})"
-                    )
-                    return False
+    except Exception as e:
+        logger.warning(f"Watermark: خطا در دانلود عکس -> {e}")
 
-                length = response.headers.get("Content-Length")
-                if length and int(length) > MAX_VIDEO_BYTES:
-                    logger.warning("Video watermark: file exceeds size limit")
-                    return False
-
-                size = 0
-                with open(destination, "wb") as output:
-                    async for chunk in response.content.iter_chunked(64 * 1024):
-                        size += len(chunk)
-                        if size > MAX_VIDEO_BYTES:
-                            logger.warning(
-                                "Video watermark: download exceeded size limit"
-                            )
-                            return False
-                        output.write(chunk)
-
-                return size > 0
-
-    except Exception as exc:
-        logger.warning(f"Video watermark: download failed: {exc}")
-        return False
+    return None
 
 
-async def _run_ffmpeg(args: list[str]) -> bool:
+def _add_watermark(image_bytes: bytes) -> Optional[bytes]:
+
     try:
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.PIPE,
+        base = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+        base.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE), Image.LANCZOS)
+
+        if not LOGO_PATH.exists():
+            logger.warning(f"Watermark: فایل لوگو پیدا نشد -> {LOGO_PATH}")
+            fallback = io.BytesIO()
+            base.convert("RGB").save(fallback, format="JPEG", quality=90)
+            return fallback.getvalue()
+
+        logo = Image.open(LOGO_PATH).convert("RGBA")
+
+        logo_width = int(base.width * LOGO_WIDTH_RATIO)
+        logo_ratio = logo_width / logo.width
+        logo_height = int(logo.height * logo_ratio)
+        logo = logo.resize((logo_width, logo_height), Image.LANCZOS)
+
+        margin = int(base.width * MARGIN_RATIO)
+        position = (
+            margin,
+            base.height - logo_height - margin,
         )
-        _, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=DOWNLOAD_TIMEOUT,
-        )
 
-        if process.returncode != 0:
-            logger.warning(
-                "Video watermark: FFmpeg failed: "
-                + stderr.decode("utf-8", errors="replace")[-1200:]
-            )
-            return False
+        # لوگو خودش کانال آلفا (شفافیت) دارد، پس با mask خودش
+        # چسبانده می‌شود -- فقط خطوط واقعی لوگو دیده می‌شوند، نه
+        # هیچ پس‌زمینه‌ای.
+        base.paste(logo, position, logo)
 
-        return True
+        output = io.BytesIO()
+        base.convert("RGB").save(output, format="JPEG", quality=90)
+        return output.getvalue()
 
-    except Exception as exc:
-        logger.warning(f"Video watermark: FFmpeg error: {exc}")
-        return False
-
-
-async def build_watermarked_video(url: str) -> Optional[bytes]:
-    """
-    برای یک URL مستقیم ویدئو، بایت‌های MP4 واترمارک‌دار برمی‌گرداند.
-    در صورت شکست، None برمی‌گرداند تا ناشر عکس یا متن را امتحان کند.
-    """
-
-    if not url or not LOGO_PATH.is_file():
-        if not LOGO_PATH.is_file():
-            logger.warning(f"Video watermark: logo missing: {LOGO_PATH}")
+    except Exception as e:
+        logger.warning(f"Watermark: خطا در ساخت واترمارک -> {e}")
         return None
 
-    with tempfile.TemporaryDirectory(prefix="khabarf24_video_") as temp_dir:
-        input_path = os.path.join(temp_dir, "input_video")
-        output_path = os.path.join(temp_dir, "output.mp4")
 
-        downloaded = await _download_video(url, input_path)
-        if not downloaded:
-            return None
+async def build_watermarked_image(url: str) -> Optional[bytes]:
+    """
+    عکس خبر را از url دانلود می‌کند و لوگوی KhabarF24 را گوشه‌ی
+    پایین‌چپ آن می‌چسباند. اگر هر مرحله شکست بخورد، None برمی‌گرداند
+    تا فراخوان بتواند به حالت متن‌ساده برگردد.
+    """
 
-        probe = await asyncio.create_subprocess_exec(
-            "ffprobe",
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            input_path,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+    if not url:
+        return None
+
+    raw = await _download_image(url)
+
+    if not raw:
+        return None
+
+    return _add_watermark(raw)
+
+
+"""
+RSS Fetcher
+
+دریافت خبرها از منابع RSS
+"""
+
+import feedparser
+from datetime import datetime
+from typing import List, Optional
+
+from app.fetchers.base_fetcher import BaseFetcher
+from app.models.raw_news import RawNews
+from app.utils.http_client import HTTPClient
+
+
+class RSSFetcher(BaseFetcher):
+    """
+    دریافت خبر از RSS
+    """
+
+    def __init__(self, source):
+        super().__init__(source)
+        self.http = HTTPClient()
+
+    async def fetch(self) -> List[RawNews]:
+        """
+        دریافت خبرها از RSS
+        """
+
+        news_list: List[RawNews] = []
+
+        rss_url = (
+            getattr(self.source, "rss_url", None)
+            or self.source.url
         )
 
-        try:
-            stdout, _ = await asyncio.wait_for(
-                probe.communicate(), timeout=20
+        if not rss_url:
+            print(
+                f"RSS URL MISSING: {self.source.name}"
             )
-            duration = float(stdout.decode().strip())
+            return news_list
+
+        try:
+            xml = await self.http.get(rss_url)
         except Exception as exc:
-            logger.warning(f"Video watermark: ffprobe failed: {exc}")
-            return None
-
-        if duration <= 0 or duration > MAX_VIDEO_SECONDS:
-            logger.warning(
-                f"Video watermark: unsupported duration {duration}"
+            print(
+                f"RSS FETCH ERROR: {self.source.name} | "
+                f"url={rss_url} | error={exc}"
             )
-            return None
+            return news_list
 
-        logo = str(LOGO_PATH.resolve())
-
-        # لوگو با عرض ۲۴ درصد و حاشیه ۴ درصد روی ویدئو قرار می‌گیرد.
-        filter_graph = (
-            "[1:v]scale=iw*min(1\\,0.24*W/iw):-1[logo];"
-            "[0:v][logo]overlay="
-            "x=W*0.04:y=H-h-H*0.04:"
-            "format=auto[v]"
-        )
-
-        args = [
-            "ffmpeg",
-            "-hide_banner",
-            "-loglevel", "error",
-            "-y",
-            "-i", input_path,
-            "-i", logo,
-            "-filter_complex", filter_graph,
-            "-map", "[v]",
-            "-map", "0:a?",
-            "-c:v", "libx264",
-            "-preset", "veryfast",
-            "-crf", "23",
-            "-pix_fmt", "yuv420p",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-movflags", "+faststart",
-            "-t", str(MAX_VIDEO_SECONDS),
-            output_path,
-        ]
-
-        success = await _run_ffmpeg(args)
-        if not success or not os.path.isfile(output_path):
-            return None
+        if not xml:
+            print(
+                f"RSS FETCH FAILED: {self.source.name} | "
+                f"url={rss_url} | response is empty"
+            )
+            return news_list
 
         try:
-            if os.path.getsize(output_path) > MAX_VIDEO_BYTES:
-                logger.warning(
-                    "Video watermark: processed video exceeds size limit"
+            feed = feedparser.parse(xml)
+        except Exception as exc:
+            print(
+                f"RSS PARSE ERROR: {self.source.name} | "
+                f"error={exc}"
+            )
+            return news_list
+
+        if feed.bozo:
+            print(
+                f"RSS PARSE WARNING: {self.source.name} | "
+                f"{getattr(feed, 'bozo_exception', 'unknown error')}"
+            )
+
+        print(
+            f"RSS RESULT: {self.source.name} | "
+            f"entries={len(feed.entries)} | "
+            f"url={rss_url}"
+        )
+
+        source_categories = list(
+            getattr(self.source, "categories", None) or []
+        )
+
+        for entry in feed.entries:
+            try:
+                news = RawNews(
+                    source_id=self.source.id,
+                    source=self.source.name,
+                    source_category_hint=source_categories,
+                    title=getattr(entry, "title", "") or "",
+                    content=self._extract_content(entry),
+                    summary=getattr(entry, "summary", "") or "",
+                    url=getattr(entry, "link", "") or "",
+                    published_at=self._extract_published_at(entry),
+                    language=self.source.language,
+                    category=(
+                        source_categories[0]
+                        if source_categories
+                        else ""
+                    ),
+                    image_url=self._extract_image_url(entry),
+                    raw_data=dict(entry),
+                    tags=list(
+                        getattr(entry, "tags", []) or []
+                    ),
                 )
-                return None
 
-            with open(output_path, "rb") as file:
-                return file.read()
-        except Exception as exc:
-            logger.warning(f"Video watermark: output read failed: {exc}")
-            return None
+                if not news.title and not news.content and not news.url:
+                    continue
+
+                news_list.append(news)
+
+            except Exception as exc:
+                print(
+                    f"RSS ENTRY ERROR: {self.source.name} | "
+                    f"error={exc}"
+                )
+
+        print(
+            f"RSS PARSED: {self.source.name} | "
+            f"news={len(news_list)}"
+        )
+
+        return news_list
+
+    @staticmethod
+    def _extract_content(entry) -> str:
+        """
+        استخراج متن اصلی خبر از RSS.
+        """
+
+        content = getattr(entry, "content", None)
+
+        if content:
+            try:
+                if isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict):
+                            value = item.get("value", "")
+                            if value:
+                                return value
+            except Exception:
+                pass
+
+        return (
+            getattr(entry, "summary", "")
+            or ""
+        )
+
+    @staticmethod
+    def _extract_published_at(
+        entry,
+    ) -> Optional[datetime]:
+        """
+        تبدیل تاریخ RSS به datetime.
+        """
+
+        parsed_time = getattr(
+            entry,
+            "published_parsed",
+            None,
+        )
+
+        if not parsed_time:
+            parsed_time = getattr(
+                entry,
+                "updated_parsed",
+                None,
+            )
+
+        if parsed_time:
+            try:
+                return datetime(
+                    parsed_time.tm_year,
+                    parsed_time.tm_mon,
+                    parsed_time.tm_mday,
+                    parsed_time.tm_hour,
+                    parsed_time.tm_min,
+                    parsed_time.tm_sec,
+                )
+            except (ValueError, TypeError, AttributeError):
+                pass
+
+        return None
+
+    @staticmethod
+    def _extract_image_url(entry) -> Optional[str]:
+        """
+        استخراج تصویر از media:thumbnail،
+        media:content یا enclosure.
+        """
+
+        media_thumbnail = getattr(
+            entry,
+            "media_thumbnail",
+            None,
+        )
+
+        if media_thumbnail:
+            url = media_thumbnail[0].get("url")
+            if url:
+                return url
+
+        media_content = getattr(
+            entry,
+            "media_content",
+            None,
+        )
+
+        if media_content:
+            url = media_content[0].get("url")
+            if url:
+                return url
+
+        for link in getattr(entry, "links", []) or []:
+            if (
+                link.get("rel") == "enclosure"
+                and str(link.get("type", "")).startswith("image")
+            ):
+                url = link.get("href")
+                if url:
+                    return url
+
+        return None
+
+"""
+Telegram Publisher - KhabarF24
+ارسال نهایی خبر به کانال تلگرام
+"""
+
+import io
+
+from telegram import Bot
+from telegram.error import BadRequest
+
+from config import settings
+from app.models.raw_news import RawNews
+from app.formatter.formatter import Formatter
+from app.utils.watermark import build_watermarked_image
+from app.utils.logger import logger
+
+# محدودیت واقعی تلگرام برای توضیح زیر عکس/ویدیو (کوتاه‌تر از پیام متنی)
+CAPTION_LIMIT = 1024
+
+# پیش‌فرض کتابخانه‌ی تلگرام فقط ۵ ثانیه است و آپلود عکس گاهی بیشتر
+# طول می‌کشد (خطای Timed out).
+UPLOAD_TIMEOUT = 40
+
+
+class TelegramPublisher:
+
+    def __init__(self):
+        if not settings.BOT_TOKEN:
+            raise ValueError("BOT_TOKEN تنظیم نشده است")
+        if not settings.CHANNEL_ID:
+            raise ValueError("CHANNEL_ID تنظیم نشده است")
+
+        self.bot = Bot(token=settings.BOT_TOKEN)
+        self.formatter = Formatter()
+
+    async def publish(self, news: RawNews) -> bool:
+        """
+        یک خبر را به کانال ارسال می‌کند.
+
+        نکته: عمداً parse_mode نمی‌گذاریم (متن ساده). قالب‌ها هیچ
+        Markdown ای ندارند، ولی هشتگ‌هایی مثل #فرمول_یک یا #سری_آ یک
+        زیرخط دارند و در Markdown قدیمی تلگرام باعث خطای
+        "can't find end of the entity" و گم‌شدن کل پست می‌شدند.
+
+        اگر خبر عکس داشته باشد و متن پست زیر محدودیت caption باشد،
+        به‌صورت عکس (با لوگوی کانال) ارسال می‌شود؛ اگر تلگرام عکس را
+        نپذیرد (BadRequest)، همان خبر به‌صورت متن ساده ارسال می‌شود.
+        """
+        try:
+            text = await self.formatter.format(news)
+
+            image_url = getattr(news, "image_url", None)
+
+            if image_url and len(text) <= CAPTION_LIMIT:
+
+                image_bytes = await build_watermarked_image(image_url)
+
+                if image_bytes:
+
+                    try:
+                        await self.bot.send_photo(
+                            chat_id=settings.CHANNEL_ID,
+                            photo=io.BytesIO(image_bytes),
+                            caption=text,
+                            read_timeout=UPLOAD_TIMEOUT,
+                            write_timeout=UPLOAD_TIMEOUT,
+                            connect_timeout=20,
+                        )
+
+                        logger.info(
+                            f"✅ Published (photo) to Telegram: {news.title[:70]}..."
+                        )
+                        return True
+
+                    except BadRequest as e:
+                        # عکس مشکل دارد؛ خبر را بدون عکس می‌فرستیم.
+                        # (TimedOut عمداً گرفته نمی‌شود: ممکن است عکس
+                        # واقعاً ارسال شده باشد و ارسال متن، تکراری شود.)
+                        logger.warning(
+                            f"TelegramPublisher: تلگرام عکس را نپذیرفت ({e}); ارسال متن ساده"
+                        )
+
+                else:
+                    logger.warning(
+                        "TelegramPublisher: ساخت عکس واترمارک‌دار ناموفق بود، ارسال متن ساده"
+                    )
+
+            await self.bot.send_message(
+                chat_id=settings.CHANNEL_ID,
+                text=text,
+                disable_web_page_preview=True,
+            )
+
+            logger.info(f"✅ Published to Telegram: {news.title[:70]}...")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Telegram publish error: {e}")
+            return False
