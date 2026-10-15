@@ -1,101 +1,202 @@
 """
-Watermark Utility
+Video Watermark Utility - KhabarF24
 
-دانلود عکس خبر و چسباندن لوگوی شفاف KhabarF24 (گوشه‌ی پایین‌چپ،
-بدون پس‌زمینه‌ی مشکی -- چون خودِ فایل لوگو از قبل PNG شفاف است).
+دانلود ویدئوی مستقیم و قراردادن هدر PNG روی گوشه پایین‌چپ.
+نیازمند FFmpeg و FFprobe است.
 """
 
-import io
+import asyncio
+import os
+import tempfile
 from pathlib import Path
 from typing import Optional
 
 import aiohttp
-from PIL import Image
 
 from app.utils.logger import logger
 
 LOGO_PATH = Path("assets/khabarf24_header_transparent_final.png")
 
-# عرض لوگو نسبت به عرض عکس خبر
-LOGO_WIDTH_RATIO = 0.30
-MARGIN_RATIO = 0.04
-
-# عکس‌های خیلی بزرگ منبع قبل از آپلود به تلگرام کوچک می‌شوند
-# (آپلود سریع‌تر، خطای Timed out کمتر)
-MAX_IMAGE_SIDE = 1600
+DOWNLOAD_TIMEOUT = 90
+MAX_VIDEO_BYTES = 150 * 1024 * 1024
+MAX_VIDEO_SECONDS = 180
 
 
-async def _download_image(url: str) -> Optional[bytes]:
+async def _download_video(url: str, destination: str) -> bool:
+    timeout = aiohttp.ClientTimeout(
+        total=DOWNLOAD_TIMEOUT,
+        connect=15,
+        sock_read=30,
+    )
 
     try:
-        timeout = aiohttp.ClientTimeout(total=15)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    return await response.read()
+            async with session.get(
+                url,
+                allow_redirects=True,
+                headers={"User-Agent": "Mozilla/5.0 KhabarF24Bot"},
+            ) as response:
+                if response.status != 200:
+                    logger.warning(
+                        f"Video watermark: download HTTP {response.status}"
+                    )
+                    return False
 
-                logger.warning(
-                    f"Watermark: دانلود عکس ناموفق، HTTP {response.status} -> {url}"
-                )
+                content_type = response.headers.get(
+                    "Content-Type", ""
+                ).lower()
 
-    except Exception as e:
-        logger.warning(f"Watermark: خطا در دانلود عکس -> {e}")
+                if (
+                    content_type
+                    and not (
+                        content_type.startswith("video/")
+                        or "octet-stream" in content_type
+                        or "application/mp4" in content_type
+                    )
+                ):
+                    logger.warning(
+                        "Video watermark: URL did not return a video "
+                        f"(Content-Type={content_type})"
+                    )
+                    return False
 
-    return None
+                length = response.headers.get("Content-Length")
+                if length and int(length) > MAX_VIDEO_BYTES:
+                    logger.warning("Video watermark: file exceeds size limit")
+                    return False
+
+                size = 0
+                with open(destination, "wb") as output:
+                    async for chunk in response.content.iter_chunked(64 * 1024):
+                        size += len(chunk)
+                        if size > MAX_VIDEO_BYTES:
+                            logger.warning(
+                                "Video watermark: download exceeded size limit"
+                            )
+                            return False
+                        output.write(chunk)
+
+                return size > 0
+
+    except Exception as exc:
+        logger.warning(f"Video watermark: download failed: {exc}")
+        return False
 
 
-def _add_watermark(image_bytes: bytes) -> Optional[bytes]:
-
+async def _run_ffmpeg(args: list[str]) -> bool:
     try:
-        base = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
-        base.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE), Image.LANCZOS)
-
-        if not LOGO_PATH.exists():
-            logger.warning(f"Watermark: فایل لوگو پیدا نشد -> {LOGO_PATH}")
-            fallback = io.BytesIO()
-            base.convert("RGB").save(fallback, format="JPEG", quality=90)
-            return fallback.getvalue()
-
-        logo = Image.open(LOGO_PATH).convert("RGBA")
-
-        logo_width = int(base.width * LOGO_WIDTH_RATIO)
-        logo_ratio = logo_width / logo.width
-        logo_height = int(logo.height * logo_ratio)
-        logo = logo.resize((logo_width, logo_height), Image.LANCZOS)
-
-        margin = int(base.width * MARGIN_RATIO)
-        position = (
-            margin,
-            base.height - logo_height - margin,
+        process = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=DOWNLOAD_TIMEOUT,
         )
 
-        # لوگو خودش کانال آلفا (شفافیت) دارد، پس با mask خودش
-        # چسبانده می‌شود -- فقط خطوط واقعی لوگو دیده می‌شوند، نه
-        # هیچ پس‌زمینه‌ای.
-        base.paste(logo, position, logo)
+        if process.returncode != 0:
+            logger.warning(
+                "Video watermark: FFmpeg failed: "
+                + stderr.decode("utf-8", errors="replace")[-1200:]
+            )
+            return False
 
-        output = io.BytesIO()
-        base.convert("RGB").save(output, format="JPEG", quality=90)
-        return output.getvalue()
+        return True
 
-    except Exception as e:
-        logger.warning(f"Watermark: خطا در ساخت واترمارک -> {e}")
-        return None
+    except Exception as exc:
+        logger.warning(f"Video watermark: FFmpeg error: {exc}")
+        return False
 
 
-async def build_watermarked_image(url: str) -> Optional[bytes]:
+async def build_watermarked_video(url: str) -> Optional[bytes]:
     """
-    عکس خبر را از url دانلود می‌کند و لوگوی KhabarF24 را گوشه‌ی
-    پایین‌چپ آن می‌چسباند. اگر هر مرحله شکست بخورد، None برمی‌گرداند
-    تا فراخوان بتواند به حالت متن‌ساده برگردد.
+    برای یک URL مستقیم ویدئو، بایت‌های MP4 واترمارک‌دار برمی‌گرداند.
+    در صورت شکست، None برمی‌گرداند تا ناشر عکس یا متن را امتحان کند.
     """
 
-    if not url:
+    if not url or not LOGO_PATH.is_file():
+        if not LOGO_PATH.is_file():
+            logger.warning(f"Video watermark: logo missing: {LOGO_PATH}")
         return None
 
-    raw = await _download_image(url)
+    with tempfile.TemporaryDirectory(prefix="khabarf24_video_") as temp_dir:
+        input_path = os.path.join(temp_dir, "input_video")
+        output_path = os.path.join(temp_dir, "output.mp4")
 
-    if not raw:
-        return None
+        downloaded = await _download_video(url, input_path)
+        if not downloaded:
+            return None
 
-    return _add_watermark(raw)
+        probe = await asyncio.create_subprocess_exec(
+            "ffprobe",
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            input_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, _ = await asyncio.wait_for(
+                probe.communicate(), timeout=20
+            )
+            duration = float(stdout.decode().strip())
+        except Exception as exc:
+            logger.warning(f"Video watermark: ffprobe failed: {exc}")
+            return None
+
+        if duration <= 0 or duration > MAX_VIDEO_SECONDS:
+            logger.warning(
+                f"Video watermark: unsupported duration {duration}"
+            )
+            return None
+
+        logo = str(LOGO_PATH.resolve())
+
+        # لوگو با عرض ۲۴ درصد و حاشیه ۴ درصد روی ویدئو قرار می‌گیرد.
+        filter_graph = (
+            "[1:v]scale=iw*min(1\\,0.24*W/iw):-1[logo];"
+            "[0:v][logo]overlay="
+            "x=W*0.04:y=H-h-H*0.04:"
+            "format=auto[v]"
+        )
+
+        args = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-y",
+            "-i", input_path,
+            "-i", logo,
+            "-filter_complex", filter_graph,
+            "-map", "[v]",
+            "-map", "0:a?",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "23",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
+            "-t", str(MAX_VIDEO_SECONDS),
+            output_path,
+        ]
+
+        success = await _run_ffmpeg(args)
+        if not success or not os.path.isfile(output_path):
+            return None
+
+        try:
+            if os.path.getsize(output_path) > MAX_VIDEO_BYTES:
+                logger.warning(
+                    "Video watermark: processed video exceeds size limit"
+                )
+                return None
+
+            with open(output_path, "rb") as file:
+                return file.read()
+        except Exception as exc:
+            logger.warning(f"Video watermark: output read failed: {exc}")
+            return None
