@@ -41,14 +41,26 @@ class RSSFetcher(BaseFetcher):
 
         xml = await self.http.get(rss_url)
 
-        if not xml:
-            return news_list
+if not xml:
+    print(
+        f"RSS FETCH FAILED: {self.source.name} | "
+        f"url={rss_url} | response is empty"
+    )
+    return news_list
 
-        feed = feedparser.parse(xml)
+feed = feedparser.parse(xml)
 
-        if feed.bozo:
-            print(f"RSS Error: {self.source.name}")
+if feed.bozo:
+    print(
+        f"RSS PARSE WARNING: {self.source.name} | "
+        f"{getattr(feed, 'bozo_exception', 'unknown error')}"
+    )
 
+print(
+    f"RSS RESULT: {self.source.name} | "
+    f"entries={len(feed.entries)} | "
+    f"url={rss_url}"
+)
         for entry in feed.entries:
             try:
                 # انتقال دسته‌بندی‌های تعریف‌شده برای منبع
