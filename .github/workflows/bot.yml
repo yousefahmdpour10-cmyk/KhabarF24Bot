@@ -25,8 +25,23 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+          ffprobe -version
+
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Verify media tools
+        run: |
+          python --version
+          ffmpeg -version
+          ffprobe -version
+          python -c "from PIL import Image; print('Pillow OK')"
+          python -c "import aiohttp; print('aiohttp OK')"
 
       - name: Run bot
         env:
