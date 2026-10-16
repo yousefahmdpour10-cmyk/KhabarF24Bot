@@ -1,18 +1,15 @@
 """
-Sports API Fetcher
+Sports Fetcher (ESPN)
 
 نتیجه‌ی بازی‌های تمام‌شده‌ی لیگ‌های دنبال‌شده را با جزئیات می‌گیرد:
-گلزنان، پاس گل، کارت‌ها، ترکیب، مربی و آمار.
+گلزنان، پاس گل، کارت‌ها، ترکیب، آمار و داور.
 
-چون پلن رایگان فقط ۱۰۰ درخواست در روز دارد:
-- فقط هر ~۴۰ دقیقه و فقط در ساعت‌های فعال بازی‌ها به API درخواست می‌دهیم؛
-- برای هر بازی حداکثر ۳ درخواست جزئیات می‌زنیم، به این ترتیب اولویت:
-  رویدادها (گل/پاس/کارت) ← ترکیب و مربی ← آمار. اگر سهمیه تمام شود،
-  بازی‌های بعدی فقط با همان چیزهایی که گرفته شده منتشر می‌شوند؛
-- نتیجه‌ی بازی‌های پیداشده در حافظه می‌ماند و هر چرخه دوباره به pipeline
-  داده می‌شود (بدون درخواست جدید). تکراری‌ها را DuplicateChecker حذف
-  می‌کند و اگر ترجمه‌ی AI شکست بخورد، همان بازی چرخه‌ی بعد دوباره
-  امتحان می‌شود.
+- هر ~۲۰ دقیقه و فقط در ساعت‌های فعال بازی‌ها لیگ‌ها را چک می‌کنیم؛
+- گلزنان و کارت‌ها از خود لیست بازی‌ها می‌آیند، و برای هر بازی
+  «تازه‌تمام‌شده» یک درخواست گزارش کامل (ترکیب، آمار، داور) می‌زنیم؛
+- نتیجه‌ی بازی‌های پیداشده در حافظه می‌ماند و هر چرخه دوباره به
+  pipeline داده می‌شود. تکراری‌ها را DuplicateChecker حذف می‌کند و اگر
+  ترجمه‌ی AI شکست بخورد، همان بازی چرخه‌ی بعد دوباره امتحان می‌شود.
 """
 
 import copy
@@ -23,46 +20,53 @@ from typing import Dict, List, Optional
 
 from app.fetchers.base_fetcher import BaseFetcher
 from app.models.raw_news import RawNews
-from app.services.sports_api_client import SportsApiClient, budget_left
+from app.services.sports_api_client import EspnClient, FOLLOWED_LEAGUES
 from app.utils.logger import logger
 
-POLL_INTERVAL_SECONDS = 40 * 60
-ACTIVE_HOURS_UTC = set(range(11, 24)) | {0, 1}
+POLL_INTERVAL_SECONDS = 20 * 60
+ACTIVE_HOURS_UTC = set(range(10, 24)) | {0, 1}
 CACHE_TTL_SECONDS = 24 * 3600
-RESERVED_REQUESTS = 6   # همیشه چند درخواست برای لیست بازی‌ها نگه می‌داریم
 TEHRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 
-# اگر True شود، لیست بازیکنان ذخیره هم در پست می‌آید (پست خیلی بلند می‌شود)
+# اگر True شود، بازیکنان ذخیره هم در پست می‌آیند (پست خیلی بلند می‌شود)
 INCLUDE_SUBSTITUTES = False
 
-# آمارهایی که در پست نشان داده می‌شوند: (اسم در API, برچسب فارسی)
+# (اسم آمار در ESPN, برچسب فارسی)
 STAT_LABELS = [
-    ("Ball Possession", "مالکیت توپ"),
-    ("Total Shots", "شوت"),
-    ("Shots on Goal", "شوت در چارچوب"),
-    ("Corner Kicks", "کرنر"),
-    ("Fouls", "خطا"),
+    ("possessionPct", "مالکیت توپ"),
+    ("totalShots", "شوت"),
+    ("shotsOnTarget", "شوت در چارچوب"),
+    ("wonCorners", "کرنر"),
+    ("foulsCommitted", "خطا"),
 ]
 
-_ROUND_RE = re.compile(r"(?:Regular Season|League Stage) - (\d+)", re.IGNORECASE)
+_ASSIST_RE = re.compile(r"Assisted by ([^.]+?)(?: with | following | after |\.|$)")
 
 # حافظه‌ی مشترک بین چرخه‌ها (هر چرخه یک نمونه‌ی جدید fetcher ساخته می‌شود)
-_cache: Dict[int, dict] = {}
+_cache: Dict[str, dict] = {}
 _last_poll_at: Optional[float] = None
+_shape_logged = False
 
 
-def _minute_text(event: dict) -> str:
-    info = event.get("time") or {}
-    minute = info.get("elapsed")
-    extra = info.get("extra")
-    return f"{minute}+{extra}" if extra else f"{minute}"
+def _to_int(value) -> Optional[int]:
+    if isinstance(value, dict):
+        value = value.get("displayValue", value.get("value"))
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _name_of(athlete: Optional[dict]) -> Optional[str]:
+    athlete = athlete or {}
+    return athlete.get("displayName") or athlete.get("fullName") or athlete.get("shortName")
 
 
 class SportsApiFetcher(BaseFetcher):
 
     def __init__(self, source):
         super().__init__(source)
-        self.client = SportsApiClient()
+        self.client = EspnClient()
 
     async def fetch(self) -> List[RawNews]:
 
@@ -70,6 +74,10 @@ class SportsApiFetcher(BaseFetcher):
         self._prune()
 
         return [self._make_news(data) for data in _cache.values()]
+
+    # ------------------------------------------------------------------
+    # دریافت
+    # ------------------------------------------------------------------
 
     async def _maybe_poll(self) -> None:
         global _last_poll_at
@@ -85,256 +93,313 @@ class SportsApiFetcher(BaseFetcher):
         ):
             return
 
-        if budget_left() <= RESERVED_REQUESTS:
-            logger.warning("SportsApiFetcher: سهمیه‌ی امروز تقریباً تمام است")
-            return
-
         _last_poll_at = time.monotonic()
 
-        dates = [now.strftime("%Y-%m-%d")]
-        if now.hour <= 1:
-            # بازی‌هایی که دیروز شروع شده و بعد از نیمه‌شب UTC تمام شده‌اند
-            dates.append((now - timedelta(days=1)).strftime("%Y-%m-%d"))
+        # ESPN روزها را بر اساس ساعت آمریکا می‌شمارد؛ در ساعت‌های اول
+        # روز UTC دیروز را هم می‌گیریم تا بازی‌های دیروقت گم نشوند.
+        dates = [now.strftime("%Y%m%d")]
+        if now.hour <= 5:
+            dates.append((now - timedelta(days=1)).strftime("%Y%m%d"))
 
-        for date in dates:
+        for slug, league_name in FOLLOWED_LEAGUES.items():
 
-            fixtures = await self.client.get_finished_fixtures(date)
+            for date in dates:
 
-            for fx in fixtures:
+                events = await self.client.get_scoreboard(slug, date)
 
-                data = self._extract(fx)
+                finished = 0
 
-                if not data or data["fixture_id"] in _cache:
-                    continue
+                for event in events:
 
-                await self._enrich(data)
-                _cache[data["fixture_id"]] = data
+                    data = self._extract(event, league_name)
 
-        logger.info(f"SportsApiFetcher: {len(_cache)} بازی در حافظه")
+                    if not data:
+                        continue
+
+                    finished += 1
+
+                    if data["key"] in _cache:
+                        continue
+
+                    summary = await self.client.get_summary(slug, data["event_id"])
+
+                    if summary:
+                        self._log_shape_once(summary)
+                        self._apply_summary(data, summary)
+
+                    _cache[data["key"]] = data
+
+                logger.info(
+                    f"EspnFetcher: {league_name} {date} -> {len(events)} بازی، "
+                    f"{finished} تمام‌شده"
+                )
+
+        logger.info(f"EspnFetcher: {len(_cache)} بازی در حافظه")
 
     @staticmethod
     def _prune() -> None:
         cutoff = time.time() - CACHE_TTL_SECONDS
-        for fid in [f for f, d in _cache.items() if d["found_at"] < cutoff]:
-            del _cache[fid]
+        for key in [k for k, d in _cache.items() if d["found_at"] < cutoff]:
+            del _cache[key]
+
+    @staticmethod
+    def _log_shape_once(summary: dict) -> None:
+        """
+        اولین بار ساختار واقعی پاسخ را در لاگ می‌نویسیم، تا اگر ESPN
+        ساختار را فرق داده باشد، بتوانیم نگاشت را دقیق اصلاح کنیم.
+        """
+        global _shape_logged
+        if _shape_logged:
+            return
+        _shape_logged = True
+
+        try:
+            rosters = summary.get("rosters") or []
+            roster_keys = list(rosters[0].keys()) if rosters else []
+            first_player = (
+                list((rosters[0].get("roster") or [{}])[0].keys()) if rosters else []
+            )
+            teams = (summary.get("boxscore") or {}).get("teams") or []
+            stat_names = [
+                s.get("name") for s in (teams[0].get("statistics") or [])
+            ][:20] if teams else []
+            key_events = summary.get("keyEvents") or []
+            sample_event = (key_events[0].get("text") or "")[:120] if key_events else ""
+
+            logger.info(f"ESPN shape: summary keys = {list(summary.keys())}")
+            logger.info(f"ESPN shape: roster keys = {roster_keys}, player keys = {first_player}")
+            logger.info(f"ESPN shape: stat names = {stat_names}")
+            logger.info(
+                f"ESPN shape: keyEvents = {len(key_events)}, sample text = {sample_event!r}"
+            )
+        except Exception as e:
+            logger.warning(f"ESPN shape log failed -> {e}")
 
     # ------------------------------------------------------------------
-    # استخراج اطلاعات پایه از لیست بازی‌ها (بدون درخواست اضافه)
+    # استخراج از لیست بازی‌ها
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _extract(fx: dict) -> Optional[dict]:
+    def _extract(event: dict, league_name: str) -> Optional[dict]:
 
-        fixture = fx.get("fixture") or {}
-        league = fx.get("league") or {}
-        teams = fx.get("teams") or {}
-        score = fx.get("goals") or {}
+        competitions = event.get("competitions") or []
+        comp = competitions[0] if competitions else {}
 
-        fixture_id = fixture.get("id")
-        home = (teams.get("home") or {}).get("name")
-        away = (teams.get("away") or {}).get("name")
-        home_goals = score.get("home")
-        away_goals = score.get("away")
+        status = (comp.get("status") or event.get("status") or {}).get("type") or {}
 
-        if not fixture_id or not home or not away:
+        if not (status.get("completed") or status.get("state") == "post"):
+            return None
+
+        competitors = comp.get("competitors") or []
+        home = next((c for c in competitors if c.get("homeAway") == "home"), None)
+        away = next((c for c in competitors if c.get("homeAway") == "away"), None)
+
+        if not home or not away:
+            return None
+
+        home_name = (home.get("team") or {}).get("displayName")
+        away_name = (away.get("team") or {}).get("displayName")
+        home_goals = _to_int(home.get("score"))
+        away_goals = _to_int(away.get("score"))
+
+        if not home_name or not away_name:
             return None
         if home_goals is None or away_goals is None:
             return None
 
-        status = (fixture.get("status") or {}).get("short", "FT")
-        title = f"{home} {home_goals}-{away_goals} {away}"
-        result = f"{home} {home_goals} - {away_goals} {away}"
+        home_id = str((home.get("team") or {}).get("id", ""))
+        away_id = str((away.get("team") or {}).get("id", ""))
+        team_names = {home_id: home_name, away_id: away_name}
 
-        if status == "PEN":
-            pen = (fx.get("score") or {}).get("penalty") or {}
-            if pen.get("home") is not None and pen.get("away") is not None:
-                title += f" ({pen['home']}-{pen['away']} on penalties)"
-                result += f" (پنالتی: {pen['home']} - {pen['away']})"
-        elif status == "AET":
+        title = f"{home_name} {home_goals}-{away_goals} {away_name}"
+        result = f"{home_name} {home_goals} - {away_goals} {away_name}"
+
+        status_name = (status.get("name") or "").upper()
+        if "PEN" in status_name:
+            pen_home = _to_int(home.get("shootoutScore"))
+            pen_away = _to_int(away.get("shootoutScore"))
+            if pen_home is not None and pen_away is not None:
+                title += f" ({pen_home}-{pen_away} on penalties)"
+                result += f" (پنالتی: {pen_home} - {pen_away})"
+        elif "AET" in status_name or "EXTRA" in status_name:
             result += " (پس از وقت اضافه)"
 
+        goals: List[str] = []
+        yellow_cards: List[str] = []
+        red_cards: List[str] = []
+
+        for detail in comp.get("details") or []:
+
+            if detail.get("shootout"):
+                continue
+
+            athletes = detail.get("athletesInvolved") or []
+            player = _name_of(athletes[0]) if athletes else None
+            player = player or "?"
+            minute = (detail.get("clock") or {}).get("displayValue") or ""
+            team = team_names.get(str((detail.get("team") or {}).get("id", "")), "")
+
+            if detail.get("scoringPlay"):
+                if detail.get("ownGoal"):
+                    goals.append(f"{player} ({minute}) (o.g.)")
+                else:
+                    tag = " (pen.)" if detail.get("penaltyKick") else ""
+                    goals.append(f"{player} ({minute}){tag} - {team}")
+
+            elif detail.get("redCard"):
+                red_cards.append(f"{player} ({minute}) - {team}")
+
+            elif detail.get("yellowCard"):
+                yellow_cards.append(f"{player} ({minute}) - {team}")
+
         match_date = match_time = None
-        raw_date = fixture.get("date")
+        raw_date = event.get("date") or comp.get("date")
         if raw_date:
             try:
-                dt = datetime.fromisoformat(raw_date).astimezone(TEHRAN_TZ)
+                dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+                dt = dt.astimezone(TEHRAN_TZ)
                 match_date = dt.strftime("%Y-%m-%d")
                 match_time = dt.strftime("%H:%M")
             except ValueError:
                 pass
 
-        round_text = league.get("round") or ""
-        match = _ROUND_RE.search(round_text)
-        stage = f"هفته {match.group(1)}" if match else (round_text or None)
+        notes = comp.get("notes") or []
+        stage = (notes[0].get("headline") if notes else None) or None
+
+        event_id = str(event.get("id", ""))
 
         return {
-            "fixture_id": fixture_id,
+            "key": f"{league_name}:{event_id}",
+            "event_id": event_id,
             "found_at": time.time(),
-            "home": home,
-            "away": away,
-            "home_id": (teams.get("home") or {}).get("id"),
-            "away_id": (teams.get("away") or {}).get("id"),
+            "home": home_name,
+            "away": away_name,
+            "home_id": home_id,
+            "away_id": away_id,
             "home_goals": home_goals,
             "away_goals": away_goals,
             "title": title,
             "result": result,
-            "league": fx.get("_league_name", ""),
+            "league": league_name,
             "stage": stage,
-            "stadium": (fixture.get("venue") or {}).get("name"),
-            "referee": fixture.get("referee"),
+            "stadium": (comp.get("venue") or {}).get("fullName"),
+            "referee": None,
             "match_date": match_date,
             "match_time": match_time,
-            "goals": [],
+            "goals": goals,
             "assists": [],
-            "yellow_cards": [],
-            "red_cards": [],
+            "yellow_cards": yellow_cards,
+            "red_cards": red_cards,
             "lineup": None,
             "coach": None,
             "stats": [],
         }
 
     # ------------------------------------------------------------------
-    # جزئیات هر بازی (هرکدام یک درخواست)
+    # تکمیل با گزارش کامل بازی
     # ------------------------------------------------------------------
 
-    async def _enrich(self, data: dict) -> None:
-
-        fid = data["fixture_id"]
-
-        if budget_left() > RESERVED_REQUESTS:
-            self._apply_events(data, await self.client.get_fixture_events(fid))
-
-        if budget_left() > RESERVED_REQUESTS:
-            self._apply_lineups(data, await self.client.get_fixture_lineups(fid))
-
-        if budget_left() > RESERVED_REQUESTS:
-            self._apply_stats(data, await self.client.get_fixture_statistics(fid))
-
-    @staticmethod
-    def _apply_events(data: dict, events: List[dict]) -> None:
-
-        for event in events:
-
-            etype = event.get("type")
-            detail = event.get("detail") or ""
-            low = detail.lower()
-            player = (event.get("player") or {}).get("name") or "?"
-            team = (event.get("team") or {}).get("name", "")
-            minute = _minute_text(event)
-
-            if etype == "Goal":
-
-                if detail == "Missed Penalty":
-                    continue
-
-                tag = ""
-                if detail == "Penalty":
-                    tag = " (pen.)"
-                elif detail == "Own Goal":
-                    tag = " (o.g.)"
-
-                data["goals"].append(f"{player} ({minute}'){tag} - {team}")
-
-                assist = (event.get("assist") or {}).get("name")
-                if assist and detail != "Own Goal":
-                    data["assists"].append(f"{assist} ({minute}') - {team}")
-
-            elif etype == "Card":
-
-                line = f"{player} ({minute}') - {team}"
-
-                if "second yellow" in low:
-                    data["red_cards"].append(line + " (دو کارت زرد)")
-                elif "red" in low:
-                    data["red_cards"].append(line)
-                elif "yellow" in low:
-                    data["yellow_cards"].append(line)
-
-    @staticmethod
-    def _side(data: dict, team_id) -> Optional[str]:
-        if team_id is not None and team_id == data["home_id"]:
-            return "home"
-        if team_id is not None and team_id == data["away_id"]:
-            return "away"
-        return None
-
-    @staticmethod
-    def _player_line(entry: dict) -> Optional[str]:
-        player = (entry or {}).get("player") or {}
-        name = player.get("name")
-        if not name:
-            return None
-        number = player.get("number")
-        return f"{number} {name}" if number is not None else name
-
     @classmethod
-    def _apply_lineups(cls, data: dict, response: List[dict]) -> None:
+    def _apply_summary(cls, data: dict, summary: dict) -> None:
+        # هر بخش مستقل است؛ اگر یکی ساختار غیرمنتظره داشت، بقیه خراب نشوند
+        for part in (cls._apply_info, cls._apply_rosters, cls._apply_stats, cls._apply_assists):
+            try:
+                part(data, summary)
+            except Exception as e:
+                logger.warning(f"EspnFetcher: بخش {part.__name__} ناموفق -> {e}")
+
+    @staticmethod
+    def _apply_info(data: dict, summary: dict) -> None:
+        info = summary.get("gameInfo") or {}
+
+        officials = info.get("officials") or []
+        for official in officials:
+            position = ((official.get("position") or {}).get("displayName") or "").lower()
+            if "referee" in position and "assistant" not in position and "var" not in position:
+                data["referee"] = official.get("fullName") or official.get("displayName")
+                break
+
+        if not data["stadium"]:
+            data["stadium"] = (info.get("venue") or {}).get("fullName")
+
+    @staticmethod
+    def _apply_rosters(data: dict, summary: dict) -> None:
 
         lineup: Dict[str, dict] = {}
-        coaches: Dict[str, str] = {}
 
-        for item in response:
+        for roster in summary.get("rosters") or []:
 
-            team = item.get("team") or {}
-            side = cls._side(data, team.get("id"))
-
-            if not side:
+            side = roster.get("homeAway")
+            if side not in ("home", "away"):
                 continue
 
-            starting = [
-                line for line in (
-                    cls._player_line(p) for p in item.get("startXI") or []
-                ) if line
-            ]
+            def place(entry: dict) -> int:
+                try:
+                    return int(entry.get("formationPlace"))
+                except (TypeError, ValueError):
+                    return 99
+
+            players = roster.get("roster") or []
+            starters = sorted(
+                [p for p in players if p.get("starter")], key=place
+            )
+
+            def line(entry: dict) -> Optional[str]:
+                athlete = entry.get("athlete") or {}
+                name = _name_of(athlete)
+                if not name:
+                    return None
+                jersey = entry.get("jersey") or athlete.get("jersey")
+                return f"{jersey} {name}" if jersey else name
+
+            starting = [l for l in (line(p) for p in starters) if l]
 
             substitutes: List[str] = []
             if INCLUDE_SUBSTITUTES:
                 substitutes = [
-                    line for line in (
-                        cls._player_line(p) for p in item.get("substitutes") or []
-                    ) if line
+                    l for l in (
+                        line(p) for p in players if not p.get("starter")
+                    ) if l
                 ]
 
-            name = team.get("name") or data[side]
-            formation = item.get("formation")
+            team_name = (roster.get("team") or {}).get("displayName") or data[side]
+
+            formation = roster.get("formation")
+            if isinstance(formation, dict):
+                formation = formation.get("summary") or formation.get("name")
             if formation:
-                name = f"{name} ({formation})"
+                team_name = f"{team_name} ({formation})"
 
-            lineup[side] = {
-                "name": name,
-                "starting": starting,
-                "substitutes": substitutes,
-            }
-
-            coach = (item.get("coach") or {}).get("name")
-            if coach:
-                coaches[side] = coach
+            if starting:
+                lineup[side] = {
+                    "name": team_name,
+                    "starting": starting,
+                    "substitutes": substitutes,
+                }
 
         if lineup:
             data["lineup"] = lineup
 
-        parts = [
-            f"{coaches[side]} ({data[side]})"
-            for side in ("home", "away")
-            if side in coaches
-        ]
-        if parts:
-            data["coach"] = " / ".join(parts)
+    @staticmethod
+    def _apply_stats(data: dict, summary: dict) -> None:
 
-    @classmethod
-    def _apply_stats(cls, data: dict, response: List[dict]) -> None:
+        by_side: Dict[str, Dict[str, str]] = {}
 
-        by_side: Dict[str, dict] = {}
+        for team in (summary.get("boxscore") or {}).get("teams") or []:
 
-        for item in response:
+            team_id = str((team.get("team") or {}).get("id", ""))
+            side = team.get("homeAway")
+            if side not in ("home", "away"):
+                side = "home" if team_id == data["home_id"] else (
+                    "away" if team_id == data["away_id"] else None
+                )
+            if not side:
+                continue
 
-            side = cls._side(data, (item.get("team") or {}).get("id"))
-
-            if side:
-                by_side[side] = {
-                    s.get("type"): s.get("value")
-                    for s in item.get("statistics") or []
-                }
+            by_side[side] = {
+                s.get("name"): s.get("displayValue")
+                for s in team.get("statistics") or []
+            }
 
         home = by_side.get("home")
         away = by_side.get("away")
@@ -349,17 +414,41 @@ class SportsApiFetcher(BaseFetcher):
             home_value = home.get(key)
             away_value = away.get(key)
 
-            if home_value is None and away_value is None:
+            if home_value in (None, "") and away_value in (None, ""):
                 continue
 
-            lines.append(
-                f"{label}: "
-                f"{home_value if home_value is not None else 0}"
-                f" - "
-                f"{away_value if away_value is not None else 0}"
-            )
+            def fmt(value) -> str:
+                if value in (None, ""):
+                    return "0"
+                value = str(value)
+                if key == "possessionPct" and not value.endswith("%"):
+                    value += "%"
+                return value
+
+            lines.append(f"{label}: {fmt(home_value)} - {fmt(away_value)}")
 
         data["stats"] = lines
+
+    @staticmethod
+    def _apply_assists(data: dict, summary: dict) -> None:
+        """
+        ESPN پاس‌دهنده را جدا نمی‌دهد؛ در متن رویداد گل می‌آید
+        ("... Assisted by X."). از همان متن بیرون می‌کشیم.
+        """
+
+        for event in summary.get("keyEvents") or []:
+
+            kind = ((event.get("type") or {}).get("text") or "").lower()
+            if "goal" not in kind or "own" in kind:
+                continue
+
+            match = _ASSIST_RE.search(event.get("text") or "")
+            if not match:
+                continue
+
+            minute = (event.get("clock") or {}).get("displayValue") or ""
+            team = (event.get("team") or {}).get("displayName") or ""
+            data["assists"].append(f"{match.group(1).strip()} ({minute}) - {team}")
 
     # ------------------------------------------------------------------
     # ساخت RawNews
@@ -379,8 +468,8 @@ class SportsApiFetcher(BaseFetcher):
             summary += " Goals: " + "; ".join(data["goals"]) + "."
 
         news = RawNews(
-            source_id="api_football",
-            source="API-Football",
+            source_id="espn_matches",
+            source="ESPN",
             title=data["title"],
             summary=summary,
             language="en",
@@ -391,6 +480,8 @@ class SportsApiFetcher(BaseFetcher):
         news.sport_name = "فوتبال"
         news.sport_emoji = "⚽"
         news.sport_hashtag = "#فوتبال"
+        # تا main.py این را «خبر ورزشی» حساب کند
+        news.category = "sport"
 
         # اسم این فیلدها دقیقاً همان‌هایی است که builder های فوتبال می‌خوانند
         news.result = data["result"]
