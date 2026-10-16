@@ -100,6 +100,14 @@ class RSSFetcher(BaseFetcher):
                 if not news.title and not news.content and not news.url:
                     continue
 
+                # بررسی موقت برای تشخیص لینک عکس و ویدئو
+                print(
+                    f"MEDIA CHECK: {news.source} | "
+                    f"image={bool(news.image_url)} | "
+                    f"video={bool(news.video_url)} | "
+                    f"title={news.title[:60]}"
+                )
+
                 news_list.append(news)
 
             except Exception as exc:
@@ -151,6 +159,7 @@ class RSSFetcher(BaseFetcher):
     def _extract_image_url(entry) -> Optional[str]:
         for field in ("media_thumbnail", "media_content"):
             items = getattr(entry, field, None) or []
+
             for item in items:
                 if not isinstance(item, dict):
                     continue
@@ -179,16 +188,19 @@ class RSSFetcher(BaseFetcher):
         return None
 
     @staticmethod
-    def _extract_video(entry) -> Tuple[Optional[str], Optional[str]]:
+    def _extract_video(
+        entry,
+    ) -> Tuple[Optional[str], Optional[str]]:
         """
-        فقط لینک‌هایی را برمی‌گرداند که RSS آن‌ها را به‌عنوان
-        ویدئو یا فایل رسانه‌ای ویدئویی معرفی کرده باشد.
+        استخراج لینک ویدئو از فیلدهای رسانه‌ای RSS.
+        این تابع فقط لینک‌های معرفی‌شده به‌عنوان ویدئو را می‌پذیرد.
         """
 
         candidates = []
 
         for field in ("media_content", "media_thumbnail"):
             items = getattr(entry, field, None) or []
+
             for item in items:
                 if isinstance(item, dict):
                     candidates.append(item)
@@ -213,11 +225,12 @@ class RSSFetcher(BaseFetcher):
                     and media_type in (
                         "application/mp4",
                         "application/x-mpegurl",
+                        "application/vnd.apple.mpegurl",
                     )
                 )
             )
 
             if is_video:
-                return url, media_type
+                return url, media_type or None
 
         return None, None
