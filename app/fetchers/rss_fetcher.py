@@ -1,14 +1,15 @@
 """
-RSS Fetcher
-دریافت اخبار از RSS و تلاش برای استخراج تصویر و ویدئو از صفحه خبر.
+KhabarF24 RSS Fetcher
+RSS + article-page media extraction
 """
 
 import asyncio
 import json
 import logging
 import re
-from datetime import datetime
-from typing import List, Optional, Tuple
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 import feedparser
@@ -18,553 +19,665 @@ from app.fetchers.base_fetcher import BaseFetcher
 from app.models.raw_news import RawNews
 from app.utils.http_client import HTTPClient
 
-
 logger = logging.getLogger(__name__)
 
-# برای جلوگیری از درخواست بیش از حد به سایت‌های خبری
-MAX_ARTICLE_PAGES_PER_FETCH = 12
-MAX_CONCURRENT_PAGE_REQUESTS = 4
+MAX_ARTICLE_PAGES_PER_FETCH = 30
+MAX_CONCURRENT_PAGE_REQUESTS = 5
 
 VIDEO_EXTENSIONS = (
-    ".mp4",
-    ".webm",
-    ".mov",
-    ".m4v",
-    ".m3u8",
-    ".mpd",
+    ".mp4", ".webm", ".mov", ".m4v", ".m3u8", ".mpd",
 )
 
 VIDEO_MIME_TYPES = (
-    "video/mp4",
-    "video/webm",
-    "video/quicktime",
+    "video/",
     "application/vnd.apple.mpegurl",
     "application/x-mpegurl",
     "application/dash+xml",
 )
 
-VIDEO_URL_PATTERN = re.compile(
-    r"""https?://[^\s"'<>\\]+?\.(?:mp4|webm|mov|m4v|m3u8|mpd)
-    (?:\?[^\s"'<>\\]*)?""",
-    re.IGNORECASE | re.VERBOSE,
+VIDEO_URL_RE = re.compile(
+    r"""https?://[^\s"'<>\\]+""",
+    re.IGNORECASE,
 )
+
+VIDEO_KEYS = {
+    "contenturl",
+    "content_url",
+    "videourl",
+    "video_url",
+    "video",
+    "video_src",
+    "videosrc",
+    "playbackurl",
+    "playback_url",
+    "streamurl",
+    "stream_url",
+    "mediacontent",
+    "media_content_url",
+}
+
+IMAGE_KEYS = {
+    "thumbnailurl",
+    "thumbnail_url",
+    "image",
+    "imageurl",
+    "image_url",
+    "thumbnail",
+}
 
 
 class RSSFetcher(BaseFetcher):
-    """دریافت خبر از RSS و استخراج رسانه از صفحه خبر."""
-
     def __init__(self, source):
         super().__init__(source)
-        self.http = HTTPClient(timeout=20, retries=2)
+        self.http = HTTPClient()
 
     async def fetch(self) -> List[RawNews]:
-        news_list: List[RawNews] = []
+        feed_url = getattr(self.source, "url", None)
 
-        rss_url = (
-            getattr(self.source, "rss_url", None)
-            or getattr(self.source, "url", None)
-        )
-
-        if not rss_url:
-            logger.warning("RSS URL MISSING: %s", self.source.name)
-            return news_list
+        if not feed_url:
+            logger.warning("RSS source has no URL: %s", self.source)
+            return []
 
         try:
-            xml = await self.http.get(rss_url)
-        except Exception:
-            logger.exception("RSS FETCH ERROR: %s", self.source.name)
-            return news_list
+            feed_text = await self.http.get(feed_url)
 
-        if not xml:
-            logger.warning(
-                "RSS FETCH FAILED: %s | url=%s",
-                self.source.name,
-                rss_url,
-            )
-            return news_list
+            if not feed_text:
+                logger.warning("RSS download failed: %s", feed_url)
+                return []
 
-        try:
-            feed = feedparser.parse(xml)
-        except Exception:
-            logger.exception("RSS PARSE ERROR: %s", self.source.name)
-            return news_list
+            feed = await asyncio.to_thread(feedparser.parse, feed_text)
 
-        if getattr(feed, "bozo", False):
-            logger.warning(
-                "RSS PARSE WARNING: %s | %s",
-                self.source.name,
-                getattr(feed, "bozo_exception", "unknown error"),
-            )
+            if getattr(feed, "bozo", False):
+                logger.debug(
+                    "RSS parser warning for %s: %s",
+                    feed_url,
+                    getattr(feed, "bozo_exception", ""),
+                )
 
-        source_categories = list(
-            getattr(self.source, "categories", None) or []
-        )
+            entries = list(getattr(feed, "entries", []) or [])
+            news_items: List[RawNews] = []
+            article_jobs = []
 
-        logger.info(
-            "RSS RESULT: %s | entries=%s",
-            self.source.name,
-            len(feed.entries),
-        )
+            for entry in entries:
+                title = self._clean_text(
+                    entry.get("title", "")
+                )
 
-        entries_to_check = []
+                article_url = (
+                    entry.get("link")
+                    or entry.get("id")
+                    or ""
+                )
 
-        for entry in feed.entries:
-            try:
-                video_url, video_type = self._extract_video(entry)
+                if not title or not article_url:
+                    continue
+
+                content = self._extract_content(entry)
+                summary = self._clean_text(
+                    entry.get("summary", "")
+                )
                 image_url = self._extract_image_url(entry)
 
-                news = RawNews(
-                    source_id=self.source.id,
-                    source=self.source.name,
-                    source_category_hint=source_categories,
-                    title=getattr(entry, "title", "") or "",
-                    content=self._extract_content(entry),
-                    summary=getattr(entry, "summary", "") or "",
-                    url=getattr(entry, "link", "") or "",
-                    published_at=self._extract_published_at(entry),
-                    language=getattr(self.source, "language", "") or "",
-                    category=(
-                        source_categories[0]
-                        if source_categories
-                        else ""
+                video_url, video_type = self._extract_video(entry)
+
+                raw_data = dict(entry)
+
+                item = RawNews(
+                    source_id=getattr(
+                        self.source, "id", ""
                     ),
+                    source=getattr(
+                        self.source,
+                        "name",
+                        "Unknown",
+                    ),
+                    title=title,
+                    content=content,
+                    summary=summary,
+                    url=article_url,
+                    published_at=self._extract_published_at(
+                        entry
+                    ),
+                    language=getattr(
+                        self.source, "language", "en"
+                    ),
+                    category=self._extract_category(),
                     image_url=image_url or "",
                     video_url=video_url or "",
                     video_content_type=video_type or "",
-                    raw_data=dict(entry),
-                    tags=list(getattr(entry, "tags", []) or []),
+                    raw_data=raw_data,
+                    tags=[],
                 )
 
-                if not news.title and not news.content and not news.url:
-                    continue
+                news_items.append(item)
 
-                news_list.append(news)
+                # Also inspect the article page. RSS media fields
+                # frequently contain only thumbnails.
+                if (
+                    not video_url
+                    and self._is_http_url(article_url)
+                    and len(article_jobs)
+                    < MAX_ARTICLE_PAGES_PER_FETCH
+                ):
+                    article_jobs.append(
+                        (item, article_url)
+                    )
 
-                # صفحه خبر فقط وقتی بررسی می‌شود که RSS ویدئو نداده باشد.
-                if news.url and not news.video_url:
-                    entries_to_check.append(news)
-
-            except Exception:
-                logger.exception(
-                    "RSS ENTRY ERROR: %s",
-                    self.source.name,
-                )
-
-        # بررسی محدود و هم‌زمان صفحات خبر
-        pages = entries_to_check[:MAX_ARTICLE_PAGES_PER_FETCH]
-
-        if pages:
             semaphore = asyncio.Semaphore(
                 MAX_CONCURRENT_PAGE_REQUESTS
             )
 
+            async def inspect_article(item, url):
+                async with semaphore:
+                    try:
+                        html = await self.http.get(url)
+
+                        if not html:
+                            logger.debug(
+                                "Could not load article: %s",
+                                url,
+                            )
+                            return
+
+                        video, content_type, image = (
+                            self._extract_page_media(
+                                html,
+                                url,
+                            )
+                        )
+
+                        if video:
+                            item.video_url = video
+                            item.video_content_type = (
+                                content_type or ""
+                            )
+
+                            logger.info(
+                                "ARTICLE VIDEO FOUND | %s | %s",
+                                getattr(
+                                    self.source,
+                                    "name",
+                                    "RSS",
+                                ),
+                                video[:250],
+                            )
+                        else:
+                            logger.debug(
+                                "ARTICLE VIDEO NOT FOUND | %s",
+                                url,
+                            )
+
+                        if not getattr(item, "image_url", "") and image:
+                            item.image_url = image
+
+                    except Exception:
+                        logger.exception(
+                            "Article media extraction failed: %s",
+                            url,
+                        )
+
             await asyncio.gather(
                 *[
-                    self._enrich_from_article(news, semaphore)
-                    for news in pages
+                    inspect_article(item, url)
+                    for item, url in article_jobs
                 ],
                 return_exceptions=True,
             )
 
-        for news in news_list:
             logger.info(
-                "MEDIA CHECK: %s | image=%s | video=%s | title=%s",
-                news.source,
-                bool(news.image_url),
-                bool(news.video_url),
-                news.title[:60],
+                "RSS PARSED | %s | news=%s | article_pages_checked=%s",
+                getattr(self.source, "name", "RSS"),
+                len(news_items),
+                len(article_jobs),
             )
 
-        logger.info(
-            "RSS PARSED: %s | news=%s | article_pages_checked=%s",
-            self.source.name,
-            len(news_list),
-            len(pages),
+            return news_items
+
+        except Exception:
+            logger.exception(
+                "RSS fetch failed: %s",
+                feed_url,
+            )
+            return []
+
+    def _extract_category(self) -> str:
+        categories = getattr(
+            self.source,
+            "categories",
+            None,
+        ) or []
+
+        if isinstance(categories, str):
+            return categories
+
+        if categories:
+            return str(categories[0])
+
+        return "general"
+
+    @staticmethod
+    def _is_http_url(url: str) -> bool:
+        try:
+            parsed = urlparse(url)
+            return parsed.scheme in ("http", "https") and bool(
+                parsed.netloc
+            )
+        except Exception:
+            return False
+
+    @staticmethod
+    def _clean_text(value: Any) -> str:
+        if not value:
+            return ""
+
+        if isinstance(value, list):
+            value = " ".join(
+                str(part) for part in value
+            )
+
+        soup = BeautifulSoup(str(value), "html.parser")
+
+        return re.sub(
+            r"\s+",
+            " ",
+            soup.get_text(" ", strip=True),
+        ).strip()
+
+    def _extract_content(self, entry) -> str:
+        contents = entry.get("content", [])
+
+        if contents:
+            parts = []
+
+            for item in contents:
+                value = item.get("value", "")
+                if value:
+                    parts.append(
+                        self._clean_text(value)
+                    )
+
+            if parts:
+                return "\n".join(parts)
+
+        return self._clean_text(
+            entry.get("summary", "")
         )
 
-        return news_list
-
-    async def _enrich_from_article(
-        self,
-        news: RawNews,
-        semaphore: asyncio.Semaphore,
-    ) -> None:
-        """استخراج ویدئو و تصویر احتمالی از صفحه اصلی خبر."""
-
-        async with semaphore:
-            try:
-                html = await self.http.get(news.url)
-
-                if not html:
-                    logger.debug(
-                        "ARTICLE PAGE UNAVAILABLE: %s",
-                        news.url,
-                    )
-                    return
-
-                video_url, video_type, image_url = (
-                    self._extract_page_media(html, news.url)
-                )
-
-                if video_url and not news.video_url:
-                    news.video_url = video_url
-                    news.video_content_type = video_type or ""
-
-                    logger.info(
-                        "ARTICLE VIDEO FOUND: %s | %s",
-                        self.source.name,
-                        video_url[:180],
-                    )
-
-                if image_url and not news.image_url:
-                    news.image_url = image_url
-
-                if not video_url:
-                    logger.debug(
-                        "ARTICLE VIDEO NOT FOUND: %s",
-                        news.url,
-                    )
-
-            except Exception:
-                logger.exception(
-                    "ARTICLE MEDIA ERROR: %s",
-                    news.url,
-                )
-
     @staticmethod
-    def _extract_content(entry) -> str:
-        content = getattr(entry, "content", None)
+    def _extract_published_at(entry) -> Optional[datetime]:
+        for key in ("published_parsed", "updated_parsed"):
+            parsed = entry.get(key)
 
-        if content:
-            for item in content:
-                if isinstance(item, dict):
-                    value = item.get("value", "")
-                    if value:
-                        return value
+            if parsed:
+                try:
+                    from time import mktime
 
-        return getattr(entry, "summary", "") or ""
+                    return datetime.fromtimestamp(
+                        mktime(parsed),
+                        tz=timezone.utc,
+                    )
+                except (ValueError, OverflowError, OSError):
+                    pass
 
-    @staticmethod
-    def _extract_published_at(
-        entry,
-    ) -> Optional[datetime]:
-        parsed_time = getattr(entry, "published_parsed", None)
+        for key in ("published", "updated", "date"):
+            value = entry.get(key)
 
-        if not parsed_time:
-            parsed_time = getattr(entry, "updated_parsed", None)
+            if not value:
+                continue
 
-        if parsed_time:
             try:
-                return datetime(
-                    parsed_time.tm_year,
-                    parsed_time.tm_mon,
-                    parsed_time.tm_mday,
-                    parsed_time.tm_hour,
-                    parsed_time.tm_min,
-                    parsed_time.tm_sec,
+                result = parsedate_to_datetime(value)
+
+                if result.tzinfo is None:
+                    result = result.replace(
+                        tzinfo=timezone.utc
+                    )
+
+                return result
+            except (TypeError, ValueError, OverflowError):
+                continue
+
+        return None
+
+    def _extract_image_url(self, entry) -> Optional[str]:
+        for key in ("media_thumbnail", "media_content"):
+            for media in entry.get(key, []) or []:
+                url = media.get("url")
+
+                if url and self._looks_like_image(url, media):
+                    return url
+
+        for link in entry.get("links", []) or []:
+            url = link.get("href", "")
+            media_type = link.get("type", "").lower()
+            rel = link.get("rel", "").lower()
+
+            if (
+                url
+                and (
+                    media_type.startswith("image/")
+                    or rel == "enclosure"
+                    and self._looks_like_image(url, link)
                 )
-            except (ValueError, TypeError, AttributeError):
-                pass
+            ):
+                return url
 
         return None
 
     @staticmethod
-    def _is_video_url(url: str, media_type: str = "") -> bool:
-        if not url:
-            return False
+    def _looks_like_image(
+        url: str,
+        metadata: Optional[dict] = None,
+    ) -> bool:
+        metadata = metadata or {}
 
-        media_type = (media_type or "").lower().split(";")[0].strip()
+        media_type = str(
+            metadata.get("type", "")
+        ).lower()
 
-        if media_type in VIDEO_MIME_TYPES:
+        if media_type.startswith("image/"):
             return True
 
         path = urlparse(url).path.lower()
 
-        if path.endswith(VIDEO_EXTENSIONS):
-            return True
+        return path.endswith(
+            (".jpg", ".jpeg", ".png", ".webp", ".gif")
+        )
 
-        return False
-
-    @classmethod
-    def _extract_image_url(cls, entry) -> Optional[str]:
-        for field in ("media_thumbnail", "media_content"):
-            items = getattr(entry, field, None) or []
-
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-
-                url = item.get("url")
-                media_type = str(item.get("type", "")).lower()
-                medium = str(item.get("medium", "")).lower()
-
-                if not url:
-                    continue
-
-                if cls._is_video_url(url, media_type) or medium == "video":
-                    continue
-
-                if (
-                    field == "media_thumbnail"
-                    or media_type.startswith("image/")
-                ):
-                    return url
-
-        for link in getattr(entry, "links", []) or []:
-            rel = str(link.get("rel", "")).lower()
-            media_type = str(link.get("type", "")).lower()
-            href = link.get("href")
-
-            if (
-                href
-                and rel == "enclosure"
-                and media_type.startswith("image/")
-            ):
-                return href
-
-        return None
-
-    @classmethod
     def _extract_video(
-        cls,
+        self,
         entry,
     ) -> Tuple[Optional[str], Optional[str]]:
-        candidates = []
+        for media in entry.get("media_content", []) or []:
+            url = media.get("url", "")
+            media_type = media.get("type", "")
 
-        for field in ("media_content",):
-            items = getattr(entry, field, None) or []
+            if url and self._looks_like_video(
+                url,
+                media_type,
+            ):
+                return url, media_type
 
-            for item in items:
-                if isinstance(item, dict):
-                    candidates.append(item)
-
-        for link in getattr(entry, "links", []) or []:
-            candidates.append(link)
-
-        for item in candidates:
-            url = item.get("url") or item.get("href")
-            media_type = str(item.get("type", "")).lower()
-            medium = str(item.get("medium", "")).lower()
-            rel = str(item.get("rel", "")).lower()
-
-            if not url:
-                continue
+        for link in entry.get("links", []) or []:
+            url = link.get("href", "")
+            media_type = link.get("type", "")
 
             if (
-                media_type.startswith("video/")
-                or medium == "video"
-                or cls._is_video_url(url, media_type)
-                or (
-                    rel == "enclosure"
-                    and media_type in VIDEO_MIME_TYPES
+                url
+                and link.get("rel") == "enclosure"
+                and self._looks_like_video(
+                    url,
+                    media_type,
                 )
             ):
-                return url, media_type or None
+                return url, media_type
 
         return None, None
 
-    @classmethod
+    @staticmethod
+    def _looks_like_video(
+        url: str,
+        media_type: str = "",
+    ) -> bool:
+        media_type = (media_type or "").lower()
+        path = urlparse(url).path.lower()
+
+        return (
+            path.endswith(VIDEO_EXTENSIONS)
+            or any(
+                media_type.startswith(prefix)
+                for prefix in VIDEO_MIME_TYPES
+            )
+        )
+
     def _extract_page_media(
-        cls,
+        self,
         html: str,
         page_url: str,
-    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-        """
-        بررسی HTML، تگ‌های video/source، متادیتا و JSON-LD.
-        خروجی: video_url, video_content_type, image_url
-        """
-
+    ) -> Tuple[
+        Optional[str],
+        Optional[str],
+        Optional[str],
+    ]:
         soup = BeautifulSoup(html, "html.parser")
 
         video_candidates = []
         image_candidates = []
 
-        # تگ‌های استاندارد HTML
-        for tag in soup.find_all(["video", "source"]):
-            src = tag.get("src")
+        def add_video(url, media_type=""):
+            if not isinstance(url, str) or not url.strip():
+                return
 
-            if not src:
-                continue
+            url = urljoin(page_url, url.strip())
 
-            absolute_url = urljoin(page_url, src)
-            media_type = str(tag.get("type", "")).lower()
+            if not self._is_http_url(url):
+                return
 
-            if (
-                tag.name == "video"
-                or cls._is_video_url(absolute_url, media_type)
-                or media_type.startswith("video/")
-            ):
+            if url not in [
+                item[0] for item in video_candidates
+            ]:
                 video_candidates.append(
-                    (absolute_url, media_type or None)
+                    (url, media_type or "")
                 )
 
-        # متادیتای Open Graph و Twitter
-        for tag in soup.find_all("meta"):
+        def add_image(url):
+            if not isinstance(url, str) or not url.strip():
+                return
+
+            url = urljoin(page_url, url.strip())
+
+            if (
+                self._is_http_url(url)
+                and url not in image_candidates
+            ):
+                image_candidates.append(url)
+
+        # 1. Actual video and source elements.
+        for video in soup.find_all("video"):
+            for attribute in ("src", "data-src"):
+                add_video(video.get(attribute))
+
+            for source in video.find_all("source"):
+                add_video(
+                    source.get("src")
+                    or source.get("data-src"),
+                    source.get("type", ""),
+                )
+
+            add_image(
+                video.get("poster")
+                or video.get("data-poster")
+            )
+
+        # 2. Open Graph, Twitter and common player metadata.
+        video_meta_names = {
+            "og:video",
+            "og:video:url",
+            "og:video:secure_url",
+            "twitter:player:stream",
+            "twitter:player:stream:content_type",
+            "twitter:player:video",
+            "twitter:player:video:src",
+        }
+
+        for meta in soup.find_all("meta"):
             key = (
-                tag.get("property")
-                or tag.get("name")
-                or tag.get("itemprop")
+                meta.get("property")
+                or meta.get("name")
+                or meta.get("itemprop")
                 or ""
             ).lower()
 
-            value = tag.get("content", "").strip()
+            value = meta.get("content", "")
 
-            if not value:
-                continue
+            if key in video_meta_names and value:
+                add_video(
+                    value,
+                    meta.get("type", ""),
+                )
 
-            absolute_url = urljoin(page_url, value)
-
-            if key in (
-                "og:video",
-                "og:video:url",
-                "og:video:secure_url",
-                "twitter:player:stream",
-                "contenturl",
-                "content_url",
-            ):
-                if (
-                    cls._is_video_url(absolute_url)
-                    or key in (
-                        "og:video",
-                        "og:video:url",
-                        "og:video:secure_url",
-                        "twitter:player:stream",
-                        "contenturl",
-                        "content_url",
-                    )
-                ):
-                    # لینک صفحه پلیر را به‌عنوان فایل مستقیم قبول نکن.
-                    if cls._is_video_url(absolute_url):
-                        video_candidates.append(
-                            (absolute_url, None)
-                        )
-
-            elif key in (
+            if key in {
                 "og:image",
                 "og:image:url",
                 "twitter:image",
                 "twitter:image:src",
-            ):
-                image_candidates.append(absolute_url)
+            }:
+                add_image(value)
 
-        # JSON-LD، از جمله Schema.org VideoObject
-        for script in soup.find_all(
-            "script",
-            attrs={"type": "application/ld+json"},
-        ):
-            raw_json = script.string or script.get_text()
+        # 3. JSON-LD and other embedded JSON objects.
+        for script in soup.find_all("script"):
+            script_type = str(
+                script.get("type", "")
+            ).lower()
 
-            if not raw_json:
-                continue
-
-            try:
-                data = json.loads(raw_json)
-            except (json.JSONDecodeError, TypeError):
-                continue
-
-            cls._scan_json_media(
-                data,
-                page_url,
-                video_candidates,
-                image_candidates,
+            script_text = script.string or script.get_text(
+                strip=True
             )
 
-        # لینک‌های مستقیم ویدئو که در کد صفحه جاسازی شده‌اند
-        if not video_candidates:
-            for match in VIDEO_URL_PATTERN.findall(html):
-                cleaned = match.rstrip(".,);]")
-                video_candidates.append(
-                    (urljoin(page_url, cleaned), None)
-                )
-
-        # حذف موارد تکراری و لینک‌های غیرمستقیم
-        seen = set()
-
-        for url, media_type in video_candidates:
-            if not url or url in seen:
+            if not script_text:
                 continue
 
-            seen.add(url)
+            if (
+                "json" in script_type
+                or script.get("id") in {
+                    "__NEXT_DATA__",
+                    "__NUXT_DATA__",
+                }
+                or script_type == ""
+            ):
+                self._scan_json_media(
+                    script_text,
+                    page_url,
+                    add_video,
+                    add_image,
+                )
 
-            if cls._is_video_url(url, media_type or ""):
-                return url, media_type, (
+        # 4. Direct media URLs embedded in the HTML.
+        # Keep extensionless CDN URLs when they appear in
+        # an explicit video-related HTML attribute.
+        for tag in soup.find_all(True):
+            for attr in (
+                "data-video",
+                "data-video-url",
+                "data-video-src",
+                "data-src",
+                "data-media-url",
+                "data-playback-url",
+            ):
+                value = tag.get(attr)
+
+                if isinstance(value, str) and value.startswith(
+                    ("http://", "https://", "//", "/")
+                ):
+                    candidate = urljoin(page_url, value)
+
+                    if (
+                        self._looks_like_video(candidate)
+                        or attr != "data-src"
+                    ):
+                        add_video(candidate)
+
+        # Search raw HTML for direct URLs with known extensions.
+        for match in VIDEO_URL_RE.findall(html):
+            candidate = match.rstrip("),;]}")
+
+            if self._looks_like_video(candidate):
+                add_video(candidate)
+
+        # Prefer actual media URLs over player-page URLs.
+        for url, media_type in video_candidates:
+            if self._looks_like_video(url, media_type):
+                return url, media_type or "video", (
                     image_candidates[0]
                     if image_candidates
                     else None
                 )
 
+        # Extensionless URLs are accepted only when explicitly
+        # identified as video by metadata/HTML player fields.
+        if video_candidates:
+            url, media_type = video_candidates[0]
+            return (
+                url,
+                media_type or "video",
+                image_candidates[0]
+                if image_candidates
+                else None,
+            )
+
         return (
             None,
             None,
-            image_candidates[0] if image_candidates else None,
+            image_candidates[0]
+            if image_candidates
+            else None,
         )
 
-    @classmethod
     def _scan_json_media(
-        cls,
-        value,
+        self,
+        text: str,
         page_url: str,
-        video_candidates: list,
-        image_candidates: list,
+        add_video,
+        add_image,
     ) -> None:
-        """جست‌وجوی بازگشتی آدرس رسانه‌ها در JSON."""
+        try:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            # Some player scripts contain JSON fragments rather
+            # than one complete JSON document.
+            data = None
 
-        if isinstance(value, dict):
-            type_value = value.get("@type", "")
-            if isinstance(type_value, list):
-                type_value = " ".join(str(x) for x in type_value)
-
-            is_video_object = "videoobject" in str(type_value).lower()
-
-            for key, item in value.items():
-                key_lower = str(key).lower()
-
-                if isinstance(item, str):
-                    absolute_url = urljoin(page_url, item.strip())
-
-                    if key_lower in (
-                        "contenturl",
-                        "content_url",
-                        "videourl",
-                        "video_url",
-                        "streamurl",
-                        "stream_url",
-                    ):
-                        if (
-                            cls._is_video_url(absolute_url)
-                            or is_video_object
-                        ):
-                            if cls._is_video_url(absolute_url):
-                                video_candidates.append(
-                                    (absolute_url, None)
-                                )
-
-                    elif key_lower in (
-                        "thumbnailurl",
-                        "thumbnail_url",
-                    ):
-                        if item.strip():
-                            image_candidates.append(absolute_url)
-
-                    elif key_lower == "url" and is_video_object:
-                        if cls._is_video_url(absolute_url):
-                            video_candidates.append(
-                                (absolute_url, None)
-                            )
-
-                elif isinstance(item, (dict, list)):
-                    cls._scan_json_media(
-                        item,
-                        page_url,
-                        video_candidates,
-                        image_candidates,
+        def walk(value):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    normalized = re.sub(
+                        r"[^a-z0-9_]",
+                        "",
+                        str(key).lower(),
                     )
 
-        elif isinstance(value, list):
-            for item in value:
-                cls._scan_json_media(
-                    item,
-                    page_url,
-                    video_candidates,
-                    image_candidates,
-                )
+                    if isinstance(child, str):
+                        if normalized in VIDEO_KEYS:
+                            add_video(
+                                urljoin(page_url, child)
+                            )
+                        elif normalized in IMAGE_KEYS:
+                            add_image(
+                                urljoin(page_url, child)
+                            )
+
+                        # Some schemas use contentUrl with a
+                        # MIME type in a sibling field.
+                        elif (
+                            normalized in {
+                                "url",
+                                "src",
+                                "embedurl",
+                            }
+                            and self._looks_like_video(child)
+                        ):
+                            add_video(
+                                urljoin(page_url, child)
+                            )
+
+                    elif isinstance(child, (dict, list)):
+                        walk(child)
+
+            elif isinstance(value, list):
+                for item in value:
+                    walk(item)
+
+        if data is not None:
+            walk(data)
+
+        # Also inspect escaped URLs in player JSON, even when
+        # the surrounding script is not valid JSON.
+        for match in VIDEO_URL_RE.findall(text):
+            candidate = (
+                match.replace("\\/", "/")
+                .replace("\\u0026", "&")
+                .rstrip("\\),;]}")
+            )
+
+            if self._looks_like_video(candidate):
+                add_video(candidate)
