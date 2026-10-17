@@ -1,16 +1,20 @@
-"""
-KhabarF24 RSS Fetcher
-RSS + article-page media extraction
-"""
 
 import asyncio
 import json
 import logging
 import re
+
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urljoin, urlparse
+from urllib.parse import (
+    parse_qsl,
+    urlencode,
+    urljoin,
+    urlparse,
+    urlsplit,
+    urlunsplit,
+)
 
 import feedparser
 from bs4 import BeautifulSoup
@@ -19,13 +23,19 @@ from app.fetchers.base_fetcher import BaseFetcher
 from app.models.raw_news import RawNews
 from app.utils.http_client import HTTPClient
 
+
 logger = logging.getLogger(__name__)
 
 MAX_ARTICLE_PAGES_PER_FETCH = 30
 MAX_CONCURRENT_PAGE_REQUESTS = 5
 
 VIDEO_EXTENSIONS = (
-    ".mp4", ".webm", ".mov", ".m4v", ".m3u8", ".mpd",
+    ".mp4",
+    ".webm",
+    ".mov",
+    ".m4v",
+    ".m3u8",
+    ".mpd",
 )
 
 VIDEO_MIME_TYPES = (
@@ -33,11 +43,6 @@ VIDEO_MIME_TYPES = (
     "application/vnd.apple.mpegurl",
     "application/x-mpegurl",
     "application/dash+xml",
-)
-
-VIDEO_URL_RE = re.compile(
-    r"""https?://[^\s"'<>\\]+""",
-    re.IGNORECASE,
 )
 
 VIDEO_KEYS = {
@@ -54,6 +59,12 @@ VIDEO_KEYS = {
     "stream_url",
     "mediacontent",
     "media_content_url",
+    "mediaurl",
+    "media_url",
+    "fileurl",
+    "file_url",
+    "downloadurl",
+    "download_url",
 }
 
 IMAGE_KEYS = {
@@ -63,10 +74,35 @@ IMAGE_KEYS = {
     "imageurl",
     "image_url",
     "thumbnail",
+    "poster",
+    "posterurl",
+    "poster_url",
 }
+
+VIDEO_URL_RE = re.compile(
+    r"""https?://[^\s"'<>\\]+""",
+    re.IGNORECASE,
+)
+
+BBC_HOSTS = (
+    "bbc.com",
+    "bbc.co.uk",
+    "bbci.co.uk",
+    "bbc.in",
+)
+
+PLAYER_PATH_MARKERS = (
+    "/av/embed/",
+    "/iplayer/",
+    "/video/",
+    "/player/",
+    "/embed/",
+)
 
 
 class RSSFetcher(BaseFetcher):
+    """Fetch RSS news and discover related article media."""
+
     def __init__(self, source):
         super().__init__(source)
         self.http = HTTPClient()
@@ -75,185 +111,225 @@ class RSSFetcher(BaseFetcher):
         feed_url = getattr(self.source, "url", None)
 
         if not feed_url:
-            logger.warning("RSS source has no URL: %s", self.source)
+            logger.warning(
+                "RSS_FETCH | source=%s | missing feed URL",
+                self.source_name,
+            )
+            return []
+
+        feed_text = await self.http.get(feed_url)
+
+        if not feed_text:
+            logger.warning(
+                "RSS_FETCH | source=%s | feed download failed",
+                self.source_name,
+            )
             return []
 
         try:
-            feed_text = await self.http.get(feed_url)
-
-            if not feed_text:
-                logger.warning("RSS download failed: %s", feed_url)
-                return []
-
             feed = await asyncio.to_thread(feedparser.parse, feed_text)
+        except Exception:
+            logger.exception(
+                "RSS_FETCH | source=%s | feed parsing failed",
+                self.source_name,
+            )
+            return []
 
-            if getattr(feed, "bozo", False):
-                logger.debug(
-                    "RSS parser warning for %s: %s",
-                    feed_url,
-                    getattr(feed, "bozo_exception", ""),
-                )
+        entries = list(getattr(feed, "entries", []) or [])
+        news_items: List[RawNews] = []
+        article_jobs = []
 
-            entries = list(getattr(feed, "entries", []) or [])
-            news_items: List[RawNews] = []
-            article_jobs = []
-
-            for entry in entries:
+        for entry in entries:
+            try:
                 title = self._clean_text(
-                    entry.get("title", "")
+                    self._entry_value(entry, "title", "")
                 )
 
                 article_url = (
-                    entry.get("link")
-                    or entry.get("id")
-                    or ""
+                    self._entry_value(entry, "link", "")
+                    or self._entry_value(entry, "id", "")
                 )
 
-                if not title or not article_url:
+                article_url = self._normalize_url(
+                    article_url,
+                    feed_url,
+                )
+
+                if not title:
                     continue
 
                 content = self._extract_content(entry)
                 summary = self._clean_text(
-                    entry.get("summary", "")
+                    self._entry_value(entry, "summary", "")
                 )
-                image_url = self._extract_image_url(entry)
 
+                image_url = self._extract_image_url(entry)
                 video_url, video_type = self._extract_video(entry)
+
+                published_at = self._extract_published_at(entry)
+                category = self._extract_category(entry)
 
                 raw_data = dict(entry)
 
-                item = RawNews(
-                    source_id=getattr(
-                        self.source, "id", ""
-                    ),
-                    source=getattr(
-                        self.source,
-                        "name",
-                        "Unknown",
-                    ),
+                news = RawNews(
                     title=title,
                     content=content,
                     summary=summary,
-                    url=article_url,
-                    published_at=self._extract_published_at(
-                        entry
-                    ),
-                    language=getattr(
-                        self.source, "language", "en"
-                    ),
-                    category=self._extract_category(),
+                    url=article_url or "",
                     image_url=image_url or "",
                     video_url=video_url or "",
                     video_content_type=video_type or "",
+                    author=self._extract_author(entry),
+                    published_at=published_at,
+                    source=self.source_name,
+                    source_id=getattr(self.source, "id", "") or "",
+                    country=getattr(self.source, "country", "") or "",
+                    language=getattr(self.source, "language", "") or "",
+                    category=category,
                     raw_data=raw_data,
-                    tags=[],
                 )
 
-                news_items.append(item)
+                news_items.append(news)
 
-                # Also inspect the article page. RSS media fields
-                # frequently contain only thumbnails.
+                # Only inspect the article when RSS did not provide a
+                # usable direct video URL.
                 if (
-                    not video_url
+                    not news.video_url
+                    and article_url
                     and self._is_http_url(article_url)
-                    and len(article_jobs)
-                    < MAX_ARTICLE_PAGES_PER_FETCH
+                    and len(article_jobs) < MAX_ARTICLE_PAGES_PER_FETCH
                 ):
-                    article_jobs.append(
-                        (item, article_url)
-                    )
+                    article_jobs.append((news, article_url))
 
+            except Exception:
+                logger.exception(
+                    "RSS_ENTRY_ERROR | source=%s",
+                    self.source_name,
+                )
+
+        if article_jobs:
             semaphore = asyncio.Semaphore(
                 MAX_CONCURRENT_PAGE_REQUESTS
             )
 
-            async def inspect_article(item, url):
+            async def inspect_limited(news: RawNews, url: str):
                 async with semaphore:
-                    try:
-                        html = await self.http.get(url)
-
-                        if not html:
-                            logger.debug(
-                                "Could not load article: %s",
-                                url,
-                            )
-                            return
-
-                        video, content_type, image = (
-                            self._extract_page_media(
-                                html,
-                                url,
-                            )
-                        )
-
-                        if video:
-                            item.video_url = video
-                            item.video_content_type = (
-                                content_type or ""
-                            )
-
-                            logger.info(
-                                "ARTICLE VIDEO FOUND | %s | %s",
-                                getattr(
-                                    self.source,
-                                    "name",
-                                    "RSS",
-                                ),
-                                video[:250],
-                            )
-                        else:
-                            logger.debug(
-                                "ARTICLE VIDEO NOT FOUND | %s",
-                                url,
-                            )
-
-                        if not getattr(item, "image_url", "") and image:
-                            item.image_url = image
-
-                    except Exception:
-                        logger.exception(
-                            "Article media extraction failed: %s",
-                            url,
-                        )
+                    await self._inspect_article(news, url)
 
             await asyncio.gather(
                 *[
-                    inspect_article(item, url)
-                    for item, url in article_jobs
+                    inspect_limited(news, url)
+                    for news, url in article_jobs
                 ],
                 return_exceptions=True,
             )
 
-            logger.info(
-                "RSS PARSED | %s | news=%s | article_pages_checked=%s",
-                getattr(self.source, "name", "RSS"),
-                len(news_items),
-                len(article_jobs),
+        video_count = sum(bool(item.video_url) for item in news_items)
+        image_count = sum(bool(item.image_url) for item in news_items)
+
+        logger.info(
+            "RSS_PARSED | source=%s | entries=%s | "
+            "article_pages_checked=%s | videos=%s | images=%s",
+            self.source_name,
+            len(news_items),
+            len(article_jobs),
+            video_count,
+            image_count,
+        )
+
+        return news_items
+
+    async def _inspect_article(
+        self,
+        news: RawNews,
+        article_url: str,
+    ) -> None:
+        """Inspect an article page for video and image media."""
+
+        try:
+            html = await self.http.get(article_url)
+
+            # BBC syndication may expose additional clip information
+            # through clip-related query parameters. Try this only when
+            # the normal article response did not yield a direct video.
+            if not html and self._is_bbc_url(article_url):
+                alternate_url = self._bbc_clips_url(article_url)
+                if alternate_url != article_url:
+                    html = await self.http.get(alternate_url)
+
+            if not html:
+                logger.debug(
+                    "ARTICLE_MEDIA | source=%s | page_unavailable=%s",
+                    self.source_name,
+                    article_url,
+                )
+                return
+
+            video_url, video_type, image_url, embed_url = (
+                self._extract_page_media(html, article_url)
             )
 
-            return news_items
+            if video_url and not news.video_url:
+                news.video_url = video_url
+                news.video_content_type = video_type or ""
+
+                logger.info(
+                    "ARTICLE_VIDEO_FOUND | source=%s | title=%s | "
+                    "video=%s",
+                    self.source_name,
+                    news.title[:100],
+                    video_url,
+                )
+
+            elif not news.video_url:
+                logger.info(
+                    "ARTICLE_VIDEO_NOT_FOUND | source=%s | title=%s",
+                    self.source_name,
+                    news.title[:100],
+                )
+
+            if image_url and not news.image_url:
+                news.image_url = image_url
+
+            # Keep an embedded-player URL for diagnosis or a future
+            # dedicated player resolver. Do not treat an iframe page as
+            # a direct video file that ffmpeg can necessarily download.
+            if embed_url:
+                news.raw_data = news.raw_data or {}
+                news.raw_data["video_embed_url"] = embed_url
+
+            news.raw_data = news.raw_data or {}
+            news.raw_data["article_media_checked"] = True
 
         except Exception:
             logger.exception(
-                "RSS fetch failed: %s",
-                feed_url,
+                "ARTICLE_MEDIA_ERROR | source=%s | url=%s",
+                self.source_name,
+                article_url,
             )
-            return []
 
-    def _extract_category(self) -> str:
-        categories = getattr(
-            self.source,
-            "categories",
-            None,
-        ) or []
+    @staticmethod
+    def _entry_value(
+        entry: Any,
+        key: str,
+        default: Any = None,
+    ) -> Any:
+        try:
+            return entry.get(key, default)
+        except (AttributeError, TypeError):
+            return default
 
-        if isinstance(categories, str):
-            return categories
+    @staticmethod
+    def _clean_text(value: Any) -> str:
+        if value is None:
+            return ""
 
-        if categories:
-            return str(categories[0])
+        if isinstance(value, (dict, list, tuple)):
+            return ""
 
-        return "general"
+        text = str(value)
+        soup = BeautifulSoup(text, "html.parser")
+        return " ".join(soup.get_text(" ", strip=True).split())
 
     @staticmethod
     def _is_http_url(url: str) -> bool:
@@ -266,96 +342,389 @@ class RSSFetcher(BaseFetcher):
             return False
 
     @staticmethod
-    def _clean_text(value: Any) -> str:
-        if not value:
+    def _normalize_url(
+        url: str,
+        base_url: str = "",
+    ) -> str:
+        if not url:
             return ""
 
-        if isinstance(value, list):
-            value = " ".join(
-                str(part) for part in value
+        url = str(url).strip().replace("&amp;", "&")
+
+        if base_url:
+            url = urljoin(base_url, url)
+
+        if not RSSFetcher._is_http_url(url):
+            return ""
+
+        return url
+
+    def _extract_content(self, entry: Any) -> str:
+        content_parts = []
+
+        contents = self._entry_value(entry, "content", []) or []
+
+        if isinstance(contents, list):
+            for item in contents:
+                if isinstance(item, dict):
+                    value = item.get("value", "")
+                    cleaned = self._clean_text(value)
+
+                    if cleaned:
+                        content_parts.append(cleaned)
+
+        if content_parts:
+            return "\n\n".join(content_parts)
+
+        summary = self._entry_value(entry, "summary", "")
+        return self._clean_text(summary)
+
+    def _extract_author(self, entry: Any) -> str:
+        author = self._entry_value(entry, "author", "")
+
+        if author:
+            return self._clean_text(author)
+
+        authors = self._entry_value(entry, "authors", []) or []
+
+        if isinstance(authors, list):
+            names = [
+                self._clean_text(item.get("name", ""))
+                for item in authors
+                if isinstance(item, dict)
+            ]
+            return ", ".join(name for name in names if name)
+
+        return ""
+
+    def _extract_published_at(
+        self,
+        entry: Any,
+    ) -> Optional[datetime]:
+        parsed = self._entry_value(entry, "published_parsed")
+
+        if parsed:
+            try:
+                from time import mktime
+
+                timestamp = mktime(parsed)
+                return datetime.fromtimestamp(
+                    timestamp,
+                    tz=timezone.utc,
+                )
+            except (ValueError, TypeError, OverflowError):
+                pass
+
+        value = (
+            self._entry_value(entry, "published")
+            or self._entry_value(entry, "updated")
+            or self._entry_value(entry, "created")
+        )
+
+        if not value:
+            return None
+
+        try:
+            parsed_date = parsedate_to_datetime(str(value))
+
+            if parsed_date.tzinfo is None:
+                parsed_date = parsed_date.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return parsed_date.astimezone(timezone.utc)
+
+        except (ValueError, TypeError, OverflowError):
+            return None
+
+    def _extract_category(self, entry: Any) -> str:
+        tags = self._entry_value(entry, "tags", []) or []
+
+        for tag in tags:
+            if not isinstance(tag, dict):
+                continue
+
+            term = self._clean_text(tag.get("term", ""))
+
+            if term:
+                return term.lower()
+
+        return ""
+
+    def _extract_image_url(self, entry: Any) -> str:
+        base_url = (
+            self._entry_value(entry, "link", "")
+            or getattr(self.source, "url", "")
+            or ""
+        )
+
+        # RSS media:thumbnail
+        thumbnails = self._entry_value(
+            entry,
+            "media_thumbnail",
+            [],
+        ) or []
+
+        for thumbnail in thumbnails:
+            if isinstance(thumbnail, dict):
+                url = self._normalize_url(
+                    thumbnail.get("url", ""),
+                    base_url,
+                )
+                if url and self._looks_like_image(url):
+                    return url
+
+        # RSS media:content
+        media_content = self._entry_value(
+            entry,
+            "media_content",
+            [],
+        ) or []
+
+        for media in media_content:
+            if not isinstance(media, dict):
+                continue
+
+            url = self._normalize_url(
+                media.get("url", ""),
+                base_url,
+            )
+            media_type = str(media.get("type", "")).lower()
+
+            if url and (
+                media_type.startswith("image/")
+                or self._looks_like_image(url)
+            ):
+                return url
+
+        # RSS enclosures and links
+        links = self._entry_value(entry, "links", []) or []
+
+        for link in links:
+            if not isinstance(link, dict):
+                continue
+
+            url = self._normalize_url(
+                link.get("href", ""),
+                base_url,
+            )
+            media_type = str(link.get("type", "")).lower()
+            rel = str(link.get("rel", "")).lower()
+
+            if not url:
+                continue
+
+            if media_type.startswith("image/"):
+                return url
+
+            if rel == "enclosure" and self._looks_like_image(url):
+                return url
+
+        # Some feeds place images in the description HTML.
+        html_parts = [
+            self._entry_value(entry, "summary", "") or ""
+        ]
+
+        contents = self._entry_value(entry, "content", []) or []
+        if isinstance(contents, list):
+            html_parts.extend(
+                item.get("value", "")
+                for item in contents
+                if isinstance(item, dict)
             )
 
-        soup = BeautifulSoup(str(value), "html.parser")
+        for html in html_parts:
+            soup = BeautifulSoup(str(html), "html.parser")
 
-        return re.sub(
-            r"\s+",
-            " ",
-            soup.get_text(" ", strip=True),
-        ).strip()
+            for tag in soup.find_all(["img", "source"]):
+                src = (
+                    tag.get("src")
+                    or tag.get("data-src")
+                    or tag.get("data-original")
+                    or tag.get("srcset", "").split(",")[0].strip()
+                )
 
-    def _extract_content(self, entry) -> str:
-        contents = entry.get("content", [])
+                if src:
+                    src = src.split(" ")[0]
+                    url = self._normalize_url(src, base_url)
 
-        if contents:
-            parts = []
+                    if url and self._looks_like_image(url):
+                        return url
 
-            for item in contents:
-                value = item.get("value", "")
-                if value:
-                    parts.append(
-                        self._clean_text(value)
-                    )
+        return ""
 
-            if parts:
-                return "\n".join(parts)
+    def _extract_video(
+        self,
+        entry: Any,
+    ) -> Tuple[str, str]:
+        base_url = (
+            self._entry_value(entry, "link", "")
+            or getattr(self.source, "url", "")
+            or ""
+        )
 
-        return self._clean_text(
-            entry.get("summary", "")
+        # Check RSS media:content, including the explicit medium=video
+        # attribute used by some feeds even when the URL has no suffix.
+        media_content = self._entry_value(
+            entry,
+            "media_content",
+            [],
+        ) or []
+
+        for media in media_content:
+            if not isinstance(media, dict):
+                continue
+
+            url = self._normalize_url(
+                media.get("url", ""),
+                base_url,
+            )
+            media_type = str(media.get("type", "")).lower()
+            medium = str(media.get("medium", "")).lower()
+
+            if url and (
+                medium == "video"
+                or self._looks_like_video(url, media_type)
+            ):
+                return url, media_type or self._guess_video_type(url)
+
+        # Check RSS enclosure links.
+        links = self._entry_value(entry, "links", []) or []
+
+        for link in links:
+            if not isinstance(link, dict):
+                continue
+
+            url = self._normalize_url(
+                link.get("href", ""),
+                base_url,
+            )
+            media_type = str(link.get("type", "")).lower()
+            rel = str(link.get("rel", "")).lower()
+
+            if url and (
+                self._looks_like_video(url, media_type)
+                or (
+                    rel == "enclosure"
+                    and media_type.startswith("video/")
+                )
+            ):
+                return url, media_type or self._guess_video_type(url)
+
+        # Check content:encoded or summary HTML for video sources.
+        html_parts = [
+            self._entry_value(entry, "summary", "") or ""
+        ]
+
+        contents = self._entry_value(entry, "content", []) or []
+        if isinstance(contents, list):
+            html_parts.extend(
+                item.get("value", "")
+                for item in contents
+                if isinstance(item, dict)
+            )
+
+        for html in html_parts:
+            video_url, video_type, _, _ = self._extract_page_media(
+                str(html),
+                base_url,
+            )
+
+            if video_url:
+                return video_url, video_type
+
+        return "", ""
+
+    @staticmethod
+    def _looks_like_image(url: str) -> bool:
+        path = urlparse(url).path.lower()
+
+        return path.endswith(
+            (".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif")
         )
 
     @staticmethod
-    def _extract_published_at(entry) -> Optional[datetime]:
-        for key in ("published_parsed", "updated_parsed"):
-            parsed = entry.get(key)
+    def _looks_like_video(
+        url: str,
+        media_type: str = "",
+    ) -> bool:
+        media_type = (media_type or "").lower()
 
-            if parsed:
-                try:
-                    from time import mktime
+        if any(media_type.startswith(t) for t in VIDEO_MIME_TYPES):
+            return True
 
-                    return datetime.fromtimestamp(
-                        mktime(parsed),
-                        tz=timezone.utc,
-                    )
-                except (ValueError, OverflowError, OSError):
-                    pass
+        path = urlparse(url).path.lower()
 
-        for key in ("published", "updated", "date"):
-            value = entry.get(key)
+        return path.endswith(VIDEO_EXTENSIONS)
 
-            if not value:
-                continue
+    @staticmethod
+    def _guess_video_type(url: str) -> str:
+        path = urlparse(url).path.lower()
 
-            try:
-                result = parsedate_to_datetime(value)
+        if path.endswith(".m3u8"):
+            return "application/vnd.apple.mpegurl"
 
-                if result.tzinfo is None:
-                    result = result.replace(
-                        tzinfo=timezone.utc
-                    )
+        if path.endswith(".mpd"):
+            return "application/dash+xml"
 
-                return result
-            except (TypeError, ValueError, OverflowError):
-                continue
+        if path.endswith(".webm"):
+            return "video/webm"
 
-        return None
+        if path.endswith(".mov"):
+            return "video/quicktime"
 
-    def _extract_image_url(self, entry) -> Optional[str]:
-        for key in ("media_thumbnail", "media_content"):
-            for media in entry.get(key, []) or []:
-                url = media.get("url")
+        if path.endswith(".m4v"):
+            return "video/x-m4v"
 
-                if url and self._looks_like_image(url, media):
-                    return url
+        if path.endswith(".mp4"):
+            return "video/mp4"
 
-        for link in entry.get("links", []) or []:
-            url = link.get("href", "")
-            media_type = link.get("type", "").lower()
-            rel = link.get("rel", "").lower()
+        return ""
 
-            if (
-                url
-                and (
-                    media_type.startswith("image/")
+    @staticmethod
+    def _is_bbc_url(url: str) -> bool:
+        host = (urlparse(url).hostname or "").lower()
+
+        return any(
+            host == domain or host.endswith("." + domain)
+            for domain in BBC_HOSTS
+        )
+
+    @staticmethod
+    def _bbc_clips_url(url: str) -> str:
+        """Build a bounded BBC clip-discovery URL variant."""
+
+        try:
+            parts = urlsplit(url)
+            query = dict(parse_qsl(parts.query, keep_blank_values=True))
+
+            query.setdefault("clips", "1")
+            query.setdefault("clip_format", "link")
+
+            return urlunsplit(
+                (
+                    parts.scheme,
+                    parts.netloc,
+                    parts.path,
+                    urlencode(query),
+                    parts.fragment,
+                )
+            )
+        except Exception:
+            return url
+
+    def _extract_page_media(
+        self,
+        html: str,
+        page_url: str,
+    ) -> Tuple[str, str, str, str]:
+        """
+        Return:
+            direct_video_url,
+            video_content_type,
+            image_url,
+            embedded_player_url
+media_type.startswith("image/")
                     or rel == "enclosure"
                     and self._looks_like_image(url, link)
                 )
