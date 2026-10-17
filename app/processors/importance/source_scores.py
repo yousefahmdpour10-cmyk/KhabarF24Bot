@@ -13,6 +13,7 @@ SOURCE_SCORES = {
     "Guardian": 8,
     "The New York Times": 8,
     "API-Football": 8,
+    "ESPN": 8,
 
     "Tasnim News": 7,
     "IRNA": 7,
