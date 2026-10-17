@@ -31,7 +31,12 @@ LOGO_PATH = BASE_DIR / "assets" / "khabarf24_header_transparent_final.png"
 
 # محدودیت‌ها برای جلوگیری از مصرف بیش از حد حافظه و زمان GitHub Actions
 MAX_DOWNLOAD_BYTES = 150 * 1024 * 1024
-MAX_OUTPUT_BYTES = 150 * 1024 * 1024
+
+# ربات‌های تلگرام حداکثر ۵۰ مگابایت آپلود می‌کنند. اگر خروجی بزرگ‌تر
+# باشد ارسال شکست می‌خورد و زمان چرخه بیهوده تلف شده است؛ پس سقف را
+# کمی زیر ۵۰ مگابایت نگه می‌داریم.
+MAX_OUTPUT_BYTES = 49 * 1024 * 1024
+
 MAX_DURATION_SECONDS = 180
 DOWNLOAD_TIMEOUT_SECONDS = 90
 PROCESS_TIMEOUT_SECONDS = 240
@@ -40,8 +45,10 @@ PROCESS_TIMEOUT_SECONDS = 240
 LOGO_WIDTH_RATIO = 0.24
 
 # کیفیت خروجی ویدئو؛ عدد کمتر یعنی کیفیت بالاتر و حجم بیشتر.
-VIDEO_CRF = "18"
-VIDEO_PRESET = "medium"
+# CRF 23 + preset veryfast: حجم کمتر، پردازش خیلی سریع‌تر روی
+# سرور گیت‌هاب، و کیفیت برای شبکه‌های اجتماعی کاملاً مناسب.
+VIDEO_CRF = "23"
+VIDEO_PRESET = "veryfast"
 
 
 def _tool_exists(name: str) -> bool:
@@ -312,7 +319,10 @@ async def build_watermarked_video(video_url: str):
             raise RuntimeError("Output video is empty.")
 
         if output_size > MAX_OUTPUT_BYTES:
-            logger.warning("Watermarked video exceeds output size limit.")
+            logger.warning(
+                "Watermarked video exceeds output size limit: %.1f MB",
+                output_size / (1024 * 1024),
+            )
             shutil.rmtree(temp_dir, ignore_errors=True)
             return None
 
