@@ -848,4 +848,254 @@ class RSSFetcher(BaseFetcher):
                 host == h or host.endswith("." + h)
                 for h in EMBED_HOSTS
             )
+            def add_embed(url: Any) -> None:
+            url = absolute(url)
+ 
+            if url and url not in embed_candidates:
+                embed_candidates.append(url)
+ 
+        def add_video(url: Any, media_type: str = "") -> None:
+            url = absolute(url)
+ 
+            if not url:
+                return
+ 
+            if self._looks_like_video(url, media_type):
+                if url not in [u for u, _ in direct_candidates]:
+                    direct_candidates.append(
+                        (
+                            url,
+                            media_type
+                            or self._guess_video_type(url),
+                        )
+                    )
+ 
+            elif is_player_page(url):
+                add_embed(url)
+ 
+            elif url not in [u for u, _ in weak_candidates]:
+                # آدرسی که صراحتاً در یک فیلد «ویدئو» آمده ولی پسوند
+                # ندارد (مثلاً CDN)؛ فقط اگر چیز بهتری نبود استفاده
+                # می‌شود.
+                weak_candidates.append((url, media_type or "video"))
+ 
+        def add_image(url: Any) -> None:
+            url = absolute(url)
+ 
+            if url and url not in image_candidates:
+                image_candidates.append(url)
+ 
+        # 1. تگ‌های video و source
+        for video in soup.find_all("video"):
+            for attribute in ("src", "data-src"):
+                add_video(video.get(attribute))
+ 
+            for source in video.find_all("source"):
+                add_video(
+                    source.get("src") or source.get("data-src"),
+                    source.get("type", ""),
+                )
+ 
+            add_image(
+                video.get("poster") or video.get("data-poster")
+            )
+ 
+        # 2. iframe هایی که player هستند (فقط برای عیب‌یابی)
+        for iframe in soup.find_all("iframe"):
+            src = absolute(iframe.get("src") or iframe.get("data-src"))
+ 
+            if src and is_player_page(src):
+                add_embed(src)
+ 
+        # 3. متای Open Graph / Twitter
+        video_meta_names = {
+            "og:video",
+            "og:video:url",
+            "og:video:secure_url",
+            "twitter:player:stream",
+        }
+ 
+        for meta in soup.find_all("meta"):
+            key = (
+                meta.get("property")
+                or meta.get("name")
+                or meta.get("itemprop")
+                or ""
+            ).lower()
+ 
+            value = meta.get("content", "")
+ 
+            if not value:
+                continue
+ 
+            if key in video_meta_names:
+                add_video(value, meta.get("type", ""))
+ 
+            elif key == "twitter:player":
+                add_embed(value)
+ 
+            elif key in {
+                "og:image",
+                "og:image:url",
+                "twitter:image",
+                "twitter:image:src",
+            }:
+                add_image(value)
+ 
+        # 4. JSON-LD و داده‌های JSON داخل صفحه
+        for script in soup.find_all("script"):
+            script_type = str(script.get("type", "")).lower()
+
             
+            script_text = script.string or script.get_text(strip=True)
+
+                   if not script_text:
+                continue
+ 
+            if (
+                "json" in script_type
+                or script.get("id") in {"__NEXT_DATA__", "__NUXT_DATA__"}
+                or script_type == ""
+            ):
+                self._scan_json_media(
+                    script_text,
+                    page_url,
+                    add_video,
+                    add_image,
+                )
+ 
+        # 5. ویژگی‌های data-* مخصوص player
+        for tag in soup.find_all(True):
+            for attr in (
+                "data-video",
+                "data-video-url",
+                "data-video-src",
+                "data-src",
+                "data-media-url",
+                "data-playback-url",
+            ):
+                value = tag.get(attr)
+ 
+                if isinstance(value, str) and value.startswith(
+                    ("http://", "https://", "//", "/")
+                ):
+                    candidate = urljoin(page_url, value)
+ 
+                    # data-src روی تگ img عکس است؛ فقط اگر واقعاً شبیه
+                    # ویدئو بود قبول می‌کنیم.
+                    if (
+                        self._looks_like_video(candidate)
+                        or attr != "data-src"
+                    ):
+                        add_video(candidate)
+ 
+        # 6. آدرس‌هایی با پسوند ویدئو در خود متن HTML
+        for match in VIDEO_URL_RE.findall(html):
+            candidate = match.rstrip("),;]}")
+ 
+            if self._looks_like_video(candidate):
+                add_video(candidate)
+ 
+        # انتخاب نتیجه: اول فایل قابل دانلود (mp4/webm/...)، بعد آدرس‌های
+        # ضعیف، و پلی‌لیست‌های m3u8/mpd فقط برای عیب‌یابی.
+        progressive = [
+            item
+            for item in direct_candidates
+            if not urlparse(item[0]).path.lower().endswith(
+                STREAM_EXTENSIONS
+            )
+        ]
+        streams = [
+            item[0]
+            for item in direct_candidates
+            if item not in progressive
+        ]
+ 
+        chosen: Optional[Tuple[str, str]] = None
+ 
+        if progressive:
+            chosen = progressive[0]
+        elif weak_candidates:
+            chosen = weak_candidates[0]
+ 
+        embed_url = (
+            embed_candidates[0]
+            if embed_candidates
+            else (streams[0] if streams else "")
+        )
+ 
+        image_url = image_candidates[0] if image_candidates else ""
+ 
+        if chosen:
+            return chosen[0], chosen[1], image_url, embed_url
+ 
+        return "", "", image_url, embed_url
+ 
+    def _scan_json_media(
+        self,
+        text: str,
+        page_url: str,
+        add_video,
+        add_image,
+    ) -> None:
+ 
+        def is_url_like(value: Any) -> bool:
+            return isinstance(value, str) and value.strip().startswith(
+                ("http://", "https://", "//", "/")
+            )
+ 
+        try:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            # بعضی اسکریپت‌ها فقط تکه‌ای JSON دارند، نه یک سند کامل.
+            data = None
+ 
+        def walk(value: Any, depth: int = 0) -> None:
+            if depth > 12:
+                return
+ 
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    normalized = re.sub(
+                        r"[^a-z0-9_]",
+                        "",
+                        str(key).lower(),
+                    )
+ 
+                    if isinstance(child, str):
+                        if not is_url_like(child):
+                            continue
+ 
+                        if normalized in VIDEO_KEYS:
+                            add_video(urljoin(page_url, child))
+ 
+                        elif normalized in IMAGE_KEYS:
+                            add_image(urljoin(page_url, child))
+ 
+                        elif (
+                            normalized in {"url", "src", "embedurl"}
+                            and self._looks_like_video(child)
+                        ):
+                            add_video(urljoin(page_url, child))
+ 
+                    elif isinstance(child, (dict, list)):
+                        walk(child, depth + 1)
+ 
+            elif isinstance(value, list):
+                for item in value:
+                    walk(item, depth + 1)
+ 
+        if data is not None:
+            walk(data)
+ 
+        # آدرس‌های escape شده در JSON player، حتی وقتی کل اسکریپت JSON
+        # معتبر نیست.
+        for match in VIDEO_URL_RE.findall(text):
+            candidate = (
+                match.replace("\\/", "/")
+                .replace("\\u0026", "&")
+                .rstrip("\\),;]}")
+            )
+ 
+            if self._looks_like_video(candidate):
+                add_video(candidate)
