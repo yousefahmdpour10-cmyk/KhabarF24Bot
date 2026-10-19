@@ -1,3 +1,4 @@
+
 """
 Social Fetcher
 
@@ -25,18 +26,14 @@ from app.utils.logger import logger
 
 
 class SocialFetcher(BaseFetcher):
-    """
-    دریافت خبر از منابع اجتماعی عمومی.
-    """
+    """دریافت خبر از منابع اجتماعی عمومی."""
 
     MAX_POSTS = 20
 
     def __init__(self, source):
         super().__init__(source)
 
-        self.timeout = aiohttp.ClientTimeout(
-            total=20
-        )
+        self.timeout = aiohttp.ClientTimeout(total=20)
 
         self.headers = {
             "User-Agent": (
@@ -48,39 +45,31 @@ class SocialFetcher(BaseFetcher):
         }
 
     async def fetch(self) -> List[RawNews]:
-        """
-        دریافت پست‌های منبع اجتماعی.
-        """
+        """دریافت پست‌های منبع اجتماعی."""
 
         source_type = (
-            getattr(self.source, "source_type", "")
-            or ""
+            getattr(self.source, "source_type", "") or ""
         ).lower().strip()
 
         if source_type != "social":
             logger.warning(
-                f"SocialFetcher received invalid source type: "
-                f"{self.source.name}"
+                "SocialFetcher received invalid source type: %s",
+                self.source.name,
             )
             return []
 
         platform = (
-            getattr(self.source, "social_platform", "")
-            or ""
+            getattr(self.source, "social_platform", "") or ""
         ).lower().strip()
-
-        # ----------------------------------------------
-        # Telegram
-        # ----------------------------------------------
 
         if platform == "telegram":
             return await self._fetch_telegram()
 
         logger.warning(
-            f"Unsupported social platform for "
-            f"{self.source.name}: {platform}"
+            "Unsupported social platform for %s: %s",
+            self.source.name,
+            platform,
         )
-
         return []
 
     # ==================================================
@@ -88,76 +77,98 @@ class SocialFetcher(BaseFetcher):
     # ==================================================
 
     async def _fetch_telegram(self) -> List[RawNews]:
-        """
-        دریافت پست‌های یک کانال عمومی Telegram.
-
-        منبع:
-        https://t.me/s/<channel>
-        """
+        """دریافت پست‌های یک کانال عمومی تلگرام."""
 
         channel_url = self._get_telegram_url()
 
         if not channel_url:
             logger.warning(
-                f"Telegram URL is missing: {self.source.name}"
+                "Telegram URL is missing: %s",
+                self.source.name,
             )
             return []
 
         logger.info(
-            f"Fetching Telegram: {self.source.name}"
+            "Fetching Telegram: %s | url=%s",
+            self.source.name,
+            channel_url,
         )
 
         html = await self._download(channel_url)
 
+        # تغییر تشخیصی: ثبت دقیق شکست دریافت صفحه
         if not html:
+            logger.warning(
+                "TELEGRAM_FETCH_EMPTY | source=%s | url=%s",
+                self.source.name,
+                channel_url,
+            )
             return []
 
+        # تغییر تشخیصی: تأیید دریافت HTML
+        logger.info(
+            "TELEGRAM_HTML_RECEIVED | source=%s | html_length=%d",
+            self.source.name,
+            len(html),
+        )
+
         try:
-            soup = BeautifulSoup(
-                html,
-                "lxml",
-            )
+            soup = BeautifulSoup(html, "lxml")
 
             messages = soup.select(
                 ".tgme_widget_message_wrap"
             )
 
+            # تغییر تشخیصی: بررسی ساختار صفحه تلگرام
             if not messages:
+                page_title = (
+                    soup.title.get_text(" ", strip=True)
+                    if soup.title
+                    else "NO_TITLE"
+                )
+
                 logger.warning(
-                    f"No Telegram posts found: "
-                    f"{self.source.name}"
+                    "TELEGRAM_NO_POSTS | source=%s | url=%s | "
+                    "html_length=%d | page_title=%s",
+                    self.source.name,
+                    channel_url,
+                    len(html),
+                    page_title,
                 )
                 return []
 
             news_list: List[RawNews] = []
 
-            # از جدیدترین پست‌ها شروع می‌کنیم
+            # از جدیدترین پست‌های موجود در HTML شروع می‌کنیم.
             for message in messages[-self.MAX_POSTS:]:
                 try:
-                    news = self._parse_telegram_post(
-                        message
-                    )
+                    news = self._parse_telegram_post(message)
 
                     if news:
                         news_list.append(news)
 
-                except Exception as e:
-                    logger.error(
-                        f"Telegram post parse error "
-                        f"({self.source.name}): {e}"
+                except Exception as error:
+                    logger.exception(
+                        "Telegram post parse error | source=%s | error=%s",
+                        self.source.name,
+                        error,
                     )
 
             logger.info(
-                f"Telegram: {self.source.name} -> "
-                f"{len(news_list)} posts"
+                "TELEGRAM_POSTS_PARSED | source=%s | "
+                "html_posts=%d | parsed_posts=%d",
+                self.source.name,
+                len(messages),
+                len(news_list),
             )
 
             return news_list
 
-        except Exception as e:
+        except Exception as error:
             logger.exception(
-                f"Telegram parsing error "
-                f"({self.source.name}): {e}"
+                "Telegram parsing error | source=%s | error=%s",
+                self.source.name,
+                error,
             )
             return []
 
@@ -166,66 +177,43 @@ class SocialFetcher(BaseFetcher):
     # ==================================================
 
     def _get_telegram_url(self) -> Optional[str]:
-        """
-        ساخت URL عمومی Telegram.
-        """
+        """ساخت URL عمومی تلگرام از تنظیمات منبع."""
 
         social_url = (
-            getattr(self.source, "social_url", None)
-            or ""
+            getattr(self.source, "social_url", None) or ""
         ).strip()
 
         website_url = (
-            getattr(self.source, "website_url", None)
-            or ""
+            getattr(self.source, "website_url", None) or ""
         ).strip()
 
         source_url = (
-            getattr(self.source, "url", None)
-            or ""
+            getattr(self.source, "url", None) or ""
         ).strip()
 
-        url = (
-            social_url
-            or website_url
-            or source_url
-        )
+        url = social_url or website_url or source_url
 
         if not url:
             return None
 
-        # اگر لینک به صورت username داده شده باشد
-        if not url.startswith("http"):
+        if not url.startswith(("http://", "https://")):
             username = url.lstrip("@").strip("/")
 
             if username:
-                return (
-                    f"https://t.me/s/{username}"
-                )
+                return f"https://t.me/s/{username}"
 
             return None
 
-        # t.me/channel
         if "t.me/" in url:
+            username = url.rstrip("/").split("t.me/", 1)[-1]
 
-            username = url.rstrip("/").split(
-                "t.me/",
-                1
-            )[-1]
-
-            # اگر از قبل /s/ دارد
             if username.startswith("s/"):
-                return (
-                    "https://t.me/"
-                    + username
-                )
+                return "https://t.me/" + username
 
             username = username.split("/", 1)[0]
 
             if username:
-                return (
-                    f"https://t.me/s/{username}"
-                )
+                return f"https://t.me/s/{username}"
 
         return url
 
@@ -233,30 +221,41 @@ class SocialFetcher(BaseFetcher):
     # Download
     # ==================================================
 
-    async def _download(
-        self,
-        url: str,
-    ) -> Optional[str]:
-        """
-        دانلود HTML صفحه.
-        """
+    async def _download(self, url: str) -> Optional[str]:
+        """دانلود HTML صفحه."""
 
         try:
-
             async with aiohttp.ClientSession(
                 timeout=self.timeout,
                 headers=self.headers,
             ) as session:
-
                 async with session.get(
                     url,
                     allow_redirects=True,
                 ) as response:
-
                     if response.status != 200:
                         logger.warning(
-                            f"Social request failed: "
-                            f"{response.status} - {url}"
+                            "Social request failed | source=%s | "
+                            "status=%d | url=%s",
+                            self.source.name,
+                            response.status,
+                            url,
+                        )
+                        return None
+
+                    content_type = response.headers.get(
+                        "Content-Type", ""
+                    ).lower()
+
+                    if (
+                        "text/html" not in content_type
+                        and "application/xhtml" not in content_type
+                    ):
+                        logger.warning(
+                            "Social response is not HTML | source=%s | "
+                            "content_type=%s",
+                            self.source.name,
+                            content_type,
                         )
                         return None
 
@@ -265,111 +264,74 @@ class SocialFetcher(BaseFetcher):
                         errors="ignore",
                     )
 
-        except Exception as e:
-
-            logger.error(
-                f"Social download error "
-                f"({self.source.name}): {e}"
+        except (aiohttp.ClientError, TimeoutError) as error:
+            logger.warning(
+                "Social download error | source=%s | url=%s | error=%s",
+                self.source.name,
+                url,
+                error,
             )
+            return None
 
+        except Exception as error:
+            logger.exception(
+                "Unexpected social download error | source=%s | error=%s",
+                self.source.name,
+                error,
+            )
             return None
 
     # ==================================================
     # Parse Telegram Post
     # ==================================================
 
-    def _parse_telegram_post(
-        self,
-        message,
-    ) -> Optional[RawNews]:
-        """
-        تبدیل یک پست Telegram به RawNews.
-        """
+    def _parse_telegram_post(self, message) -> Optional[RawNews]:
+        """تبدیل یک پست تلگرام به RawNews."""
 
         text_element = message.select_one(
             ".tgme_widget_message_text"
         )
 
-        if text_element:
+        content = (
+            text_element.get_text("\n", strip=True)
+            if text_element
+            else ""
+        )
 
-            content = text_element.get_text(
-                "\n",
-                strip=True,
-            )
-
-        else:
-            content = ""
-
-        # ----------------------------------------------
-        # اگر پست هیچ متنی نداشت، فعلاً رد می‌شود.
-        # ----------------------------------------------
-
+        # فعلاً پست‌های بدون متن رد می‌شوند.
         if not content:
             return None
-
-        # ----------------------------------------------
-        # لینک پست
-        # ----------------------------------------------
-
-        post_link = ""
 
         post_link_element = message.select_one(
             ".tgme_widget_message_date"
         )
 
-        if post_link_element:
-            post_link = (
-                post_link_element.get("href", "")
-                or ""
-            )
-
-        # ----------------------------------------------
-        # زمان انتشار
-        # ----------------------------------------------
-
-        published_at = self._extract_datetime(
-            message
+        post_link = (
+            post_link_element.get("href", "")
+            if post_link_element
+            else ""
         )
 
-        # ----------------------------------------------
-        # تصویر
-        # ----------------------------------------------
-
-        image_url = self._extract_image(
-            message
-        )
-
-        # ----------------------------------------------
-        # لینک‌های داخل متن
-        # ----------------------------------------------
+        published_at = self._extract_datetime(message)
+        image_url = self._extract_image(message)
 
         related_urls = []
 
         for link in message.select(
             ".tgme_widget_message_text a"
         ):
-
             href = link.get("href")
 
             if href:
                 related_urls.append(
-                    urljoin(
-                        "https://t.me/",
-                        href,
-                    )
+                    urljoin("https://t.me/", href)
                 )
 
-        # ----------------------------------------------
-        # عنوان
-        # ----------------------------------------------
+        title = self._build_title(content)
 
-        title = self._build_title(
-            content
+        categories = (
+            getattr(self.source, "categories", None) or []
         )
-
-        # ----------------------------------------------
-        # RawNews
-        # ----------------------------------------------
 
         news = RawNews(
             source_id=self.source.id,
@@ -380,24 +342,14 @@ class SocialFetcher(BaseFetcher):
             url=post_link,
             image_url=image_url or "",
             published_at=published_at,
-            language=self.source.language,
-            country=self.source.country,
-            category=(
-                self.source.categories[0]
-                if getattr(
-                    self.source,
-                    "categories",
-                    None,
-                )
-                else "sport"
-            ),
+            language=getattr(self.source, "language", ""),
+            country=getattr(self.source, "country", ""),
+            category=categories[0] if categories else "sport",
             related_urls=related_urls,
             raw_data={
                 "platform": "telegram",
                 "channel": self.source.name,
-                "channel_url": (
-                    self._get_telegram_url()
-                ),
+                "channel_url": self._get_telegram_url(),
             },
         )
 
@@ -408,12 +360,8 @@ class SocialFetcher(BaseFetcher):
     # ==================================================
 
     @staticmethod
-    def _extract_image(
-        message,
-    ) -> Optional[str]:
-        """
-        استخراج تصویر پست Telegram.
-        """
+    def _extract_image(message) -> Optional[str]:
+        """استخراج تصویر پست تلگرام."""
 
         photo = message.select_one(
             ".tgme_widget_message_photo_wrap"
@@ -422,50 +370,21 @@ class SocialFetcher(BaseFetcher):
         if not photo:
             return None
 
-        style = photo.get(
-            "style",
-            "",
-        )
+        style = photo.get("style", "")
 
-        # Telegram معمولاً تصویر را در
-        # background-image قرار می‌دهد.
-        if "background-image" in style:
+        if "background-image" not in style:
+            return None
 
-            start = style.find(
-                'url("'
-            )
+        for quote in ('"', "'"):
+            marker = f"url({quote}"
+            start = style.find(marker)
 
             if start != -1:
-
-                start += 5
-
-                end = style.find(
-                    '"',
-                    start,
-                )
+                start += len(marker)
+                end = style.find(quote, start)
 
                 if end != -1:
-                    return style[
-                        start:end
-                    ]
-
-            start = style.find(
-                "url('"
-            )
-
-            if start != -1:
-
-                start += 5
-
-                end = style.find(
-                    "'",
-                    start,
-                )
-
-                if end != -1:
-                    return style[
-                        start:end
-                    ]
+                    return style[start:end]
 
         return None
 
@@ -474,36 +393,24 @@ class SocialFetcher(BaseFetcher):
     # ==================================================
 
     @staticmethod
-    def _extract_datetime(
-        message,
-    ) -> Optional[datetime]:
-        """
-        استخراج تاریخ پست.
-        """
+    def _extract_datetime(message) -> Optional[datetime]:
+        """استخراج زمان انتشار پست."""
 
-        time_element = message.select_one(
-            "time"
-        )
+        time_element = message.select_one("time")
 
         if not time_element:
             return None
 
-        datetime_value = time_element.get(
-            "datetime"
-        )
+        datetime_value = time_element.get("datetime")
 
         if not datetime_value:
             return None
 
         try:
             return datetime.fromisoformat(
-                datetime_value.replace(
-                    "Z",
-                    "+00:00",
-                )
+                datetime_value.replace("Z", "+00:00")
             )
-
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     # ==================================================
@@ -511,15 +418,8 @@ class SocialFetcher(BaseFetcher):
     # ==================================================
 
     @staticmethod
-    def _build_title(
-        content: str,
-    ) -> str:
-        """
-        ساخت عنوان اولیه از متن پست.
-
-        عنوان نهایی بعداً توسط ContentGenerator
-        ساخته خواهد شد.
-        """
+    def _build_title(content: str) -> str:
+        """ساخت عنوان اولیه از متن پست."""
 
         lines = [
             line.strip()
@@ -532,7 +432,6 @@ class SocialFetcher(BaseFetcher):
 
         title = lines[0]
 
-        # جلوگیری از عنوان بیش از حد طولانی
         if len(title) > 180:
             title = title[:177] + "..."
 
