@@ -1,18 +1,264 @@
 [
   {
     "id": "bbc_business",
-    "name": "BBC",
+    "name": "BBC Business",
     "source_type": "rss",
     "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
     "categories": [
       "economy"
     ],
     "priority": 85,
     "check_interval": 60,
     "enabled": true
+  },
+  {
+    "id": "wsj_markets",
+    "name": "WSJ Markets",
+    "source_type": "rss",
+    "url": "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "markets"
+    ],
+    "priority": 86,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "cnbc_top_news",
+    "name": "CNBC",
+    "source_type": "rss",
+    "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "markets",
+      "business"
+    ],
+    "priority": 87,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "marketwatch_top",
+    "name": "MarketWatch",
+    "source_type": "rss",
+    "url": "https://feeds.marketwatch.com/marketwatch/topstories/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "markets"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "coindesk",
+    "name": "CoinDesk",
+    "source_type": "rss",
+    "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "crypto",
+      "bitcoin"
+    ],
+    "priority": 91,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "cointelegraph",
+    "name": "Cointelegraph",
+    "source_type": "rss",
+    "url": "https://cointelegraph.com/rss",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "crypto",
+      "bitcoin"
+    ],
+    "priority": 87,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "decrypt",
+    "name": "Decrypt",
+    "source_type": "rss",
+    "url": "https://decrypt.co/feed",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "crypto",
+      "bitcoin"
+    ],
+    "priority": 82,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "investing_com",
+    "name": "Investing.com",
+    "source_type": "rss",
+    "url": "https://www.investing.com/rss/news.rss",
+    "country": "CY",
+    "flag": "🇨🇾",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "markets",
+      "currencies"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": false
+  },
+  {
+    "id": "tesla_newsroom",
+    "name": "Tesla Newsroom",
+    "source_type": "website",
+    "url": "https://www.tesla.com/blog",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": false,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "technology",
+      "tesla",
+      "business"
+    ],
+    "priority": 88,
+    "check_interval": 60,
+    "enabled": false,
+    "website_url": "https://www.tesla.com/blog"
+  },
+  {
+    "id": "tejaratnews",
+    "name": "تجارت‌نیوز",
+    "source_type": "rss",
+    "url": "https://tejaratnews.com/feed",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "iran",
+      "currencies"
+    ],
+    "priority": 86,
+    "check_interval": 60,
+    "enabled": false
+  },
+  {
+    "id": "eghtesadonline",
+    "name": "اقتصاد آنلاین",
+    "source_type": "rss",
+    "url": "https://www.eghtesadonline.com/fa/rss/allnews",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "iran",
+      "currencies"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": false
+  },
+  {
+    "id": "donya_e_eqtesad",
+    "name": "دنیای اقتصاد",
+    "source_type": "rss",
+    "url": "https://donya-e-eqtesad.com/rss",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "economy",
+      "iran",
+      "markets"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": false
   }
-]
+    ]
