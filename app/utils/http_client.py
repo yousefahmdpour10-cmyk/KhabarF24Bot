@@ -21,6 +21,12 @@ class HTTPClient:
     DEFAULT_TIMEOUT = 30
     DEFAULT_RETRIES = 3
 
+    # بعضی سایت‌ها (مثل FIFA) هدرهای پاسخ بزرگ‌تر از حد پیش‌فرض aiohttp
+    # (۸۱۹۰ بایت) می‌فرستند و بدون این دو مقدار خطای
+    # "Got more than 8190 bytes" می‌گیریم.
+    MAX_LINE_SIZE = 65536
+    MAX_FIELD_SIZE = 65536
+
     DEFAULT_HEADERS = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -73,6 +79,8 @@ class HTTPClient:
                     headers=request_headers,
                     auto_decompress=True,
                     read_bufsize=64 * 1024,
+                    max_line_size=self.MAX_LINE_SIZE,
+                    max_field_size=self.MAX_FIELD_SIZE,
                 ) as session:
                     async with session.get(
                         url,
