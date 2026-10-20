@@ -8,6 +8,10 @@
     "flag": "🇶🇦",
     "language": "en",
     "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
     "categories": [
       "politics"
     ],
@@ -24,11 +28,100 @@
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
     "categories": [
       "politics"
     ],
     "priority": 85,
     "check_interval": 60,
     "enabled": true
+  },
+  {
+    "id": "france24_politics",
+    "name": "France 24",
+    "source_type": "rss",
+    "url": "https://www.france24.com/en/rss",
+    "country": "FR",
+    "flag": "🇫🇷",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "politics",
+      "international"
+    ],
+    "priority": 86,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "al_arabiya_politics",
+    "name": "Al Arabiya",
+    "source_type": "rss",
+    "url": "https://english.alarabiya.net/tools/rss",
+    "country": "SA",
+    "flag": "🇸🇦",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "politics",
+      "middle_east"
+    ],
+    "priority": 83,
+    "check_interval": 60,
+    "enabled": false
+  },
+  {
+    "id": "i24news_politics",
+    "name": "i24NEWS",
+    "source_type": "rss",
+    "url": "https://www.i24news.tv/en/rss",
+    "country": "IL",
+    "flag": "🇮🇱",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "politics",
+      "middle_east"
+    ],
+    "priority": 82,
+    "check_interval": 60,
+    "enabled": false
+  },
+  {
+    "id": "centcom_updates",
+    "name": "CENTCOM",
+    "source_type": "rss",
+    "url": "https://www.centcom.mil/MEDIA/PRESS-RELEASES/RSS/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "politics",
+      "military",
+      "middle_east"
+    ],
+    "priority": 88,
+    "check_interval": 60,
+    "enabled": false
   }
-]
+    ]
