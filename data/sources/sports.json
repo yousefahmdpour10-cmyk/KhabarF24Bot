@@ -4,8 +4,6 @@
     "name": "BBC Sport",
     "source_type": "rss",
     "url": "https://feeds.bbci.co.uk/sport/rss.xml",
-    "rss_url": "https://feeds.bbci.co.uk/sport/rss.xml",
-    "website_url": "https://www.bbc.com/sport",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
@@ -14,18 +12,19 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport"],
+    "categories": [
+      "sport"
+    ],
     "priority": 85,
     "check_interval": 60,
-    "enabled": true
+    "enabled": true,
+    "website_url": "https://www.bbc.com/sport"
   },
   {
     "id": "bbc_football",
     "name": "BBC Football",
     "source_type": "rss",
     "url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
-    "rss_url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
-    "website_url": "https://www.bbc.com/sport/football",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
@@ -34,18 +33,20 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football"],
+    "categories": [
+      "sport",
+      "football"
+    ],
     "priority": 90,
     "check_interval": 60,
-    "enabled": true
+    "enabled": true,
+    "website_url": "https://www.bbc.com/sport/football"
   },
   {
     "id": "espn_soccer",
     "name": "ESPN Soccer",
     "source_type": "rss",
     "url": "https://www.espn.com/espn/rss/soccer/news",
-    "rss_url": "https://www.espn.com/espn/rss/soccer/news",
-    "website_url": "https://www.espn.com/soccer/",
     "country": "US",
     "flag": "🇺🇸",
     "language": "en",
@@ -54,18 +55,20 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football"],
+    "categories": [
+      "sport",
+      "football"
+    ],
     "priority": 90,
     "check_interval": 60,
-    "enabled": true
+    "enabled": true,
+    "website_url": "https://www.espn.com/soccer/"
   },
   {
     "id": "di_marzio",
     "name": "Gianluca Di Marzio",
     "source_type": "rss",
     "url": "https://www.gianlucadimarzio.com/rss",
-    "rss_url": "https://www.gianlucadimarzio.com/rss",
-    "website_url": "https://www.gianlucadimarzio.com/",
     "country": "IT",
     "flag": "🇮🇹",
     "language": "it",
@@ -74,18 +77,21 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football", "transfer"],
+    "categories": [
+      "sport",
+      "football",
+      "transfer"
+    ],
     "priority": 96,
     "check_interval": 60,
-    "enabled": true
+    "enabled": true,
+    "website_url": "https://www.gianlucadimarzio.com/"
   },
   {
     "id": "transfermarkt",
     "name": "Transfermarkt",
     "source_type": "rss",
     "url": "https://www.transfermarkt.com/rss/news",
-    "rss_url": "https://www.transfermarkt.com/rss/news",
-    "website_url": "https://www.transfermarkt.com/",
     "country": "DE",
     "flag": "🇩🇪",
     "language": "en",
@@ -94,19 +100,21 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football", "transfer"],
+    "categories": [
+      "sport",
+      "football",
+      "transfer"
+    ],
     "priority": 90,
     "check_interval": 120,
-    "enabled": true
+    "enabled": false,
+    "website_url": "https://www.transfermarkt.com/"
   },
   {
     "id": "fabrizio_romano_telegram",
     "name": "Fabrizio Romano",
     "source_type": "social",
     "url": "https://t.me/fabrizioromanotg",
-    "social_url": "https://t.me/fabrizioromanotg",
-    "website_url": "https://www.fabrizioromano.com/",
-    "social_platform": "telegram",
     "country": "IT",
     "flag": "🇮🇹",
     "language": "en",
@@ -115,18 +123,23 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football", "transfer"],
+    "categories": [
+      "sport",
+      "football",
+      "transfer"
+    ],
     "priority": 98,
     "check_interval": 60,
-    "enabled": true
+    "enabled": true,
+    "website_url": "https://www.fabrizioromano.com/",
+    "social_url": "https://t.me/fabrizioromanotg",
+    "social_platform": "telegram"
   },
   {
     "id": "sky_sports_football",
     "name": "Sky Sports Football",
     "source_type": "rss",
     "url": "https://www.skysports.com/rss/11095",
-    "rss_url": "https://www.skysports.com/rss/11095",
-    "website_url": "https://www.skysports.com/football",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
@@ -135,17 +148,21 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football", "transfer"],
+    "categories": [
+      "sport",
+      "football",
+      "transfer"
+    ],
     "priority": 94,
     "check_interval": 60,
-    "enabled": true
+    "enabled": true,
+    "website_url": "https://www.skysports.com/football"
   },
   {
     "id": "uefa",
     "name": "UEFA",
     "source_type": "website",
     "url": "https://www.uefa.com/news-media/news/",
-    "website_url": "https://www.uefa.com/news-media/news/",
     "country": "CH",
     "flag": "🇪🇺",
     "language": "en",
@@ -154,17 +171,22 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football", "champions_league", "europa_league"],
+    "categories": [
+      "sport",
+      "football",
+      "champions_league",
+      "europa_league"
+    ],
     "priority": 93,
     "check_interval": 120,
-    "enabled": true
+    "enabled": false,
+    "website_url": "https://www.uefa.com/news-media/news/"
   },
   {
     "id": "fifa",
     "name": "FIFA",
     "source_type": "website",
     "url": "https://www.fifa.com/news/",
-    "website_url": "https://www.fifa.com/news/",
     "country": "CH",
     "flag": "🌍",
     "language": "en",
@@ -173,17 +195,21 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football", "international"],
+    "categories": [
+      "sport",
+      "football",
+      "international"
+    ],
     "priority": 92,
     "check_interval": 120,
-    "enabled": true
+    "enabled": false,
+    "website_url": "https://www.fifa.com/news/"
   },
   {
     "id": "premier_league",
     "name": "Premier League",
     "source_type": "website",
     "url": "https://www.premierleague.com/en/news",
-    "website_url": "https://www.premierleague.com/en/news",
     "country": "GB",
     "flag": "🇬🇧",
     "language": "en",
@@ -192,27 +218,240 @@
     "supports_scraping": true,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football", "premier_league"],
+    "categories": [
+      "sport",
+      "football",
+      "premier_league"
+    ],
     "priority": 94,
     "check_interval": 120,
-    "enabled": true
+    "enabled": false,
+    "website_url": "https://www.premierleague.com/en/news"
   },
   {
-    "id": "espn_matches",
-    "name": "ESPN Matches",
-    "source_type": "sports_api",
-    "url": "",
+    "id": "marca",
+    "name": "MARCA",
+    "source_type": "rss",
+    "url": "https://e00-marca.uecdn.es/rss/portada.xml",
+    "country": "ES",
+    "flag": "🇪🇸",
+    "language": "es",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "laliga"
+    ],
+    "priority": 93,
+    "check_interval": 60,
+    "enabled": true,
+    "website_url": "https://www.marca.com/"
+  },
+  {
+    "id": "manchester_evening_news",
+    "name": "Manchester Evening News",
+    "source_type": "rss",
+    "url": "https://www.manchestereveningnews.co.uk/sport/football/?service=rss",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "manchester_united"
+    ],
+    "priority": 91,
+    "check_interval": 60,
+    "enabled": true,
+    "website_url": "https://www.manchestereveningnews.co.uk/sport/football/"
+  },
+  {
+    "id": "as_com_football",
+    "name": "AS.com",
+    "source_type": "rss",
+    "url": "https://as.com/rss/",
+    "country": "ES",
+    "flag": "🇪🇸",
+    "language": "es",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "laliga"
+    ],
+    "priority": 87,
+    "check_interval": 60,
+    "enabled": true,
+    "website_url": "https://as.com/"
+  },
+  {
+    "id": "the_athletic_football",
+    "name": "The Athletic Football",
+    "source_type": "website",
+    "url": "https://www.nytimes.com/athletic/football/",
     "country": "US",
     "flag": "🇺🇸",
     "language": "en",
     "has_rss": false,
-    "has_api": true,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": false,
+    "website_url": "https://www.nytimes.com/athletic/football/"
+  },
+  {
+    "id": "reuters_sports",
+    "name": "Reuters Sports",
+    "source_type": "rss",
+    "url": "https://feeds.reuters.com/reuters/sportsNews",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
     "supports_scraping": false,
     "requires_browser": false,
     "requires_auth": false,
-    "categories": ["sport", "football"],
-    "priority": 95,
-    "check_interval": 180,
-    "enabled": true
+    "categories": [
+      "sport",
+      "football"
+    ],
+    "priority": 85,
+    "check_interval": 60,
+    "enabled": false
+  },
+  {
+    "id": "varzesh3",
+    "name": "ورزش سه",
+    "source_type": "rss",
+    "url": "https://www.varzesh3.com/rss/all",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "iran"
+    ],
+    "priority": 92,
+    "check_interval": 60,
+    "enabled": true,
+    "website_url": "https://www.varzesh3.com/"
+  },
+  {
+    "id": "tasnim_sport",
+    "name": "تسنیم ورزش",
+    "source_type": "rss",
+    "url": "https://www.tasnimnews.com/fa/rss/feed/0/8/0/ورزش",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "iran"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": false
+  },
+  {
+    "id": "manutd_official",
+    "name": "Manchester United",
+    "source_type": "rss",
+    "url": "https://www.manutd.com/en/rss/news",
+    "country": "GB",
+    "flag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "manchester_united"
+    ],
+    "priority": 88,
+    "check_interval": 60,
+    "enabled": false,
+    "website_url": "https://www.manutd.com/en/news"
+  },
+  {
+    "id": "realmadrid_official",
+    "name": "Real Madrid",
+    "source_type": "website",
+    "url": "https://www.realmadrid.com/en-US/news",
+    "country": "ES",
+    "flag": "🇪🇸",
+    "language": "en",
+    "has_rss": false,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "laliga"
+    ],
+    "priority": 82,
+    "check_interval": 60,
+    "enabled": false,
+    "website_url": "https://www.realmadrid.com/en-US/news"
+  },
+  {
+    "id": "fcbarcelona_official",
+    "name": "FC Barcelona",
+    "source_type": "website",
+    "url": "https://www.fcbarcelona.com/en/football/first-team/news",
+    "country": "ES",
+    "flag": "🇪🇸",
+    "language": "en",
+    "has_rss": false,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "sport",
+      "football",
+      "laliga"
+    ],
+    "priority": 82,
+    "check_interval": 60,
+    "enabled": false,
+    "website_url": "https://www.fcbarcelona.com/en/football/first-team/news"
   }
-    ]
+]
