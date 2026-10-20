@@ -27,14 +27,17 @@ SOURCE_REPUTATION = {
     # منابع ورزشی بین‌المللی
     "BBC Sport": 94,
     "BBC Football": 94,
+    "ESPN": 90,
     "ESPN Soccer": 90,
     "Gianluca Di Marzio": 88,
     "Transfermarkt": 85,
+    # اسم منبع تلگرام در sources.json دقیقاً "Fabrizio Romano" است
+    "Fabrizio Romano": 85,
     "Fabrizio Romano Telegram": 85,
     "Sky Sports Football": 90,
     "UEFA": 96,
     "FIFA": 96,
     "Premier League": 96,
     "API-Football": 95,
-}
 
+}
