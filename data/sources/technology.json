@@ -8,11 +8,164 @@
     "flag": "🇬🇧",
     "language": "en",
     "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
     "categories": [
       "technology"
     ],
     "priority": 85,
     "check_interval": 60,
     "enabled": true
+  },
+  {
+    "id": "the_verge",
+    "name": "The Verge",
+    "source_type": "rss",
+    "url": "https://www.theverge.com/rss/index.xml",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "business"
+    ],
+    "priority": 87,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "techcrunch",
+    "name": "TechCrunch",
+    "source_type": "rss",
+    "url": "https://techcrunch.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "business",
+      "startups"
+    ],
+    "priority": 86,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "arstechnica",
+    "name": "Ars Technica",
+    "source_type": "rss",
+    "url": "https://feeds.arstechnica.com/arstechnica/index",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "science"
+    ],
+    "priority": 83,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "engadget",
+    "name": "Engadget",
+    "source_type": "rss",
+    "url": "https://www.engadget.com/rss.xml",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology"
+    ],
+    "priority": 80,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "wired",
+    "name": "WIRED",
+    "source_type": "rss",
+    "url": "https://www.wired.com/feed/rss",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "science"
+    ],
+    "priority": 81,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "digiato",
+    "name": "دیجیاتو",
+    "source_type": "rss",
+    "url": "https://digiato.com/feed",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "iran"
+    ],
+    "priority": 89,
+    "check_interval": 60,
+    "enabled": false,
+    "website_url": "https://digiato.com/"
+  },
+  {
+    "id": "vigiato",
+    "name": "ویجیاتو",
+    "source_type": "rss",
+    "url": "https://vigiato.net/feed",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "gaming"
+    ],
+    "priority": 87,
+    "check_interval": 60,
+    "enabled": false,
+    "website_url": "https://vigiato.net/"
   }
-]
+    ]
