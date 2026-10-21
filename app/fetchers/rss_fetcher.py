@@ -8,6 +8,7 @@ media_extractor.py انجام می‌شود.
 
 import asyncio
 import logging
+import time
 from calendar import timegm
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -47,6 +48,13 @@ MAX_CACHED_ARTICLES = 5000
 _ARTICLE_MEDIA_CACHE: Dict[str, Tuple[str, str, str, str]] = {}
 
 BBC_HOSTS = ("bbc.com", "bbc.co.uk", "bbci.co.uk", "bbc.in")
+
+# اگر از یک سایت چند بار پشت‌سرهم خطا گرفتیم (مثلاً ۴۰۱ یا ۴۰۳ چون ربات را
+# بلاک کرده یا مقاله پشت پرداخت است)، مدتی سراغ صفحه‌های آن سایت
+# نمی‌رویم: هم درخواست بیهوده نمی‌زنیم، هم ریسک بلاک‌شدن IP کمتر می‌شود.
+HOST_FAILURE_LIMIT = 5
+HOST_COOLDOWN_SECONDS = 30 * 60
+_HOST_STATE: Dict[str, List[float]] = {}  # host -> [خطاهای پیاپی, تا چه زمانی متوقف]
 
 
 class RSSFetcher(BaseFetcher):
@@ -224,12 +232,42 @@ class RSSFetcher(BaseFetcher):
 
         news.raw_data["article_media_checked"] = True
 
+    @staticmethod
+    def _host_paused(host: str) -> bool:
+        state = _HOST_STATE.get(host)
+        return bool(state) and time.monotonic() < state[1]
+
+    @staticmethod
+    def _note_host_failure(host: str) -> None:
+        state = _HOST_STATE.setdefault(host, [0, 0.0])
+        state[0] += 1
+
+        if state[0] >= HOST_FAILURE_LIMIT:
+            state[0] = 0
+            state[1] = time.monotonic() + HOST_COOLDOWN_SECONDS
+
+            logger.warning(
+                "ARTICLE_HOST_PAUSED | host=%s | minutes=%s",
+                host,
+                HOST_COOLDOWN_SECONDS // 60,
+            )
+
+    @staticmethod
+    def _note_host_success(host: str) -> None:
+        _HOST_STATE.pop(host, None)
+
     async def _inspect_article(
         self,
         news: RawNews,
         article_url: str,
     ) -> None:
         """Inspect an article page for video and image media."""
+
+        host = (urlparse(article_url).hostname or "").lower()
+
+        if self._host_paused(host):
+            # عمداً در حافظه ثبت نمی‌شود تا بعد از پایان مکث دوباره امتحان شود
+            return
 
         try:
             html = await self.http.get(article_url)
@@ -242,8 +280,11 @@ class RSSFetcher(BaseFetcher):
                     html = await self.http.get(alternate_url)
 
             if not html:
+                self._note_host_failure(host)
                 self._remember_article(article_url, ("", "", "", ""))
                 return
+
+            self._note_host_success(host)
 
             # تحلیل HTML کار CPU است؛ در thread جدا اجرا می‌شود تا
             # بقیه‌ی دانلودها متوقف نشوند.
@@ -583,7 +624,7 @@ class RSSFetcher(BaseFetcher):
                     parts.path,
                     urlencode(query),
                     parts.fragment,
-                )
+                 )
             )
         except Exception:
-            return url
+            return url 
