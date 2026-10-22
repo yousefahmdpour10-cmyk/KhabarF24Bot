@@ -71,6 +71,22 @@ URL_PREFIXES = ("http://", "https://", "//", "/")
 # توابع ساده
 # ----------------------------------------------------------------------
 
+def url_path(url: str) -> str:
+    """مسیر URL؛ برای آدرس خراب (مثل "https://[x") رشته‌ی خالی."""
+    try:
+        return urlparse(url).path.lower()
+    except ValueError:
+        return ""
+
+
+def url_host(url: str) -> str:
+    """نام سایت؛ برای آدرس خراب رشته‌ی خالی."""
+    try:
+        return (urlparse(url).hostname or "").lower()
+    except ValueError:
+        return ""
+
+
 def is_http_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
@@ -80,7 +96,7 @@ def is_http_url(url: str) -> bool:
 
 
 def looks_like_image(url: str) -> bool:
-    return urlparse(url).path.lower().endswith(IMAGE_EXTENSIONS)
+    return url_path(url).endswith(IMAGE_EXTENSIONS)
 
 
 def looks_like_video(url: str, media_type: str = "") -> bool:
@@ -89,11 +105,11 @@ def looks_like_video(url: str, media_type: str = "") -> bool:
     if any(media_type.startswith(t) for t in VIDEO_MIME_TYPES):
         return True
 
-    return urlparse(url).path.lower().endswith(VIDEO_EXTENSIONS)
+    return url_path(url).endswith(VIDEO_EXTENSIONS)
 
 
 def guess_video_type(url: str) -> str:
-    path = urlparse(url).path.lower()
+    path = url_path(url)
 
     types = {
         ".m3u8": "application/vnd.apple.mpegurl",
@@ -137,15 +153,17 @@ class MediaCollector:
         if not isinstance(url, str) or not url.strip():
             return ""
 
-        url = urljoin(self.page_url, url.strip().replace("&amp;", "&"))
+        try:
+            url = urljoin(self.page_url, url.strip().replace("&amp;", "&"))
+        except ValueError:
+            return ""
 
         return url if is_http_url(url) else ""
 
     @staticmethod
     def is_player_page(url: str) -> bool:
-        parsed = urlparse(url)
-        path = parsed.path.lower()
-        host = (parsed.hostname or "").lower()
+        path = url_path(url)
+        host = url_host(url)
 
         if any(marker in path for marker in PLAYER_PATH_MARKERS):
             return True
@@ -192,7 +210,7 @@ class MediaCollector:
 
         progressive = [
             item for item in self.direct
-            if not urlparse(item[0]).path.lower().endswith(STREAM_EXTENSIONS)
+            if not url_path(item[0]).endswith(STREAM_EXTENSIONS)
         ]
         streams = [
             item[0] for item in self.direct if item not in progressive
@@ -289,7 +307,10 @@ def _scan_data_attributes(soup: BeautifulSoup, c: MediaCollector) -> None:
             if not (isinstance(value, str) and value.startswith(URL_PREFIXES)):
                 continue
 
-            candidate = urljoin(c.page_url, value)
+            candidate = c.absolute(value)
+
+            if not candidate:
+                continue
 
             # data-src روی تگ img عکس است؛ فقط اگر واقعاً شبیه ویدئو
             # بود قبول می‌کنیم.
@@ -376,11 +397,21 @@ def extract_page_media(
     soup = make_soup(html)
     collector = MediaCollector(page_url)
 
-    _scan_video_tags(soup, collector)
-    _scan_iframes(soup, collector)
-    _scan_meta(soup, collector)
-    _scan_scripts(soup, collector)
-    _scan_data_attributes(soup, collector)
-    _scan_raw_urls(html, collector)
+    # هر مرحله مستقل است: اگر یکی با یک صفحه‌ی عجیب خطا داد، نتیجه‌ی
+    # مرحله‌های دیگر از بین نرود.
+    steps = (
+        lambda: _scan_video_tags(soup, collector),
+        lambda: _scan_iframes(soup, collector),
+        lambda: _scan_meta(soup, collector),
+        lambda: _scan_scripts(soup, collector),
+        lambda: _scan_data_attributes(soup, collector),
+        lambda: _scan_raw_urls(html, collector),
+    )
+
+    for step in steps:
+        try:
+            step()
+        except Exception:
+            continue
 
     return collector.result()
