@@ -32,6 +32,7 @@ from app.fetchers.media_extractor import (
     is_http_url,
     looks_like_image,
     looks_like_video,
+    url_host,
 )
 from app.models.raw_news import RawNews
 from app.utils.http_client import HTTPClient
@@ -263,7 +264,7 @@ class RSSFetcher(BaseFetcher):
     ) -> None:
         """Inspect an article page for video and image media."""
 
-        host = (urlparse(article_url).hostname or "").lower()
+        host = url_host(article_url)
 
         if self._host_paused(host):
             # عمداً در حافظه ثبت نمی‌شود تا بعد از پایان مکث دوباره امتحان شود
@@ -318,6 +319,8 @@ class RSSFetcher(BaseFetcher):
                 self.source_name,
                 article_url,
             )
+            # بدون این، همان صفحه‌ی مشکل‌دار هر چرخه دوباره دانلود می‌شد
+            self._remember_article(article_url, ("", "", "", ""))
 
     # ------------------------------------------------------------------
     # ابزارهای کمکی
@@ -350,7 +353,10 @@ class RSSFetcher(BaseFetcher):
         url = str(url).strip().replace("&amp;", "&")
 
         if base_url:
-            url = urljoin(base_url, url)
+            try:
+                url = urljoin(base_url, url)
+            except ValueError:
+                return ""
 
         return url if is_http_url(url) else ""
 
@@ -599,7 +605,7 @@ class RSSFetcher(BaseFetcher):
 
     @staticmethod
     def _is_bbc_url(url: str) -> bool:
-        host = (urlparse(url).hostname or "").lower()
+        host = url_host(url)
 
         return any(
             host == domain or host.endswith("." + domain)
@@ -624,7 +630,7 @@ class RSSFetcher(BaseFetcher):
                     parts.path,
                     urlencode(query),
                     parts.fragment,
-                 )
+                )
             )
         except Exception:
-            return url 
+            return url
