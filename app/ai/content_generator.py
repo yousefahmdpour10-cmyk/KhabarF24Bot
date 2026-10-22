@@ -32,10 +32,27 @@ class ContentGenerator:
         source_text = content if len(content) >= len(summary) else summary
 
         news.content_generated = False
+        news.ai_paused = False
 
         if not news.title and not source_text:
             logger.warning(
                 "ContentGenerator: خبر بدون عنوان و متن رد شد"
+            )
+            return news
+
+        # خبر فوری از فاصله‌ی بین درخواست‌ها معاف است
+        priority = bool(getattr(news, "is_breaking", False))
+
+        wait = GeminiClient.wait_seconds(priority)
+
+        if wait > 0:
+            # نه خطا، نه درخواست: نوبت این خبر نیست. main.py با دیدن
+            # ai_paused بقیه‌ی کاندیدهای این چرخه را بررسی نمی‌کند.
+            news.ai_paused = True
+            logger.info(
+                "ContentGenerator: Gemini تا %.0f ثانیه‌ی دیگر آماده نیست "
+                "(سهمیه‌ی روزانه را پخش می‌کنیم)",
+                wait,
             )
             return news
 
@@ -45,7 +62,10 @@ class ContentGenerator:
         )
 
         try:
-            raw_response = await self.client.generate(prompt)
+            raw_response = await self.client.generate(
+                prompt,
+                priority=priority,
+            )
         except Exception:
             logger.exception(
                 "ContentGenerator: خطا هنگام دریافت پاسخ از Gemini"
