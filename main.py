@@ -176,6 +176,10 @@ async def main():
                         logger.info("Gemini آماده نیست؛ این چرخه زودتر تمام شد")
                         break
 
+                                        if getattr(result, "ai_paused", False):
+                        logger.info("Gemini آماده نیست؛ این چرخه زودتر تمام شد")
+                        break
+
                     if getattr(result, "is_duplicate", False):
                         logger.info(
                             "Skipped duplicate | source=%s | title=%s",
