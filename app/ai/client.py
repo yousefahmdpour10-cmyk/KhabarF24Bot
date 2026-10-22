@@ -1,13 +1,21 @@
-
 """
 app/ai/client.py
 
 Gemini API Client
+
+سهمیه‌ی رایگان Gemini روزانه (مثلاً ۵۰۰ درخواست) است. برای اینکه این
+سهمیه در چند ساعت اول نسوزد و بقیه‌ی روز کانال ساکت نماند:
+- بین درخواست‌های عادی حداقل GEMINI_MIN_INTERVAL_SECONDS فاصله می‌گذاریم
+  (پیش‌فرض ۱۷۵ ثانیه ≈ ۴۹۰ درخواست در روز)؛ خبر فوری از این فاصله معاف است؛
+- اگر Gemini گفت سهمیه‌ی روزانه تمام شده و ساعت‌ها باید صبر کرد، تا آن
+  زمان اصلاً درخواست نمی‌فرستیم (به‌جای ۱۲۰ ثانیه صبر و تلاش بی‌فایده).
 """
 
 import asyncio
 import json
 import random
+import re
+import time
 from typing import Optional
 
 import aiohttp
@@ -20,6 +28,25 @@ GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "{model}:generateContent"
 )
+
+# حداقل فاصله‌ی دو درخواست عادی (ثانیه). ۸۶۴۰۰ / ۱۷۵ ≈ ۴۹۴ درخواست در روز.
+MIN_INTERVAL_SECONDS = float(
+    getattr(settings, "GEMINI_MIN_INTERVAL_SECONDS", 175)
+)
+
+# اگر زمان انتظار پیشنهادیِ Gemini از این بیشتر بود، یعنی سهمیه‌ی
+# روزانه تمام شده (نه محدودیت چند‌ثانیه‌ای در دقیقه).
+LONG_BLOCK_THRESHOLD_SECONDS = 10 * 60
+MAX_BLOCK_SECONDS = 8 * 3600
+
+_RETRY_IN_RE = re.compile(
+    r"retry in\s+(?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?",
+    re.IGNORECASE,
+)
+
+# وضعیت مشترک بین همه‌ی نمونه‌ها (زمان‌ها با time.monotonic)
+_next_call_at: float = 0.0
+_blocked_until: float = 0.0
 
 
 class GeminiClient:
@@ -41,8 +68,52 @@ class GeminiClient:
             "gemini-2.0-flash",
         )
 
-    async def generate(self, prompt: str) -> Optional[str]:
+    # ------------------------------------------------------------------
+    # نوبت‌دهی
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def wait_seconds(priority: bool = False) -> float:
+        """
+        چند ثانیه تا اجازه‌ی درخواست بعدی؟ صفر یعنی همین الان آزاد است.
+        priority=True (خبر فوری) فقط به بلوک سهمیه‌ی روزانه تن می‌دهد،
+        نه به فاصله‌ی بین درخواست‌ها.
+        """
+        now = time.monotonic()
+        wait = max(0.0, _blocked_until - now)
+
+        if not priority:
+            wait = max(wait, _next_call_at - now)
+
+        return wait
+
+    @staticmethod
+    def _block_for(seconds: float) -> None:
+        global _blocked_until
+
+        seconds = min(seconds + 30, MAX_BLOCK_SECONDS)
+        _blocked_until = time.monotonic() + seconds
+
+        hours, rest = divmod(int(seconds), 3600)
+
+        logger.warning(
+            "Gemini: سهمیه‌ی روزانه تمام شده؛ تا حدود %s ساعت و %s دقیقه‌ی "
+            "دیگر درخواستی ارسال نمی‌شود.",
+            hours,
+            rest // 60,
+        )
+
+    # ------------------------------------------------------------------
+    # ارسال
+    # ------------------------------------------------------------------
+
+    async def generate(
+        self,
+        prompt: str,
+        priority: bool = False,
+    ) -> Optional[str]:
         """ارسال prompt به Gemini و دریافت متن خروجی."""
+        global _next_call_at
 
         if not self.api_key:
             logger.error("GEMINI_API_KEY تنظیم نشده است")
@@ -51,6 +122,14 @@ class GeminiClient:
         if not prompt or not prompt.strip():
             logger.warning("Gemini: prompt خالی است")
             return None
+
+        if self.wait_seconds(priority) > 0:
+            # فراخواننده باید قبلاً wait_seconds را چک کرده باشد؛
+            # این فقط برای محافظت است.
+            return None
+
+        # از همین لحظه نوبت درخواست بعدی عقب می‌رود
+        _next_call_at = time.monotonic() + MIN_INTERVAL_SECONDS
 
         url = GEMINI_ENDPOINT.format(model=self.model)
 
@@ -119,7 +198,6 @@ class GeminiClient:
                         body_preview = body[:1000]
 
                         if response.status == 429:
-                            # ثبت علت واقعی محدودیت؛ کلید API ثبت نمی‌شود.
                             logger.warning(
                                 "Gemini HTTP 429 | model=%s | "
                                 "attempt=%s/%s | response=%s",
@@ -129,6 +207,20 @@ class GeminiClient:
                                 body_preview,
                             )
 
+                            seconds = self._retry_seconds(
+                                response.headers,
+                                body,
+                            )
+
+                            # سهمیه‌ی روزانه تمام شده: صبر چند‌ثانیه‌ای
+                            # فایده ندارد، تا ریست شدن مکث می‌کنیم.
+                            if (
+                                seconds is not None
+                                and seconds > LONG_BLOCK_THRESHOLD_SECONDS
+                            ):
+                                self._block_for(seconds)
+                                return None
+
                             if attempt >= self.retries:
                                 logger.warning(
                                     "Gemini rate limit؛ "
@@ -136,11 +228,7 @@ class GeminiClient:
                                 )
                                 return None
 
-                            delay = self._retry_delay(
-                                response.headers,
-                                body,
-                                attempt,
-                            )
+                            delay = self._retry_delay(seconds, attempt)
 
                             logger.warning(
                                 "Gemini rate limit؛ "
@@ -205,73 +293,62 @@ class GeminiClient:
         logger.error("Gemini: همه تلاش‌ها ناموفق بودند")
         return None
 
-    @classmethod
-    def _retry_delay(
-        cls,
-        headers,
-        body: str,
-        attempt: int,
-    ) -> int:
-        """محاسبه زمان انتظار بر اساس پاسخ سرویس."""
+    # ------------------------------------------------------------------
+    # تحلیل پاسخ خطا
+    # ------------------------------------------------------------------
 
-        retry_after = headers.get("Retry-After")
+    @staticmethod
+    def _retry_seconds(headers, body: str) -> Optional[float]:
+        """
+        زمان انتظاری که خود Gemini پیشنهاد داده (ثانیه)، یا None.
+        سه منبع: هدر Retry-After، فیلد retryDelay در details، و متن
+        پیام ("Please retry in 4h34m42.9s").
+        """
+
+        retry_after = headers.get("Retry-After") if headers else None
 
         if retry_after:
             try:
-                return max(
-                    1,
-                    min(
-                        int(float(retry_after)),
-                        cls.MAX_RETRY_DELAY,
-                    ),
-                )
+                return float(retry_after)
             except (ValueError, TypeError):
                 pass
 
         try:
             data = json.loads(body)
-            error = data.get("error", {})
-
-            # گاهی اطلاعات محدودیت در پیام خطا مشخص است.
-            message = str(error.get("message", ""))
-            if message:
-                logger.warning(
-                    "Gemini error message: %s",
-                    message[:500],
-                )
-
-            details = error.get("details", [])
+            details = (data.get("error") or {}).get("details") or []
 
             for item in details:
                 if not isinstance(item, dict):
                     continue
 
-                retry_delay = item.get("retryDelay")
+                value = str(item.get("retryDelay", "")).strip().lower()
 
-                if retry_delay:
-                    value = str(retry_delay).strip().lower()
+                if value.endswith("s"):
+                    return float(value[:-1])
 
-                    if value.endswith("s"):
-                        seconds = float(value[:-1])
-                        return max(
-                            1,
-                            min(
-                                int(seconds) + 1,
-                                cls.MAX_RETRY_DELAY,
-                            ),
-                        )
-
-        except (
-            ValueError,
-            TypeError,
-            AttributeError,
-        ):
+        except (ValueError, TypeError, AttributeError):
             pass
 
-        return min(
-            10 * (2 ** (attempt - 1)),
-            60,
-        )
+        match = _RETRY_IN_RE.search(body or "")
+
+        if match and any(match.groups()):
+            hours, minutes, seconds = match.groups()
+            return (
+                int(hours or 0) * 3600
+                + int(minutes or 0) * 60
+                + float(seconds or 0)
+            )
+
+        return None
+
+    @classmethod
+    def _retry_delay(cls, seconds: Optional[float], attempt: int) -> int:
+        """زمان انتظار برای محدودیت کوتاه (در دقیقه)."""
+
+        if seconds is not None:
+            return max(1, min(int(seconds) + 1, cls.MAX_RETRY_DELAY))
+
+        return min(10 * (2 ** (attempt - 1)), 60)
 
     @staticmethod
     def _extract_text(data: dict) -> Optional[str]:
