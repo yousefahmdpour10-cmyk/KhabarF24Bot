@@ -172,6 +172,10 @@ async def main():
                     result = await pipeline.process(news)
                     processed_count += 1
 
+                                        if getattr(result, "ai_paused", False):
+                        logger.info("Gemini آماده نیست؛ این چرخه زودتر تمام شد")
+                        break
+
                     if getattr(result, "is_duplicate", False):
                         logger.info(
                             "Skipped duplicate | source=%s | title=%s",
