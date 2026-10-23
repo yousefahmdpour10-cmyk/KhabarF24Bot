@@ -1,13 +1,14 @@
 """
 RSS Fetcher
 
-دریافت خبر از منابع RSS، به‌همراه پیدا کردن عکس و ویدئوی هر خبر
-(اول از خود RSS، و اگر نبود از صفحه‌ی خبر). تحلیل HTML در
-media_extractor.py انجام می‌شود.
+Ø¯Ø±ÛŒØ§ÙØª Ø®Ø¨Ø± Ø§Ø² Ù…Ù†Ø§Ø¨Ø¹ RSSØŒ Ø¨Ù‡â€ŒÙ‡Ù…Ø±Ø§Ù‡ Ù¾ÛŒØ¯Ø§ Ú©Ø±Ø¯Ù† Ø¹Ú©Ø³ Ùˆ ÙˆÛŒØ¯Ø¦ÙˆÛŒ Ù‡Ø± Ø®Ø¨Ø±
+(Ø§ÙˆÙ„ Ø§Ø² Ø®ÙˆØ¯ RSSØŒ Ùˆ Ø§Ú¯Ø± Ù†Ø¨ÙˆØ¯ Ø§Ø² ØµÙØ­Ù‡â€ŒÛŒ Ø®Ø¨Ø±). ØªØ­Ù„ÛŒÙ„ HTML Ø¯Ø±
+media_extractor.py Ø§Ù†Ø¬Ø§Ù… Ù…ÛŒâ€ŒØ´ÙˆØ¯.
 """
 
 import asyncio
 import logging
+import re
 import time
 from calendar import timegm
 from datetime import datetime, timezone
@@ -43,19 +44,19 @@ MAX_ARTICLE_PAGES_PER_FETCH = 30
 MAX_CONCURRENT_PAGE_REQUESTS = 5
 MAX_HTML_CHARS = 1_500_000
 
-# نتیجه‌ی بررسی صفحه‌ی هر خبر را نگه می‌داریم تا همان خبر در چرخه‌های
-# بعد (که RSS هنوز آن را دارد) دوباره دانلود و تحلیل نشود.
+# Ù†ØªÛŒØ¬Ù‡â€ŒÛŒ Ø¨Ø±Ø±Ø³ÛŒ ØµÙØ­Ù‡â€ŒÛŒ Ù‡Ø± Ø®Ø¨Ø± Ø±Ø§ Ù†Ú¯Ù‡ Ù…ÛŒâ€ŒØ¯Ø§Ø±ÛŒÙ… ØªØ§ Ù‡Ù…Ø§Ù† Ø®Ø¨Ø± Ø¯Ø± Ú†Ø±Ø®Ù‡â€ŒÙ‡Ø§ÛŒ
+# Ø¨Ø¹Ø¯ (Ú©Ù‡ RSS Ù‡Ù†ÙˆØ² Ø¢Ù† Ø±Ø§ Ø¯Ø§Ø±Ø¯) Ø¯ÙˆØ¨Ø§Ø±Ù‡ Ø¯Ø§Ù†Ù„ÙˆØ¯ Ùˆ ØªØ­Ù„ÛŒÙ„ Ù†Ø´ÙˆØ¯.
 MAX_CACHED_ARTICLES = 5000
 _ARTICLE_MEDIA_CACHE: Dict[str, Tuple[str, str, str, str]] = {}
 
 BBC_HOSTS = ("bbc.com", "bbc.co.uk", "bbci.co.uk", "bbc.in")
 
-# اگر از یک سایت چند بار پشت‌سرهم خطا گرفتیم (مثلاً ۴۰۱ یا ۴۰۳ چون ربات را
-# بلاک کرده یا مقاله پشت پرداخت است)، مدتی سراغ صفحه‌های آن سایت
-# نمی‌رویم: هم درخواست بیهوده نمی‌زنیم، هم ریسک بلاک‌شدن IP کمتر می‌شود.
+# Ø§Ú¯Ø± Ø§Ø² ÛŒÚ© Ø³Ø§ÛŒØª Ú†Ù†Ø¯ Ø¨Ø§Ø± Ù¾Ø´Øªâ€ŒØ³Ø±Ù‡Ù… Ø®Ø·Ø§ Ú¯Ø±ÙØªÛŒÙ… (Ù…Ø«Ù„Ø§Ù‹ Û´Û°Û± ÛŒØ§ Û´Û°Û³ Ú†ÙˆÙ† Ø±Ø¨Ø§Øª Ø±Ø§
+# Ø¨Ù„Ø§Ú© Ú©Ø±Ø¯Ù‡ ÛŒØ§ Ù…Ù‚Ø§Ù„Ù‡ Ù¾Ø´Øª Ù¾Ø±Ø¯Ø§Ø®Øª Ø§Ø³Øª)ØŒ Ù…Ø¯ØªÛŒ Ø³Ø±Ø§Øº ØµÙØ­Ù‡â€ŒÙ‡Ø§ÛŒ Ø¢Ù† Ø³Ø§ÛŒØª
+# Ù†Ù…ÛŒâ€ŒØ±ÙˆÛŒÙ…: Ù‡Ù… Ø¯Ø±Ø®ÙˆØ§Ø³Øª Ø¨ÛŒÙ‡ÙˆØ¯Ù‡ Ù†Ù…ÛŒâ€ŒØ²Ù†ÛŒÙ…ØŒ Ù‡Ù… Ø±ÛŒØ³Ú© Ø¨Ù„Ø§Ú©â€ŒØ´Ø¯Ù† IP Ú©Ù…ØªØ± Ù…ÛŒâ€ŒØ´ÙˆØ¯.
 HOST_FAILURE_LIMIT = 5
 HOST_COOLDOWN_SECONDS = 30 * 60
-_HOST_STATE: Dict[str, List[float]] = {}  # host -> [خطاهای پیاپی, تا چه زمانی متوقف]
+_HOST_STATE: Dict[str, List[float]] = {}  # host -> [Ø®Ø·Ø§Ù‡Ø§ÛŒ Ù¾ÛŒØ§Ù¾ÛŒ, ØªØ§ Ú†Ù‡ Ø²Ù…Ø§Ù†ÛŒ Ù…ØªÙˆÙ‚Ù]
 
 
 class RSSFetcher(BaseFetcher):
@@ -66,7 +67,7 @@ class RSSFetcher(BaseFetcher):
         self.http = HTTPClient()
 
     # ------------------------------------------------------------------
-    # دریافت فید
+    # Ø¯Ø±ÛŒØ§ÙØª ÙÛŒØ¯
     # ------------------------------------------------------------------
 
     async def fetch(self) -> List[RawNews]:
@@ -109,8 +110,8 @@ class RSSFetcher(BaseFetcher):
 
                 news_items.append(news)
 
-                # فقط وقتی RSS خودش ویدئوی مستقیم نداده، صفحه‌ی خبر را
-                # بررسی می‌کنیم.
+                # ÙÙ‚Ø· ÙˆÙ‚ØªÛŒ RSS Ø®ÙˆØ¯Ø´ ÙˆÛŒØ¯Ø¦ÙˆÛŒ Ù…Ø³ØªÙ‚ÛŒÙ… Ù†Ø¯Ø§Ø¯Ù‡ØŒ ØµÙØ­Ù‡â€ŒÛŒ Ø®Ø¨Ø± Ø±Ø§
+                # Ø¨Ø±Ø±Ø³ÛŒ Ù…ÛŒâ€ŒÚ©Ù†ÛŒÙ….
                 if news.video_url or not is_http_url(news.url):
                     continue
 
@@ -167,9 +168,9 @@ class RSSFetcher(BaseFetcher):
             published_at=self._extract_published_at(entry),
             source=self.source_name,
             source_id=getattr(self.source, "id", "") or "",
-            # دسته‌هایی که برای این منبع در sources.json تعریف شده؛
-            # CategoryDetector اگر کلیدواژه‌ها ضعیف بود از آن استفاده
-            # می‌کند (فقط وقتی منبع یک دسته دارد).
+            # Ø¯Ø³ØªÙ‡â€ŒÙ‡Ø§ÛŒÛŒ Ú©Ù‡ Ø¨Ø±Ø§ÛŒ Ø§ÛŒÙ† Ù…Ù†Ø¨Ø¹ Ø¯Ø± sources.json ØªØ¹Ø±ÛŒÙ Ø´Ø¯Ù‡Ø›
+            # CategoryDetector Ø§Ú¯Ø± Ú©Ù„ÛŒØ¯ÙˆØ§Ú˜Ù‡â€ŒÙ‡Ø§ Ø¶Ø¹ÛŒÙ Ø¨ÙˆØ¯ Ø§Ø² Ø¢Ù† Ø§Ø³ØªÙØ§Ø¯Ù‡
+            # Ù…ÛŒâ€ŒÚ©Ù†Ø¯ (ÙÙ‚Ø· ÙˆÙ‚ØªÛŒ Ù…Ù†Ø¨Ø¹ ÛŒÚ© Ø¯Ø³ØªÙ‡ Ø¯Ø§Ø±Ø¯).
             source_category_hint=list(
                 getattr(self.source, "categories", []) or []
             ),
@@ -180,7 +181,7 @@ class RSSFetcher(BaseFetcher):
         )
 
     # ------------------------------------------------------------------
-    # بررسی صفحه‌ی خبر
+    # Ø¨Ø±Ø±Ø³ÛŒ ØµÙØ­Ù‡â€ŒÛŒ Ø®Ø¨Ø±
     # ------------------------------------------------------------------
 
     async def _inspect_articles(self, article_jobs: list) -> None:
@@ -204,7 +205,7 @@ class RSSFetcher(BaseFetcher):
         media: Tuple[str, str, str, str],
     ) -> None:
         if len(_ARTICLE_MEDIA_CACHE) >= MAX_CACHED_ARTICLES:
-            # قدیمی‌ترین ورودی (به ترتیب درج) را حذف می‌کنیم
+            # Ù‚Ø¯ÛŒÙ…ÛŒâ€ŒØªØ±ÛŒÙ† ÙˆØ±ÙˆØ¯ÛŒ (Ø¨Ù‡ ØªØ±ØªÛŒØ¨ Ø¯Ø±Ø¬) Ø±Ø§ Ø­Ø°Ù Ù…ÛŒâ€ŒÚ©Ù†ÛŒÙ…
             _ARTICLE_MEDIA_CACHE.pop(next(iter(_ARTICLE_MEDIA_CACHE)))
 
         _ARTICLE_MEDIA_CACHE[article_url] = media
@@ -226,8 +227,8 @@ class RSSFetcher(BaseFetcher):
 
         news.raw_data = news.raw_data or {}
 
-        # آدرس player یا پلی‌لیست فقط برای عیب‌یابی نگه داشته می‌شود؛
-        # فایل ویدئوی قابل دانلود نیست.
+        # Ø¢Ø¯Ø±Ø³ player ÛŒØ§ Ù¾Ù„ÛŒâ€ŒÙ„ÛŒØ³Øª ÙÙ‚Ø· Ø¨Ø±Ø§ÛŒ Ø¹ÛŒØ¨â€ŒÛŒØ§Ø¨ÛŒ Ù†Ú¯Ù‡ Ø¯Ø§Ø´ØªÙ‡ Ù…ÛŒâ€ŒØ´ÙˆØ¯Ø›
+        # ÙØ§ÛŒÙ„ ÙˆÛŒØ¯Ø¦ÙˆÛŒ Ù‚Ø§Ø¨Ù„ Ø¯Ø§Ù†Ù„ÙˆØ¯ Ù†ÛŒØ³Øª.
         if embed_url:
             news.raw_data["video_embed_url"] = embed_url
 
@@ -257,6 +258,37 @@ class RSSFetcher(BaseFetcher):
     def _note_host_success(host: str) -> None:
         _HOST_STATE.pop(host, None)
 
+    @staticmethod
+    def _extract_article_text(html: str) -> str:
+        """Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ù…ØªÙ† Ù…Ù‚Ø§Ù„Ù‡ Ø§Ø² HTML Ø¨Ø§ Ø­Ø°Ù Ø¨Ø®Ø´â€ŒÙ‡Ø§ÛŒ ØºÛŒØ±Ù…Ù‚Ø§Ù„Ù‡â€ŒØ§ÛŒ."""
+        soup = BeautifulSoup(html or "", "lxml")
+
+        for element in soup.find_all([
+            "script", "style", "noscript", "nav", "footer", "header",
+            "aside", "form", "button", "svg", "iframe",
+        ]):
+            element.decompose()
+
+        article = (
+            soup.find("article")
+            or soup.find(attrs={"itemprop": "articleBody"})
+            or soup.find("main")
+        )
+
+        if article:
+            text = " ".join(article.get_text(" ", strip=True).split())
+            if len(text) >= 200:
+                return text
+
+        paragraphs = []
+        for paragraph in soup.find_all("p"):
+            text = " ".join(paragraph.get_text(" ", strip=True).split())
+            if len(text) >= 40:
+                paragraphs.append(text)
+
+        unique = list(dict.fromkeys(paragraphs))
+        return " ".join(unique)[:12000]
+
     async def _inspect_article(
         self,
         news: RawNews,
@@ -267,14 +299,14 @@ class RSSFetcher(BaseFetcher):
         host = url_host(article_url)
 
         if self._host_paused(host):
-            # عمداً در حافظه ثبت نمی‌شود تا بعد از پایان مکث دوباره امتحان شود
+            # Ø¹Ù…Ø¯Ø§Ù‹ Ø¯Ø± Ø­Ø§ÙØ¸Ù‡ Ø«Ø¨Øª Ù†Ù…ÛŒâ€ŒØ´ÙˆØ¯ ØªØ§ Ø¨Ø¹Ø¯ Ø§Ø² Ù¾Ø§ÛŒØ§Ù† Ù…Ú©Ø« Ø¯ÙˆØ¨Ø§Ø±Ù‡ Ø§Ù…ØªØ­Ø§Ù† Ø´ÙˆØ¯
             return
 
         try:
             html = await self.http.get(article_url)
 
-            # BBC گاهی با پارامتر clips اطلاعات کلیپ را هم برمی‌گرداند؛
-            # فقط وقتی صفحه‌ی عادی جواب نداد امتحانش می‌کنیم.
+            # BBC Ú¯Ø§Ù‡ÛŒ Ø¨Ø§ Ù¾Ø§Ø±Ø§Ù…ØªØ± clips Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú©Ù„ÛŒÙ¾ Ø±Ø§ Ù‡Ù… Ø¨Ø±Ù…ÛŒâ€ŒÚ¯Ø±Ø¯Ø§Ù†Ø¯Ø›
+            # ÙÙ‚Ø· ÙˆÙ‚ØªÛŒ ØµÙØ­Ù‡â€ŒÛŒ Ø¹Ø§Ø¯ÛŒ Ø¬ÙˆØ§Ø¨ Ù†Ø¯Ø§Ø¯ Ø§Ù…ØªØ­Ø§Ù†Ø´ Ù…ÛŒâ€ŒÚ©Ù†ÛŒÙ….
             if not html and self._is_bbc_url(article_url):
                 alternate_url = self._bbc_clips_url(article_url)
                 if alternate_url != article_url:
@@ -287,8 +319,30 @@ class RSSFetcher(BaseFetcher):
 
             self._note_host_success(host)
 
-            # تحلیل HTML کار CPU است؛ در thread جدا اجرا می‌شود تا
-            # بقیه‌ی دانلودها متوقف نشوند.
+            # Ù…ØªÙ† Ù…Ù‚Ø§Ù„Ù‡ Ø±Ø§ Ù‡Ù… Ø§Ø² HTML Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ù…ÛŒâ€ŒÚ©Ù†ÛŒÙ…Ø› RSS Ø¨Ø¹Ø¶ÛŒ Ù…Ù†Ø§Ø¨Ø¹
+            # ÙÙ‚Ø· ÛŒÚ© Ø®Ù„Ø§ØµÙ‡ Ú©ÙˆØªØ§Ù‡ Ø¯Ø§Ø±Ø¯. Ù…ØªÙ† RSS ÙÙ‚Ø· ÙˆÙ‚ØªÛŒ Ø¬Ø§ÛŒÚ¯Ø²ÛŒÙ† Ù…ÛŒâ€ŒØ´ÙˆØ¯
+            # Ú©Ù‡ Ù…ØªÙ† ØµÙØ­Ù‡ Ø·ÙˆÙ„Ø§Ù†ÛŒâ€ŒØªØ± Ùˆ Ø§Ø­ØªÙ…Ø§Ù„Ø§Ù‹ Ú©Ø§Ù…Ù„â€ŒØªØ± Ø¨Ø§Ø´Ø¯.
+            try:
+                article_text = await asyncio.to_thread(
+                    self._extract_article_text,
+                    html[:MAX_HTML_CHARS],
+                )
+                current_content = self._clean_text(news.content)
+                if article_text and len(article_text) > len(current_content):
+                    news.content = article_text[:12000]
+                    if not news.summary or len(news.summary) < 80:
+                        news.summary = article_text[:500]
+                    news.raw_data = news.raw_data or {}
+                    news.raw_data["article_text_enriched"] = True
+            except Exception:
+                logger.debug(
+                    "ARTICLE_TEXT_EXTRACTION_FAILED | source=%s | title=%s",
+                    self.source_name,
+                    news.title[:100],
+                )
+
+            # ØªØ­Ù„ÛŒÙ„ HTML Ú©Ø§Ø± CPU Ø§Ø³ØªØ› Ø¯Ø± thread Ø¬Ø¯Ø§ Ø§Ø¬Ø±Ø§ Ù…ÛŒâ€ŒØ´ÙˆØ¯ ØªØ§
+            # Ø¨Ù‚ÛŒÙ‡â€ŒÛŒ Ø¯Ø§Ù†Ù„ÙˆØ¯Ù‡Ø§ Ù…ØªÙˆÙ‚Ù Ù†Ø´ÙˆÙ†Ø¯.
             media = await asyncio.to_thread(
                 extract_page_media,
                 html[:MAX_HTML_CHARS],
@@ -319,11 +373,11 @@ class RSSFetcher(BaseFetcher):
                 self.source_name,
                 article_url,
             )
-            # بدون این، همان صفحه‌ی مشکل‌دار هر چرخه دوباره دانلود می‌شد
+            # Ø¨Ø¯ÙˆÙ† Ø§ÛŒÙ†ØŒ Ù‡Ù…Ø§Ù† ØµÙØ­Ù‡â€ŒÛŒ Ù…Ø´Ú©Ù„â€ŒØ¯Ø§Ø± Ù‡Ø± Ú†Ø±Ø®Ù‡ Ø¯ÙˆØ¨Ø§Ø±Ù‡ Ø¯Ø§Ù†Ù„ÙˆØ¯ Ù…ÛŒâ€ŒØ´Ø¯
             self._remember_article(article_url, ("", "", "", ""))
 
     # ------------------------------------------------------------------
-    # ابزارهای کمکی
+    # Ø§Ø¨Ø²Ø§Ø±Ù‡Ø§ÛŒ Ú©Ù…Ú©ÛŒ
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -352,6 +406,12 @@ class RSSFetcher(BaseFetcher):
 
         url = str(url).strip().replace("&amp;", "&")
 
+        # Ø¨Ø¹Ø¶ÛŒ ÙˆØ±ÙˆØ¯ÛŒâ€ŒÙ‡Ø§ URL Ø±Ø§ Ø¨Ù‡ Ø´Ú©Ù„ Markdown Ù…ÛŒâ€ŒØ¯Ù‡Ù†Ø¯:
+        # [https://example.com/article](https://example.com/article)
+        markdown_match = re.match(r"^\[([^\]]+)\]\((https?://[^)]+)\)$", url)
+        if markdown_match:
+            url = markdown_match.group(2).strip()
+
         if base_url:
             try:
                 url = urljoin(base_url, url)
@@ -368,7 +428,7 @@ class RSSFetcher(BaseFetcher):
         )
 
     def _html_parts(self, entry: Any) -> List[str]:
-        """HTML داخل summary و content:encoded."""
+        """HTML Ø¯Ø§Ø®Ù„ summary Ùˆ content:encoded."""
 
         parts = [self._entry_value(entry, "summary", "") or ""]
         contents = self._entry_value(entry, "content", []) or []
@@ -421,7 +481,7 @@ class RSSFetcher(BaseFetcher):
 
         if parsed:
             try:
-                # published_parsed در feedparser همیشه UTC است
+                # published_parsed Ø¯Ø± feedparser Ù‡Ù…ÛŒØ´Ù‡ UTC Ø§Ø³Øª
                 return datetime.fromtimestamp(
                     timegm(parsed),
                     tz=timezone.utc,
@@ -462,7 +522,7 @@ class RSSFetcher(BaseFetcher):
         return ""
 
     # ------------------------------------------------------------------
-    # عکس
+    # Ø¹Ú©Ø³
     # ------------------------------------------------------------------
 
     def _extract_image_url(self, entry: Any) -> str:
@@ -506,7 +566,7 @@ class RSSFetcher(BaseFetcher):
             if rel == "enclosure" and looks_like_image(url):
                 return url
 
-        # بعضی فیدها عکس را داخل HTML توضیح می‌گذارند.
+        # Ø¨Ø¹Ø¶ÛŒ ÙÛŒØ¯Ù‡Ø§ Ø¹Ú©Ø³ Ø±Ø§ Ø¯Ø§Ø®Ù„ HTML ØªÙˆØ¶ÛŒØ­ Ù…ÛŒâ€ŒÚ¯Ø°Ø§Ø±Ù†Ø¯.
         for html in self._html_parts(entry):
             soup = BeautifulSoup(str(html), "html.parser")
 
@@ -527,14 +587,14 @@ class RSSFetcher(BaseFetcher):
         return ""
 
     # ------------------------------------------------------------------
-    # ویدئو (داخل خود RSS)
+    # ÙˆÛŒØ¯Ø¦Ùˆ (Ø¯Ø§Ø®Ù„ Ø®ÙˆØ¯ RSS)
     # ------------------------------------------------------------------
 
     def _extract_video(self, entry: Any) -> Tuple[str, str]:
         base_url = self._base_url(entry)
 
-        # media:content، از جمله medium=video که بعضی فیدها می‌گذارند
-        # حتی وقتی آدرس پسوند ندارد.
+        # media:contentØŒ Ø§Ø² Ø¬Ù…Ù„Ù‡ medium=video Ú©Ù‡ Ø¨Ø¹Ø¶ÛŒ ÙÛŒØ¯Ù‡Ø§ Ù…ÛŒâ€ŒÚ¯Ø°Ø§Ø±Ù†Ø¯
+        # Ø­ØªÛŒ ÙˆÙ‚ØªÛŒ Ø¢Ø¯Ø±Ø³ Ù¾Ø³ÙˆÙ†Ø¯ Ù†Ø¯Ø§Ø±Ø¯.
         for media in self._entry_value(entry, "media_content", []) or []:
             if not isinstance(media, dict):
                 continue
@@ -564,7 +624,7 @@ class RSSFetcher(BaseFetcher):
             if url and (looks_like_video(url, media_type) or is_video_enclosure):
                 return url, media_type or guess_video_type(url)
 
-        # HTML داخل summary یا content:encoded
+        # HTML Ø¯Ø§Ø®Ù„ summary ÛŒØ§ content:encoded
         for html in self._html_parts(entry):
             video_url, video_type, _, _ = extract_page_media(
                 str(html),
@@ -577,7 +637,7 @@ class RSSFetcher(BaseFetcher):
         return "", ""
 
     # ------------------------------------------------------------------
-    # نام‌های قدیمی (برای کدهایی که ممکن است مستقیم صدایشان بزنند)
+    # Ù†Ø§Ù…â€ŒÙ‡Ø§ÛŒ Ù‚Ø¯ÛŒÙ…ÛŒ (Ø¨Ø±Ø§ÛŒ Ú©Ø¯Ù‡Ø§ÛŒÛŒ Ú©Ù‡ Ù…Ù…Ú©Ù† Ø§Ø³Øª Ù…Ø³ØªÙ‚ÛŒÙ… ØµØ¯Ø§ÛŒØ´Ø§Ù† Ø¨Ø²Ù†Ù†Ø¯)
     # ------------------------------------------------------------------
 
     @staticmethod
