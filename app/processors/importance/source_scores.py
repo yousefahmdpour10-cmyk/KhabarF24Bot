@@ -41,7 +41,6 @@ SOURCE_SCORES = {
 "Der Spiegel International": 8,
 "The Economist": 9,
 
-```
 # سیاست و آمریکا
 "Axios": 8,
 "Politico": 8,
@@ -110,7 +109,6 @@ SOURCE_SCORES = {
 "ورزش سه": 8,
 "Footballi": 7,
 "Tarafdari": 7,
-```
 
 }
 
