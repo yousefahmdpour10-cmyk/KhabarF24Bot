@@ -10,6 +10,7 @@ from app.formatter.source_flags import get_flag
 from .builder import FootballBuilder
 from app.formatter.icons import (
     TITLE,
+    SUMMARY,
     SOURCE,
 )
 
@@ -32,6 +33,12 @@ class FootballFormatter:
         text += build_header("⚽ فوتبال", getattr(news, "is_breaking", False))
         text += "\n\n"
         text += f"{TITLE} {news.title}\n\n"
+
+        # خلاصه‌ی خبر. برای خبرهای RSS این تنها محتوای پست است (جزئیات
+        # ساخت‌یافته مثل ترکیب و گلزن فقط برای نتیجه‌ی بازی‌ها هست)؛
+        # قبلاً چاپ نمی‌شد و پست فقط یک خط تیتر می‌شد.
+        if getattr(news, "summary", None):
+            text += f"{SUMMARY} {news.summary}\n\n"
 
         details = self.build_details(news)
         if details:
