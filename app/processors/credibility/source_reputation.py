@@ -104,7 +104,6 @@ SOURCE_REPUTATION = {
 "ورزش سه": 90,
 "Footballi": 85,
 "Tarafdari": 82,
-```
 
 }
 
