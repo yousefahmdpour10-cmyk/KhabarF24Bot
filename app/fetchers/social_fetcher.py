@@ -1,21 +1,18 @@
-
 """
 Social Fetcher
 
-دریافت خبر از منابع اجتماعی عمومی
+دریافت خبر از منابع اجتماعی عمومی.
 
 فعلاً:
 - Telegram Public Channels
 
-ساختار طوری نوشته شده که در آینده بتوانیم:
-- X
-- سایر شبکه‌های اجتماعی
-را بدون تغییر معماری اصلی اضافه کنیم.
+ساختار برای افزودن شبکه‌های اجتماعی دیگر در آینده آماده است.
 """
 
+import re
 from datetime import datetime
 from typing import List, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -33,7 +30,11 @@ class SocialFetcher(BaseFetcher):
     def __init__(self, source):
         super().__init__(source)
 
-        self.timeout = aiohttp.ClientTimeout(total=20)
+        self.timeout = aiohttp.ClientTimeout(
+            total=20,
+            connect=5,
+            sock_read=15,
+        )
 
         self.headers = {
             "User-Agent": (
@@ -47,7 +48,7 @@ class SocialFetcher(BaseFetcher):
     async def fetch(self) -> List[RawNews]:
         """دریافت پست‌های منبع اجتماعی."""
 
-        source_type = (
+        source_type = str(
             getattr(self.source, "source_type", "") or ""
         ).lower().strip()
 
@@ -58,7 +59,7 @@ class SocialFetcher(BaseFetcher):
             )
             return []
 
-        platform = (
+        platform = str(
             getattr(self.source, "social_platform", "") or ""
         ).lower().strip()
 
@@ -96,7 +97,6 @@ class SocialFetcher(BaseFetcher):
 
         html = await self._download(channel_url)
 
-        # تغییر تشخیصی: ثبت دقیق شکست دریافت صفحه
         if not html:
             logger.warning(
                 "TELEGRAM_FETCH_EMPTY | source=%s | url=%s",
@@ -105,7 +105,6 @@ class SocialFetcher(BaseFetcher):
             )
             return []
 
-        # تغییر تشخیصی: تأیید دریافت HTML
         logger.info(
             "TELEGRAM_HTML_RECEIVED | source=%s | html_length=%d",
             self.source.name,
@@ -119,7 +118,6 @@ class SocialFetcher(BaseFetcher):
                 ".tgme_widget_message_wrap"
             )
 
-            # تغییر تشخیصی: بررسی ساختار صفحه تلگرام
             if not messages:
                 page_title = (
                     soup.title.get_text(" ", strip=True)
@@ -138,14 +136,23 @@ class SocialFetcher(BaseFetcher):
                 return []
 
             news_list: List[RawNews] = []
+            seen_urls = set()
 
-            # از جدیدترین پست‌های موجود در HTML شروع می‌کنیم.
+            # HTML کانال عمومی معمولاً جدیدترین پست‌ها را دارد.
             for message in messages[-self.MAX_POSTS:]:
                 try:
                     news = self._parse_telegram_post(message)
 
-                    if news:
-                        news_list.append(news)
+                    if not news:
+                        continue
+
+                    if news.url and news.url in seen_urls:
+                        continue
+
+                    if news.url:
+                        seen_urls.add(news.url)
+
+                    news_list.append(news)
 
                 except Exception as error:
                     logger.exception(
@@ -179,19 +186,20 @@ class SocialFetcher(BaseFetcher):
     def _get_telegram_url(self) -> Optional[str]:
         """ساخت URL عمومی تلگرام از تنظیمات منبع."""
 
-        social_url = (
-            getattr(self.source, "social_url", None) or ""
-        ).strip()
+        candidates = (
+            getattr(self.source, "social_url", None),
+            getattr(self.source, "website_url", None),
+            getattr(self.source, "url", None),
+        )
 
-        website_url = (
-            getattr(self.source, "website_url", None) or ""
-        ).strip()
-
-        source_url = (
-            getattr(self.source, "url", None) or ""
-        ).strip()
-
-        url = social_url or website_url or source_url
+        url = next(
+            (
+                str(value).strip()
+                for value in candidates
+                if value and str(value).strip()
+            ),
+            "",
+        )
 
         if not url:
             return None
@@ -199,23 +207,33 @@ class SocialFetcher(BaseFetcher):
         if not url.startswith(("http://", "https://")):
             username = url.lstrip("@").strip("/")
 
-            if username:
-                return f"https://t.me/s/{username}"
+            if not username or "/" in username:
+                return None
 
+            return f"https://t.me/s/{username}"
+
+        parsed = urlparse(url)
+
+        if parsed.netloc.lower() not in ("t.me", "www.t.me"):
+            return url
+
+        parts = parsed.path.strip("/").split("/")
+
+        if not parts or not parts[0]:
             return None
 
-        if "t.me/" in url:
-            username = url.rstrip("/").split("t.me/", 1)[-1]
+        if parts[0] == "s":
+            if len(parts) < 2:
+                return None
+            username = parts[1]
+        else:
+            username = parts[0]
 
-            if username.startswith("s/"):
-                return "https://t.me/" + username
+        # لینک‌های خصوصی یا شناسه‌های داخلی را تغییر نده.
+        if username.startswith("+") or username == "c":
+            return url
 
-            username = username.split("/", 1)[0]
-
-            if username:
-                return f"https://t.me/s/{username}"
-
-        return url
+        return f"https://t.me/s/{username}"
 
     # ==================================================
     # Download
@@ -298,10 +316,6 @@ class SocialFetcher(BaseFetcher):
             else ""
         )
 
-        # فعلاً پست‌های بدون متن رد می‌شوند.
-        if not content:
-            return None
-
         post_link_element = message.select_one(
             ".tgme_widget_message_date"
         )
@@ -312,25 +326,50 @@ class SocialFetcher(BaseFetcher):
             else ""
         )
 
+        if post_link:
+            post_link = urljoin("https://t.me/", post_link)
+
         published_at = self._extract_datetime(message)
         image_url = self._extract_image(message)
+        video_url = self._extract_video(message)
 
         related_urls = []
 
-        for link in message.select(
-            ".tgme_widget_message_text a"
-        ):
-            href = link.get("href")
+        if text_element:
+            for link in text_element.select("a[href]"):
+                href = link.get("href")
 
-            if href:
-                related_urls.append(
-                    urljoin("https://t.me/", href)
-                )
+                if not href:
+                    continue
 
+                absolute_url = urljoin("https://t.me/", href)
+
+                if absolute_url not in related_urls:
+                    related_urls.append(absolute_url)
+
+        # اگر پست متن، عکس و ویدئو ندارد، خبر قابل استفاده‌ای نیست.
+        if not content.strip() and not image_url and not video_url:
+            return None
+
+        # پست رسانه‌ای بدون متن نیز حفظ می‌شود.
         title = self._build_title(content)
+
+        if not title:
+            if video_url:
+                title = "ویدئوی جدید از " + self.source.name
+            elif image_url:
+                title = "تصویر جدید از " + self.source.name
+            else:
+                return None
 
         categories = (
             getattr(self.source, "categories", None) or []
+        )
+
+        category = (
+            categories[0]
+            if categories
+            else "sport"
         )
 
         news = RawNews(
@@ -344,13 +383,25 @@ class SocialFetcher(BaseFetcher):
             published_at=published_at,
             language=getattr(self.source, "language", ""),
             country=getattr(self.source, "country", ""),
-            category=categories[0] if categories else "sport",
+            category=category,
             related_urls=related_urls,
             raw_data={
                 "platform": "telegram",
                 "channel": self.source.name,
                 "channel_url": self._get_telegram_url(),
+                "video_url": video_url or "",
+                "has_video": bool(video_url),
+                "has_image": bool(image_url),
             },
+        )
+
+        logger.info(
+            "TELEGRAM_MEDIA_PARSED | source=%s | "
+            "image=%s | video=%s | text_length=%d",
+            self.source.name,
+            bool(image_url),
+            bool(video_url),
+            len(content),
         )
 
         return news
@@ -361,30 +412,88 @@ class SocialFetcher(BaseFetcher):
 
     @staticmethod
     def _extract_image(message) -> Optional[str]:
-        """استخراج تصویر پست تلگرام."""
+        """استخراج تصویر یا تصویر پیش‌نمایش از پست تلگرام."""
 
         photo = message.select_one(
             ".tgme_widget_message_photo_wrap"
         )
 
-        if not photo:
+        if photo:
+            style = photo.get("style", "")
+
+            match = re.search(
+                r"""background-image\s*:\s*url\(\s*(['"]?)(.*?)\1\s*\)""",
+                style,
+                re.IGNORECASE,
+            )
+
+            if match:
+                value = match.group(2).strip()
+
+                if value.startswith(("http://", "https://")):
+                    return value
+
+        # بعضی قالب‌ها تصویر را در img قرار می‌دهند.
+        image = message.select_one(
+            ".tgme_widget_message_video img, "
+            ".tgme_widget_message_photo img, "
+            ".tgme_widget_message img"
+        )
+
+        if image:
+            for attribute in (
+                "src",
+                "data-src",
+                "data-original",
+            ):
+                value = image.get(attribute)
+
+                if value and value.startswith(
+                    ("http://", "https://")
+                ):
+                    return value
+
+        return None
+
+    # ==================================================
+    # Video
+    # ==================================================
+
+    @staticmethod
+    def _extract_video(message) -> Optional[str]:
+        """
+        استخراج URL مستقیم ویدئو، اگر در HTML عمومی موجود باشد.
+
+        صفحه عمومی تلگرام ممکن است فایل ویدئو را نمایش ندهد.
+        """
+
+        video = message.select_one(
+            ".tgme_widget_message_video video, "
+            ".tgme_widget_message_video source, "
+            ".tgme_widget_message video, "
+            ".tgme_widget_message source"
+        )
+
+        if not video:
             return None
 
-        style = photo.get("style", "")
+        for attribute in ("src", "data-src"):
+            value = video.get(attribute)
 
-        if "background-image" not in style:
-            return None
+            if value and value.startswith(
+                ("http://", "https://")
+            ):
+                return value
 
-        for quote in ('"', "'"):
-            marker = f"url({quote}"
-            start = style.find(marker)
+        parent = video.find_parent("video")
 
-            if start != -1:
-                start += len(marker)
-                end = style.find(quote, start)
+        if parent:
+            value = parent.get("src")
 
-                if end != -1:
-                    return style[start:end]
+            if value and value.startswith(
+                ("http://", "https://")
+            ):
+                return value
 
         return None
 
@@ -420,6 +529,9 @@ class SocialFetcher(BaseFetcher):
     @staticmethod
     def _build_title(content: str) -> str:
         """ساخت عنوان اولیه از متن پست."""
+
+        if not content:
+            return ""
 
         lines = [
             line.strip()
