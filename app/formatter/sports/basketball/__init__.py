@@ -9,6 +9,7 @@ from app.formatter.hashtags import HashtagBuilder
 from app.formatter.source_flags import get_flag
 from app.formatter.icons import (
     TITLE,
+    SUMMARY,
     SOURCE,
 )
 from .builder import BasketballBuilder
@@ -16,7 +17,7 @@ from .builder import BasketballBuilder
 
 class BasketballFormatter:
 
-    def __init__(self):
+    def init(self):
         self.hashtags = HashtagBuilder()
         self.builder = BasketballBuilder()
 
@@ -32,6 +33,10 @@ class BasketballFormatter:
         text += build_header("🏀 بسکتبال", getattr(news, "is_breaking", False))
         text += "\n\n"
         text += f"{TITLE} {news.title}\n\n"
+
+        # خلاصه‌ی خبر (برای خبرهای RSS تنها محتوای پست است)
+        if getattr(news, "summary", None):
+            text += f"{SUMMARY} {news.summary}\n\n"
 
         details = self.build_details(news)
         if details:
