@@ -41,7 +41,6 @@ SOURCE_REPUTATION = {
 "Der Spiegel International": 88,
 "The Economist": 90,
 
-```
 # سیاست و آمریکا
 "Axios": 86,
 "Politico": 85,
