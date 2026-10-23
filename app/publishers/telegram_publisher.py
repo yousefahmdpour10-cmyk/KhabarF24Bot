@@ -1,9 +1,11 @@
 """
 Telegram Publisher - KhabarF24
-انتشار خبر به ترتیب اولویت:
+ترتیب انتشار:
 ۱. ویدئوی واترمارک‌دار
 ۲. عکس واترمارک‌دار
 ۳. متن ساده
+
+سازگار با RawNews و رسانه‌های استخراج‌شده از شبکه‌های اجتماعی.
 """
 
 from pathlib import Path
@@ -37,38 +39,79 @@ class TelegramPublisher:
         self.bot = Bot(token=settings.BOT_TOKEN)
         self.formatter = Formatter()
 
+    @staticmethod
+    def _get_video_url(news: RawNews) -> str:
+        """گرفتن URL ویدئو از مدل اصلی یا داده‌های خام."""
+
+        video_url = getattr(news, "video_url", None)
+
+        if not video_url and isinstance(
+            getattr(news, "raw_data", None), dict
+        ):
+            video_url = news.raw_data.get("video_url")
+
+        return str(video_url or "").strip()
+
+    @staticmethod
+    def _get_image_url(news: RawNews) -> str:
+        """گرفتن URL تصویر."""
+
+        image_url = getattr(news, "image_url", None)
+
+        if not image_url and isinstance(
+            getattr(news, "raw_data", None), dict
+        ):
+            image_url = (
+                news.raw_data.get("image_url")
+                or news.raw_data.get("photo_url")
+            )
+
+        return str(image_url or "").strip()
+
     async def publish(self, news: RawNews) -> bool:
         title = getattr(news, "title", "") or ""
+        video_path = None
 
         try:
             text = await self.formatter.format(news)
+
             if not isinstance(text, str):
                 text = str(text or "")
 
-            # مرحله اول: انتشار ویدئوی واترمارک‌دار
-            video_url = (
-                getattr(news, "video_url", None) or ""
-            ).strip()
+            text = text.strip()
 
-            if video_url and len(text) <= CAPTION_LIMIT:
+            if not text:
+                logger.warning(
+                    "Empty formatted text; skipping: %s",
+                    title[:70],
+                )
+                return False
+
+            video_url = self._get_video_url(news)
+            image_url = self._get_image_url(news)
+
+            # مرحله اول: ویدئوی واترمارک‌دار
+            if video_url:
                 logger.info(
                     "VIDEO CANDIDATE: title=%s | url=%s",
                     title[:70],
                     video_url[:180],
                 )
 
-                video_path = await build_watermarked_video(video_url)
+                try:
+                    video_path = await build_watermarked_video(
+                        video_url
+                    )
 
-                if video_path:
-                    try:
+                    if video_path:
                         path = Path(video_path)
 
                         if not path.is_file() or path.stat().st_size == 0:
                             logger.warning(
-                                "Watermarked video file is missing or empty: %s",
+                                "Watermarked video is missing or empty: %s",
                                 video_path,
                             )
-                        else:
+                        elif len(text) <= CAPTION_LIMIT:
                             with path.open("rb") as video_file:
                                 await self.bot.send_video(
                                     chat_id=settings.CHANNEL_ID,
@@ -86,42 +129,55 @@ class TelegramPublisher:
                                 title[:70],
                             )
                             return True
-
-                    except (BadRequest, TelegramError, OSError) as exc:
+                        else:
+                            logger.warning(
+                                "Caption exceeds video caption limit; "
+                                "trying photo/text: %s",
+                                title[:70],
+                            )
+                    else:
                         logger.warning(
-                            "Video upload failed; trying photo/text: %s",
-                            exc,
+                            "Video watermarking returned no file: %s",
+                            title[:70],
                         )
 
-                    finally:
-                        cleanup_watermarked_video(video_path)
-
-                else:
+                except (
+                    BadRequest,
+                    TelegramError,
+                    OSError,
+                    ValueError,
+                    TypeError,
+                ) as exc:
                     logger.warning(
-                        "Video watermarking failed; trying photo/text: %s",
-                        title[:70],
+                        "Video processing/upload failed; "
+                        "trying photo/text: %s",
+                        exc,
                     )
 
-            elif video_url:
-                logger.info(
-                    "Video available but caption exceeds Telegram limit; "
-                    "trying photo/text: %s",
-                    title[:70],
-                )
+                finally:
+                    if video_path:
+                        try:
+                            cleanup_watermarked_video(video_path)
+                        except Exception as cleanup_error:
+                            logger.warning(
+                                "Video cleanup failed: %s",
+                                cleanup_error,
+                            )
+
+                    video_path = None
+
             else:
                 logger.info(
-                    "No video_url available; trying photo/text: %s",
+                    "No video URL available; trying photo/text: %s",
                     title[:70],
                 )
 
-            # مرحله دوم: انتشار عکس واترمارک‌دار
-            image_url = (
-                getattr(news, "image_url", None) or ""
-            ).strip()
-
+            # مرحله دوم: عکس واترمارک‌دار
             if image_url and len(text) <= CAPTION_LIMIT:
                 try:
-                    image_bytes = await build_watermarked_image(image_url)
+                    image_bytes = await build_watermarked_image(
+                        image_url
+                    )
 
                     if image_bytes:
                         await self.bot.send_photo(
@@ -141,29 +197,37 @@ class TelegramPublisher:
                         return True
 
                     logger.warning(
-                        "Image watermarking failed; trying text: %s",
+                        "Image watermarking returned no image: %s",
                         title[:70],
                     )
 
-                except (BadRequest, TelegramError, OSError, ValueError) as exc:
+                except (
+                    BadRequest,
+                    TelegramError,
+                    OSError,
+                    ValueError,
+                    TypeError,
+                ) as exc:
                     logger.warning(
-                        "Photo upload failed; trying text: %s",
+                        "Photo processing/upload failed; "
+                        "trying text: %s",
                         exc,
                     )
 
             elif image_url:
                 logger.info(
-                    "Image available but caption exceeds Telegram limit; "
+                    "Caption exceeds photo caption limit; "
                     "trying text: %s",
                     title[:70],
                 )
+
             else:
                 logger.info(
-                    "No image_url available; trying text: %s",
+                    "No image URL available; trying text: %s",
                     title[:70],
                 )
 
-            # مرحله سوم: انتشار متن
+            # مرحله سوم: متن کامل
             await self.bot.send_message(
                 chat_id=settings.CHANNEL_ID,
                 text=text,
