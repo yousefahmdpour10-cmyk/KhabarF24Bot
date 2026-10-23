@@ -95,7 +95,7 @@ SOURCE_SCORES = {
 "BBC Sport": 9,
 "BBC Football": 9,
 "ESPN": 8,
-"ESPN Soccer": 8,
+"ESPN Soccer": 9,
 "Fabrizio Romano": 8,
 "Fabrizio Romano Telegram": 8,
 "Gianluca Di Marzio": 8,
