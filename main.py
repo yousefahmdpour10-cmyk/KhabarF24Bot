@@ -25,10 +25,14 @@ MAX_CANDIDATES_PER_CYCLE = 50
 SPORTS_CANDIDATE_TARGET = 20
 MIN_GAP_BETWEEN_CANDIDATES = 3
 
+# نتیجه‌ی ساخت‌یافته‌ی بازی‌ها (ESPN؛ و نام قدیمی API-Football)
+MATCH_REPORT_SOURCE_IDS = ("espn_matches", "api_football")
+
 
 SPORTS_SOURCE_KEYWORDS = (
     "bbc sport",
     "bbc football",
+    "espn",
     "espn soccer",
     "gianluca di marzio",
     "di marzio",
@@ -40,7 +44,6 @@ SPORTS_SOURCE_KEYWORDS = (
     "premier league",
     "api-football",
 )
-
 
 SPORTS_CATEGORY_KEYWORDS = (
     "sport",
@@ -57,23 +60,12 @@ SPORTS_CATEGORY_KEYWORDS = (
 
 
 def is_sports_candidate(news):
-    source = str(
-        getattr(news, "source", "") or ""
-    ).lower()
-
-    category = str(
-        getattr(news, "category", "") or ""
-    ).lower()
+    source = str(getattr(news, "source", "") or "").lower()
+    category = str(getattr(news, "category", "") or "").lower()
 
     return (
-        any(
-            word in source
-            for word in SPORTS_SOURCE_KEYWORDS
-        )
-        or any(
-            word in category
-            for word in SPORTS_CATEGORY_KEYWORDS
-        )
+        any(word in source for word in SPORTS_SOURCE_KEYWORDS)
+        or any(word in category for word in SPORTS_CATEGORY_KEYWORDS)
     )
 
 
@@ -93,20 +85,15 @@ def select_candidates(all_news):
     random.shuffle(sports_news)
     random.shuffle(other_news)
 
-    # نتایج ساخت‌یافته API-Football در اولویت هستند.
+    # نتیجه‌ی ساخت‌یافته‌ی بازی‌ها همیشه جلوتر از بقیه‌ی خبرهای ورزشی
+    # بررسی شود. sort پایدار است و ترتیب بقیه را عوض نمی‌کند.
     sports_news.sort(
         key=lambda n: (
-            0
-            if getattr(n, "source_id", "") == "api_football"
-            else 1
+            0 if getattr(n, "source_id", "") in MATCH_REPORT_SOURCE_IDS else 1
         )
     )
 
-    limit = min(
-        MAX_CANDIDATES_PER_CYCLE,
-        len(all_news),
-    )
-
+    limit = min(MAX_CANDIDATES_PER_CYCLE, len(all_news))
     sports_target = min(
         SPORTS_CANDIDATE_TARGET,
         len(sports_news),
@@ -114,29 +101,25 @@ def select_candidates(all_news):
     )
 
     sports_news = sports_news[:sports_target]
-
     remaining_slots = limit - len(sports_news)
     other_news = other_news[:remaining_slots]
 
     # نوبتی: یک خبر ورزشی، سپس یک خبر عمومی.
+    # خبرهای باقی‌مانده هم در انتهای فهرست قرار می‌گیرند.
     selected = []
     sport_index = 0
     other_index = 0
 
     while len(selected) < limit:
         if sport_index < len(sports_news):
-            selected.append(
-                sports_news[sport_index]
-            )
+            selected.append(sports_news[sport_index])
             sport_index += 1
 
         if len(selected) >= limit:
             break
 
         if other_index < len(other_news):
-            selected.append(
-                other_news[other_index]
-            )
+            selected.append(other_news[other_index])
             other_index += 1
 
         if (
@@ -163,31 +146,26 @@ async def main():
     pipeline = NewsPipeline()
     sources = load_sources()
 
-    logger.info(
-        "Loaded %s sources",
-        len(sources),
-    )
+    logger.info(f"Loaded {len(sources)} sources")
 
     while True:
-        if (
-            time.monotonic() - start_time
-            > MAX_RUNTIME_SECONDS
-        ):
-            logger.info(
-                "Maximum runtime reached; exiting cleanly"
-            )
+        if time.monotonic() - start_time > MAX_RUNTIME_SECONDS:
+            logger.info("Maximum runtime reached; exiting cleanly")
             break
 
         try:
             logger.info("Checking for new news...")
 
-            all_news = await fetch_service.fetch_all(
-                sources
-            )
+            all_news = await fetch_service.fetch_all(sources)
 
+            match_reports = sum(
+                1
+                for item in all_news
+                if getattr(item, "source_id", "") in MATCH_REPORT_SOURCE_IDS
+            )
             logger.info(
-                "Fetched %s news",
-                len(all_news),
+                f"Fetched {len(all_news)} news "
+                f"({match_reports} match reports)"
             )
 
             candidates = select_candidates(all_news)
@@ -200,14 +178,8 @@ async def main():
                     break
 
                 source = str(
-                    getattr(
-                        news,
-                        "source",
-                        "Unknown",
-                    )
-                    or "Unknown"
+                    getattr(news, "source", "Unknown") or "Unknown"
                 )
-
                 title = str(
                     getattr(news, "title", "") or ""
                 )[:100]
@@ -216,60 +188,41 @@ async def main():
                     result = await pipeline.process(news)
                     processed_count += 1
 
-                    if getattr(
-                        result,
-                        "ai_paused",
-                        False,
-                    ):
+                    # Gemini در حال نوبت‌دهی یا بلوک سهمیه است؛ بقیه‌ی
+                    # کاندیدهای این چرخه را بررسی نمی‌کنیم.
+                    if getattr(result, "ai_paused", False):
                         logger.info(
-                            "Gemini آماده نیست؛ "
-                            "این چرخه زودتر تمام شد"
+                            "Gemini is pacing or paused; "
+                            "ending this cycle early"
                         )
                         break
 
-                    if getattr(
-                        result,
-                        "is_duplicate",
-                        False,
-                    ):
+                    if getattr(result, "is_duplicate", False):
                         logger.info(
-                            "Skipped duplicate | "
-                            "source=%s | title=%s",
+                            "Skipped duplicate | source=%s | title=%s",
                             source,
                             title,
                         )
-
                         await asyncio.sleep(
                             MIN_GAP_BETWEEN_CANDIDATES
                         )
                         continue
 
-                    if not getattr(
-                        result,
-                        "content_generated",
-                        False,
-                    ):
+                    if not getattr(result, "content_generated", False):
                         logger.info(
                             "Skipped: content not generated | "
                             "source=%s | title=%s",
                             source,
                             title,
                         )
-
                         await asyncio.sleep(
                             MIN_GAP_BETWEEN_CANDIDATES
                         )
                         continue
 
-                    # این ویژگی باید پس از ارسال موفق تلگرام
-                    # در Pipeline تنظیم شده باشد.
-                    if getattr(
-                        result,
-                        "published",
-                        False,
-                    ):
+                    # این ویژگی در pipeline پس از ارسال تلگرام تنظیم می‌شود.
+                    if getattr(result, "published", False):
                         published_count += 1
-
                         logger.info(
                             "Successful publication: %s/%s",
                             published_count,
