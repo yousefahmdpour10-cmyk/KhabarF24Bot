@@ -1,4 +1,3 @@
-```python
 """
 Source Importance Scores
 امتیاز اهمیت منابع خبری KhabarF24
