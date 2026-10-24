@@ -20,7 +20,6 @@ FLAGS = {
 "Iran International": "🇬🇧",
 "Cointelegraph": "🇬🇧",
 
-```
 # United States
 "AP": "🇺🇸",
 "Associated Press": "🇺🇸",
@@ -122,7 +121,6 @@ FLAGS = {
 # Switzerland
 "UEFA": "🇨🇭",
 "FIFA": "🇨🇭",
-```
 
 }
 
@@ -137,7 +135,6 @@ Return the flag for a known news source.
 Supports exact names and source names with suffixes.
 """
 
-```
 if not source:
     return "🌍"
 
