@@ -16,7 +16,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-BASE_DIR = Path(file).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 from app.fetchers.sports_api_fetcher import SportsApiFetcher
@@ -142,3 +142,61 @@ async def show_matches(client: EspnClient, found: list) -> None:
     coverage = {"lineup": 0, "goals": 0, "assists": 0,
                 "cards": 0, "stats": 0, "referee": 0}
     shown = 0
+
+    for slug, data in pick_varied(found):
+        summary = await client.get_summary(slug, data["event_id"])
+
+        if summary:
+            SportsApiFetcher._log_shape_once(summary)
+            SportsApiFetcher._apply_summary(data, summary)
+        else:
+            print(f"!! دریافت گزارش کامل بازی {data['event_id']} ناموفق بود")
+
+        news = fetcher._make_news(data)
+        shown += 1
+
+        cards = len(news.yellow_cards) + len(news.red_cards)
+        coverage["lineup"] += bool(news.lineup)
+        coverage["goals"] += bool(news.goals)
+        coverage["assists"] += bool(news.assists)
+        coverage["cards"] += bool(cards)
+        coverage["stats"] += bool(news.stats)
+        coverage["referee"] += bool(news.referee)
+
+        print(f"\n>>> {news.title}   [{news.league}]")
+        print(
+            f"گل={len(news.goals)} پاس‌گل={len(news.assists)} "
+            f"کارت={cards} ترکیب={'دارد' if news.lineup else 'ندارد'} "
+            f"آمار={len(news.stats)} داور={news.referee or 'ندارد'} "
+            f"ورزشگاه={news.stadium or 'ندارد'}"
+        )
+        print("--- متن پست (بدون تیتر و خلاصه‌ی Gemini) ---")
+        print(FootballBuilder().build(news))
+        print("--- هشتگ‌ها ---")
+        print(HashtagBuilder().build(news))
+
+    heading("۴) خلاصه‌ی پوشش")
+    print(f"از {shown} بازی نمایش‌داده‌شده، تعداد بازی‌هایی که این را داشتند:")
+    for key, value in coverage.items():
+        print(f"  {key:8} {value}/{shown}")
+
+
+async def main() -> None:
+    check_config()
+
+    client = EspnClient()
+    found = await collect_finished(client)
+
+    if not found:
+        print(
+            "\n!! هیچ بازی تمام‌شده‌ای پیدا نشد. یعنی یا ESPN جواب نداده "
+            "(خطوط EspnClient بالا را ببین)، یا ساختار پاسخ عوض شده، یا "
+            "در این ۳ روز بازی نبوده."
+        )
+        return
+
+    await show_matches(client, found)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
