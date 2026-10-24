@@ -7,33 +7,48 @@ FLAGS = {
     # United Kingdom
     "Reuters": "🇬🇧",
     "BBC": "🇬🇧",
+    "BBC World": "🇬🇧",
+    "BBC Top Stories": "🇬🇧",
     "BBC Sport": "🇬🇧",
     "BBC Football": "🇬🇧",
     "BBC Business": "🇬🇧",
     "BBC Health": "🇬🇧",
     "BBC Technology": "🇬🇧",
+    "Sky News": "🇬🇧",
+    "Sky News World": "🇬🇧",
+    "Sky News Latest": "🇬🇧",
     "Sky Sports": "🇬🇧",
     "Sky Sports Football": "🇬🇧",
     "Guardian": "🇬🇧",
     "The Guardian": "🇬🇧",
+    "The Economist": "🇬🇧",
+    "Economist": "🇬🇧",
+    "The Independent": "🇬🇧",
+    "Independent": "🇬🇧",
     "Premier League": "🇬🇧",
     "Iran International": "🇬🇧",
     "Cointelegraph": "🇬🇧",
+    "Politico Europe": "🇪🇺",
+    "Reuters via Google News": "🇬🇧",
 
     # United States
     "AP": "🇺🇸",
     "Associated Press": "🇺🇸",
+    "Associated Press via Google News": "🇺🇸",
     "CNN": "🇺🇸",
+    "CNN via Google News": "🇺🇸",
     "ESPN": "🇺🇸",
     "ESPN Soccer": "🇺🇸",
     "FOX": "🇺🇸",
     "Fox News": "🇺🇸",
+    "Fox News World": "🇺🇸",
     "NYTimes": "🇺🇸",
     "NY Times": "🇺🇸",
     "The New York Times": "🇺🇸",
     "CNBC": "🇺🇸",
     "CNBC Top News": "🇺🇸",
     "WSJ Markets": "🇺🇸",
+    "The Wall Street Journal": "🇺🇸",
     "Wall Street Journal": "🇺🇸",
     "MarketWatch": "🇺🇸",
     "CoinDesk": "🇺🇸",
@@ -45,6 +60,50 @@ FLAGS = {
     "Engadget": "🇺🇸",
     "WIRED": "🇺🇸",
     "CENTCOM": "🇺🇸",
+    "U.S. Central Command": "🇺🇸",
+    "Axios": "🇺🇸",
+    "NPR": "🇺🇸",
+    "NPR World": "🇺🇸",
+    "NBC News": "🇺🇸",
+    "CBS News": "🇺🇸",
+    "ABC News": "🇺🇸",
+    "Politico": "🇺🇸",
+    "The Hill": "🇺🇸",
+    "The Washington Post": "🇺🇸",
+    "Los Angeles Times": "🇺🇸",
+    "Google News World": "🇺🇸",
+
+    # Canada
+    "CBC News": "🇨🇦",
+
+    # Australia
+    "ABC News Australia": "🇦🇺",
+
+    # India
+    "Times of India": "🇮🇳",
+    "NDTV": "🇮🇳",
+
+    # Hong Kong
+    "South China Morning Post": "🇭🇰",
+
+    # Germany
+    "Deutsche Welle": "🇩🇪",
+    "Der Spiegel International": "🇩🇪",
+    "Spiegel": "🇩🇪",
+    "Kicker": "🇩🇪",
+    "Bild": "🇩🇪",
+    "Transfermarkt": "🇩🇪",
+
+    # France
+    "AFP": "🇫🇷",
+    "France 24": "🇫🇷",
+    "France 24 Middle East": "🇫🇷",
+    "L'Équipe": "🇫🇷",
+    "API-Football": "🇫🇷",
+
+    # European Union
+    "Euronews": "🇪🇺",
+    "Politico Europe": "🇪🇺",
 
     # Italy
     "Di Marzio": "🇮🇹",
@@ -57,18 +116,6 @@ FLAGS = {
     "Marca": "🇪🇸",
     "AS": "🇪🇸",
 
-    # France
-    "L'Équipe": "🇫🇷",
-    "AFP": "🇫🇷",
-    "Euronews": "🇫🇷",
-    "API-Football": "🇫🇷",
-    "France 24": "🇫🇷",
-
-    # Germany
-    "Kicker": "🇩🇪",
-    "Bild": "🇩🇪",
-    "Transfermarkt": "🇩🇪",
-
     # Qatar
     "Al Jazeera": "🇶🇦",
 
@@ -78,9 +125,13 @@ FLAGS = {
     # Israel
     "The Jerusalem Post": "🇮🇱",
     "i24NEWS": "🇮🇱",
-
-    # Cyprus
-    "Investing.com": "🇨🇾",
+    "i24News": "🇮🇱",
+    "Israel Hayom": "🇮🇱",
+    "Israel 14": "🇮🇱",
+    "KAN News": "🇮🇱",
+    "Channel 12 Israel": "🇮🇱",
+    "The Times of Israel": "🇮🇱",
+    "Times of Israel": "🇮🇱",
 
     # Iran
     "Tasnim News": "🇮🇷",
@@ -93,8 +144,6 @@ FLAGS = {
     "Tabnak": "🇮🇷",
     "YJC": "🇮🇷",
     "Vahid Online": "🇮🇷",
-
-    # Iranian economy sources
     "تجارت‌نیوز": "🇮🇷",
     "تجارت نیوز": "🇮🇷",
     "Tejarat News": "🇮🇷",
@@ -106,8 +155,6 @@ FLAGS = {
     "اقتصادنیوز": "🇮🇷",
     "اقتصاد نیوز": "🇮🇷",
     "Eghtesad News": "🇮🇷",
-
-    # Iranian technology sources
     "دیجیاتو": "🇮🇷",
     "Digiato": "🇮🇷",
     "ویجیاتو": "🇮🇷",
@@ -121,42 +168,75 @@ FLAGS = {
     # Switzerland
     "UEFA": "🇨🇭",
     "FIFA": "🇨🇭",
+
+    # Cyprus
+    "Investing.com": "🇨🇾",
 }
 
 _NORMALIZED_FLAGS = {
-    key.strip().lower(): value
+    key.strip().casefold(): value
     for key, value in FLAGS.items()
 }
 
+# پرچم بر اساس کد کشور در فایل تنظیمات منبع
+COUNTRY_FLAGS = {
+    "GB": "🇬🇧",
+    "US": "🇺🇸",
+    "CA": "🇨🇦",
+    "AU": "🇦🇺",
+    "IN": "🇮🇳",
+    "HK": "🇭🇰",
+    "DE": "🇩🇪",
+    "FR": "🇫🇷",
+    "IT": "🇮🇹",
+    "ES": "🇪🇸",
+    "QA": "🇶🇦",
+    "SA": "🇸🇦",
+    "IL": "🇮🇱",
+    "IR": "🇮🇷",
+    "NO": "🇳🇴",
+    "CH": "🇨🇭",
+    "CY": "🇨🇾",
+    "EU": "🇪🇺",
+}
 
-def get_flag(source):
+
+def get_flag(source, country=None, flag=None):
     """
-    Return the flag for a known news source.
-    Supports exact names and source names with suffixes.
+    تعیین پرچم منبع خبری.
+    اولویت: پرچم صریح منبع، کد کشور، سپس نام رسانه.
     """
+
+    if flag and str(flag).strip() not in ("🌍", ""):
+        return str(flag).strip()
+
+    if country:
+        country_code = str(country).strip().upper()
+        country_flag = COUNTRY_FLAGS.get(country_code)
+        if country_flag:
+            return country_flag
 
     if not source:
         return "🌍"
 
-    name = str(source).strip().lower()
-
+    name = str(source).strip().casefold()
     if not name:
         return "🌍"
 
-    # First, try an exact match.
-    flag = _NORMALIZED_FLAGS.get(name)
+    matched = _NORMALIZED_FLAGS.get(name)
+    if matched:
+        return matched
 
-    if flag:
-        return flag
-
-    # Then match known source prefixes, longest names first.
-    # Example: "BBC Football RSS".
+    # تطبیق نام‌های دارای پسوند، مانند "BBC Football RSS"
     for known_name in sorted(
         _NORMALIZED_FLAGS,
         key=len,
         reverse=True,
     ):
-        if name.startswith(known_name + " "):
+        if (
+            name.startswith(known_name + " ")
+            or name.endswith(" " + known_name)
+        ):
             return _NORMALIZED_FLAGS[known_name]
 
     return "🌍"
