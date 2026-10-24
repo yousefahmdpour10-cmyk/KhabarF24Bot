@@ -1,0 +1,37 @@
+name: KhabarF24 Daily Weather
+
+on:
+  schedule:
+    # هر روز ساعت 03:30 UTC، برابر با 07:00 صبح ایران
+    - cron: "30 3 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: khabarf24-daily-weather
+  cancel-in-progress: false
+
+jobs:
+  publish-weather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: KhabarF24-v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Publish weather report
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
+        run: python weather_main.py
