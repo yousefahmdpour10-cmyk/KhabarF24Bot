@@ -1,10 +1,11 @@
 """
 Sport Detector
 
-تشخیص رشته ورزشی با امتیازدهی به کلیدواژه‌ها
-و استفاده از دسته‌بندی منبع به‌عنوان سرنخ.
+تشخیص رشته ورزشی با امتیازدهی به کلیدواژه‌ها،
+برچسب منبع و الگوهای نتیجه مسابقات.
 """
 
+import re
 from collections import defaultdict
 
 from app.models.raw_news import RawNews
@@ -24,29 +25,84 @@ WEAK_KEYWORDS = {
 
 MIN_SPORT_SCORE = 2
 
+FOOTBALL_HINTS = {
+    "football",
+    "soccer",
+    "premier_league",
+    "champions_league",
+    "europa_league",
+}
+
+FOOTBALL_SOURCE_IDS = {
+    "bbc_football",
+    "espn_soccer",
+}
+
+# نام تیم‌های شناخته‌شده برای تشخیص نتیجه مسابقات فوتبال فارسی
+PERSIAN_FOOTBALL_TEAMS = (
+    "استقلال",
+    "پرسپولیس",
+    "سپاهان",
+    "تراکتور",
+    "ذوب آهن",
+    "ذوب‌آهن",
+    "فولاد",
+    "گل گهر",
+    "گل‌گهر",
+    "ملوان",
+    "پیکان",
+    "شمس آذر",
+    "شمس‌آذر",
+    "استقلال خوزستان",
+    "مس رفسنجان",
+    "مس شهر بابک",
+    "خیبر خرم آباد",
+    "خیبر خرم‌آباد",
+    "چادرملو",
+    "آلومینیوم اراک",
+    "نساجی",
+    "هوادار",
+    "بایرن مونیخ",
+    "منچستریونایتد",
+    "منچستر یونایتد",
+    "منچسترسیتی",
+    "منچستر سیتی",
+    "لیورپول",
+    "آرسنال",
+    "چلسی",
+    "تاتنهام",
+    "رئال مادرید",
+    "بارسلونا",
+    "اتلتیکو مادرید",
+    "یوونتوس",
+    "اینتر",
+    "میلان",
+    "پاری سن ژرمن",
+    "پاری‌سن‌ژرمن",
+    "دورتموند",
+    "ناپولی",
+)
+
+# اعداد فارسی، عربی و لاتین در نتیجه مسابقات
+DIGITS = "0-9۰-۹٠-٩"
+
+SCORE_PATTERN = re.compile(
+    rf"[{DIGITS}]+\s*[-–—:]\s*[{DIGITS}]+"
+)
+
 
 class SportDetector:
+    """تشخیص رشته ورزشی و ثبت اطلاعات رشته."""
 
     async def process(self, news: RawNews) -> RawNews:
         existing_sport = getattr(news, "sport", None)
 
         if existing_sport and existing_sport in SPORTS:
-            selected = SPORTS[existing_sport]
-            news.sport_name = (
-                getattr(news, "sport_name", None)
-                or selected.get("name")
-            )
-            news.sport_emoji = (
-                getattr(news, "sport_emoji", None)
-                or selected.get("emoji")
-            )
-            news.sport_hashtag = (
-                getattr(news, "sport_hashtag", None)
-                or selected.get("hashtag")
-            )
+            self._set_sport(news, existing_sport)
+
             logger.info(
                 "Sport: %s (از قبل مشخص شده)",
-                news.sport_name,
+                news.sport_name or existing_sport,
             )
             return news
 
@@ -54,47 +110,46 @@ class SportDetector:
         summary = getattr(news, "summary", "") or ""
         content = getattr(news, "content", "") or ""
 
-        title_summary = f"{title} {summary}"
-        full_text = f"{title_summary} {content}"
+        title_summary = f"{title} {summary}".strip()
+        full_text = f"{title_summary} {content}".strip()
 
         scores = defaultdict(int)
         matched_keywords = defaultdict(list)
 
         # تشخیص رشته با استفاده از کلیدواژه‌ها
         for sport_id, sport_data in SPORTS.items():
-            keywords = sport_data.get("keywords", [])
-
-            for keyword in keywords:
+            for keyword in sport_data.get("keywords", []):
                 if not keyword:
                     continue
 
-                in_title = keyword_in_text(
-                    keyword, title_summary
+                in_title_summary = keyword_in_text(
+                    keyword,
+                    title_summary,
                 )
-                in_content = (
-                    in_title
+
+                in_full_text = (
+                    in_title_summary
                     or keyword_in_text(keyword, full_text)
                 )
 
-                if not in_content:
+                if not in_full_text:
                     continue
 
                 normalized = keyword.strip().lower()
-
                 weight = (
                     1 if normalized in WEAK_KEYWORDS else 2
                 )
 
-                if in_title:
+                if in_title_summary:
                     weight += 1
 
                 scores[sport_id] += weight
                 matched_keywords[sport_id].append(keyword)
 
-        # استفاده از دسته‌بندی منبع به‌عنوان سرنخ تکمیلی
-        source_hints = getattr(
-            news, "source_category_hint", []
-        ) or []
+        # سرنخ‌های دسته‌بندی منبع
+        source_hints = (
+            getattr(news, "source_category_hint", None) or []
+        )
 
         source_hints = {
             str(hint).strip().lower()
@@ -106,26 +161,66 @@ class SportDetector:
             getattr(news, "source_id", "") or ""
         ).strip().lower()
 
-        football_hints = {
-            "football",
-            "soccer",
-            "premier_league",
-            "champions_league",
-            "europa_league",
-        }
-
-        # فقط برچسب‌های صریح فوتبال امتیاز می‌گیرند؛
-        # برچسب عمومی sport برای تعیین فوتبال کافی نیست.
+        # منبعی که صریحاً فوتبال را مشخص کرده است.
         if (
-            source_hints & football_hints
-            or source_id in {
-                "bbc_football",
-                "espn_soccer",
-            }
+            source_hints & FOOTBALL_HINTS
+            or source_id in FOOTBALL_SOURCE_IDS
+        ):
+            scores["football"] += 3
+            matched_keywords["football"].append(
+                "football_source_hint"
+            )
+
+        # تشخیص نتیجه فوتبال فارسی:
+        # وجود نتیجه به‌تنهایی کافی نیست؛ باید نام تیم فوتبال
+        # یا نشانه معتبر فوتبال نیز در عنوان وجود داشته باشد.
+        title_has_score = bool(SCORE_PATTERN.search(title))
+
+        title_lower = title.lower()
+        title_has_football_team = any(
+            team.lower() in title_lower
+            for team in PERSIAN_FOOTBALL_TEAMS
+        )
+
+        title_has_football_word = any(
+            keyword_in_text(
+                keyword,
+                title,
+            )
+            for keyword in (
+                "فوتبال",
+                "football",
+                "soccer",
+                "گلزنی",
+                "گلزنان",
+                "گل زد",
+                "گل به ثمر رساند",
+            )
+        )
+
+        source_is_sports = bool(
+            source_hints & {"sport", "sports"}
+        )
+
+        if title_has_score and (
+            title_has_football_team
+            or title_has_football_word
+            or source_is_sports
+        ):
+            scores["football"] += 3
+            matched_keywords["football"].append(
+                "football_match_result"
+            )
+
+        # نام تیم در عنوان، حتی اگر شکل نوشتاری نتیجه متفاوت باشد.
+        # برای جلوگیری از تشخیص اشتباه، این امتیاز فقط وقتی اضافه
+        # می‌شود که عنوان نشانه فوتبالی یا نتیجه مسابقه داشته باشد.
+        if title_has_football_team and (
+            title_has_score or title_has_football_word
         ):
             scores["football"] += 2
             matched_keywords["football"].append(
-                "source_category_hint"
+                "football_team_in_title"
             )
 
         if not scores:
@@ -139,9 +234,7 @@ class SportDetector:
         )
 
         best_sport, best_score = ranked[0]
-        second_score = (
-            ranked[1][1] if len(ranked) > 1 else 0
-        )
+        second_score = ranked[1][1] if len(ranked) > 1 else 0
 
         if best_sport not in SPORTS:
             self._clear_sport(news)
@@ -151,8 +244,7 @@ class SportDetector:
             self._clear_sport(news)
             return news
 
-        # اگر دو رشته امتیاز برابر داشته باشند،
-        # از انتخاب تصادفی رشته جلوگیری می‌کنیم.
+        # در صورت برابر بودن امتیازها، رشته را حدس نمی‌زنیم.
         if second_score == best_score:
             logger.info(
                 "Sport: نامشخص (امتیاز برابر بین رشته‌ها: %s)",
@@ -165,12 +257,7 @@ class SportDetector:
             self._clear_sport(news)
             return news
 
-        selected = SPORTS[best_sport]
-
-        news.sport = best_sport
-        news.sport_name = selected.get("name")
-        news.sport_emoji = selected.get("emoji")
-        news.sport_hashtag = selected.get("hashtag")
+        self._set_sport(news, best_sport)
 
         logger.info(
             "Sport: %s | score=%s | keywords=%s",
@@ -182,7 +269,20 @@ class SportDetector:
         return news
 
     @staticmethod
+    def _set_sport(news: RawNews, sport_id: str) -> None:
+        """ثبت رشته و اطلاعات نمایشی آن."""
+
+        selected = SPORTS[sport_id]
+
+        news.sport = sport_id
+        news.sport_name = selected.get("name")
+        news.sport_emoji = selected.get("emoji")
+        news.sport_hashtag = selected.get("hashtag")
+
+    @staticmethod
     def _clear_sport(news: RawNews) -> None:
+        """پاک‌کردن تشخیص رشته نامعتبر یا نامشخص."""
+
         news.sport = None
         news.sport_name = None
         news.sport_emoji = None
