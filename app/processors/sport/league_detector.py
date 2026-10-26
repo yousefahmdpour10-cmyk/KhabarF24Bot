@@ -6,7 +6,6 @@ from typing import Optional
 LEAGUES = {
 "premier_league": [
 "premier league",
-"premier league",
 "لیگ برتر انگلیس",
 ],
 "champions_league": [
@@ -55,7 +54,6 @@ def detect_league(text: str) -> Optional[str]:
 if not text:
 return None
 
-```
 normalized = re.sub(r"\s+", " ", text).casefold()
 
 for league, keywords in LEAGUES.items():
