@@ -1,43 +1,66 @@
-import re
+"""تشخیص لیگ و رقابت ورزشی از متن خبر."""
 
-def detect_league(text):
+
+import re
+from typing import Optional
+
+LEAGUES = {
+"premier_league": [
+"premier league",
+"لیگ برتر انگلیس",
+],
+"champions_league": [
+"champions league",
+"uefa champions league",
+"لیگ قهرمانان اروپا",
+],
+"europa_league": [
+"europa league",
+"لیگ اروپا",
+],
+"la_liga": [
+"la liga",
+"لالیگا",
+],
+"serie_a": [
+"serie a",
+"سری آ ایتالیا",
+],
+"bundesliga": [
+"bundesliga",
+"بوندسلیگا",
+],
+"ligue_1": [
+"ligue 1",
+"لوشامپیونه",
+],
+"world_cup": [
+"world cup",
+"جام جهانی",
+],
+"asian_champions_league": [
+"afc champions league",
+"لیگ قهرمانان آسیا",
+],
+"iran_premier_league": [
+"persian gulf pro league",
+"iran pro league",
+"لیگ برتر ایران",
+"لیگ برتر فوتبال ایران",
+],
+}
+
+def detect_league(text: str) -> Optional[str]:
+"""نام رقابت را از متن پیدا می‌کند؛ در صورت نبود، None برمی‌گرداند."""
 if not text:
 return None
 
-text = re.sub(r"\s+", " ", text).casefold()
 
-leagues = {
-    "champions_league": [
-        "champions league",
-        "لیگ قهرمانان اروپا",
-    ],
-    "europa_league": [
-        "europa league",
-        "لیگ اروپا",
-    ],
-    "premier_league": [
-        "premier league",
-        "لیگ برتر انگلیس",
-    ],
-    "la_liga": ["la liga", "لالیگا"],
-    "serie_a": ["serie a", "سری آ ایتالیا"],
-    "bundesliga": ["bundesliga", "بوندسلیگا"],
-    "ligue_1": ["ligue 1", "لوشامپیونه"],
-    "world_cup": ["world cup", "جام جهانی"],
-    "asian_champions_league": [
-        "afc champions league",
-        "لیگ قهرمانان آسیا",
-    ],
-    "iran_premier_league": [
-        "persian gulf pro league",
-        "iran pro league",
-        "لیگ برتر ایران",
-    ],
-}
+normalized = re.sub(r"\s+", " ", text).casefold()
 
-for league, keywords in leagues.items():
+for league, keywords in LEAGUES.items():
     for keyword in keywords:
-        if keyword.casefold() in text:
+        if keyword.casefold() in normalized:
             return league
 
 return None
