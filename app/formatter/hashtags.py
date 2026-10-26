@@ -14,16 +14,31 @@ CATEGORY_TAGS = {
     "sport": "#ورزش",
 }
 
+# کلیدها حروف کوچکِ اسم مسابقه‌اند (همان اسم‌های league_detector.py)
 LEAGUE_TAGS = {
+    "champions league": "#لیگ_قهرمانان",
+    "afc champions league": "#لیگ_قهرمانان_آسیا",
+    "europa league": "#لیگ_اروپا",
+    "conference league": "#کنفرانس_لیگ",
+    "nations league": "#لیگ_ملتها",
+    "world cup": "#جام_جهانی",
+    "club world cup": "#جام_باشگاههای_جهان",
+    "asian cup": "#جام_ملتهای_آسیا",
     "premier league": "#پریمیرلیگ",
     "la liga": "#لالیگا",
     "serie a": "#سری_آ",
     "bundesliga": "#بوندسلیگا",
     "ligue 1": "#لیگ_۱",
-    "champions league": "#لیگ_قهرمانان",
-    "europa league": "#لیگ_اروپا",
-    "conference league": "#کنفرانس_لیگ",
+    "fa cup": "#جام_حذفی_انگلیس",
+    "carabao cup": "#جام_اتحادیه_انگلیس",
+    "copa del rey": "#کوپا_دل_ری",
+    "persian gulf pro league": "#لیگ_برتر_ایران",
     "nba": "#NBA",
+    "euroleague": "#یورولیگ",
+    "wimbledon": "#ویمبلدون",
+    "australian open": "#اوپن_استرالیا",
+    "roland garros": "#رولان_گاروس",
+    "us open": "#اوپن_آمریکا",
     "vnl": "#VNL",
     "fivb": "#والیبال",
 }
@@ -50,7 +65,7 @@ class HashtagBuilder:
 
         if getattr(news, "league", None):
             tag = LEAGUE_TAGS.get(
-                news.league.lower()
+                str(news.league).lower()
             )
             if tag and tag not in hashtags:
                 hashtags.append(tag)
@@ -58,4 +73,5 @@ class HashtagBuilder:
         if getattr(news, "is_breaking", False):
             hashtags.append(BREAKING_TAG)
 
-        return " ".join(hashtags)
+        # هر هشتگ در یک خط جدا (نه کنار هم با فاصله)
+        return "\n".join(hashtags)
