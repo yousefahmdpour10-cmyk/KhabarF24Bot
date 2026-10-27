@@ -8,7 +8,7 @@ CATEGORY_TAGS = {
     "iran": "#ایران",
     "politics": "#سیاسی",
     "economy": "#اقتصاد",
-    "technology": "#فناوری",
+    "technology": "#تکنولوژی",
     "health": "#سلامت",
     "weather": "#هواشناسی",
     "sport": "#ورزش",
