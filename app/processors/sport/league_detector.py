@@ -1,67 +1,100 @@
-"""تشخیص لیگ و رقابت ورزشی از متن خبر."""
+"""
+League Detector
 
-import re
+تشخیص مسابقه (لیگ یا جام) از متن خبر، برای هشتگ مسابقات.
+اسم‌های این فایل باید با کلیدهای LEAGUE_TAGS در app/formatter/hashtags.py
+(به‌صورت حروف کوچک) یکی باشد.
+"""
+
 from typing import Optional
 
+from app.utils.text_matching import keyword_in_text
 
-LEAGUES = {
-    "premier_league": [
-        "premier league",
-        "لیگ برتر انگلیس",
+# ترتیب مهم است: اولین مسابقه‌ای که پیدا شود برنده است. پس مسابقه‌های
+# خاص‌تر (مثل AFC Champions League) باید قبل از مسابقه‌ی عمومی‌تر
+# (Champions League) بیایند، و جام‌های قاره‌ای قبل از لیگ‌های داخلی.
+LEAGUE_KEYWORDS = {
+    "AFC Champions League": [
+        "afc champions league", "لیگ قهرمانان آسیا",
     ],
-    "champions_league": [
-        "champions league",
-        "uefa champions league",
-        "لیگ قهرمانان اروپا",
+    "Club World Cup": [
+        "club world cup", "جام باشگاه‌های جهان", "جام باشگاههای جهان",
     ],
-    "europa_league": [
-        "europa league",
-        "لیگ اروپا",
+    "Champions League": [
+        "champions league", "لیگ قهرمانان",
     ],
-    "la_liga": [
-        "la liga",
-        "لالیگا",
+    "Europa League": [
+        "europa league", "لیگ اروپا",
     ],
-    "serie_a": [
-        "serie a",
-        "سری آ ایتالیا",
+    "Conference League": [
+        "conference league", "کنفرانس لیگ",
     ],
-    "bundesliga": [
-        "bundesliga",
-        "بوندسلیگا",
+    "Nations League": [
+        "nations league", "لیگ ملت‌ها", "لیگ ملتها",
     ],
-    "ligue_1": [
-        "ligue 1",
-        "لوشامپیونه",
+    "World Cup": [
+        "world cup", "جام جهانی",
     ],
-    "world_cup": [
-        "world cup",
-        "جام جهانی",
+    "Asian Cup": [
+        "asian cup", "جام ملت‌های آسیا", "جام ملتهای آسیا",
     ],
-    "asian_champions_league": [
-        "afc champions league",
-        "لیگ قهرمانان آسیا",
+    "Premier League": [
+        "premier league", "لیگ برتر انگلیس", "پریمیرلیگ",
     ],
-    "iran_premier_league": [
-        "persian gulf pro league",
-        "iran pro league",
-        "لیگ برتر ایران",
-        "لیگ برتر فوتبال ایران",
+    "La Liga": [
+        "la liga", "laliga", "لالیگا",
+    ],
+    "Serie A": [
+        "serie a", "سری آ",
+    ],
+    "Bundesliga": [
+        "bundesliga", "بوندسلیگا",
+    ],
+    "Ligue 1": [
+        "ligue 1", "لوشامپیونه",
+    ],
+    "FA Cup": [
+        "fa cup", "جام حذفی انگلیس",
+    ],
+    "Carabao Cup": [
+        "carabao cup", "efl cup",
+    ],
+    "Copa del Rey": [
+        "copa del rey", "کوپا دل ری",
+    ],
+    "Persian Gulf Pro League": [
+        "persian gulf pro league", "لیگ برتر خلیج فارس",
+    ],
+    "NBA": [
+        "nba",
+    ],
+    "EuroLeague": [
+        "euroleague",
+    ],
+    "Wimbledon": [
+        "wimbledon", "ویمبلدون",
+    ],
+    "Australian Open": [
+        "australian open", "اوپن استرالیا",
+    ],
+    "Roland Garros": [
+        "roland garros", "french open", "رولان گاروس",
+    ],
+    "US Open": [
+        "us open", "اوپن آمریکا",
     ],
 }
 
 
 def detect_league(text: str) -> Optional[str]:
-    """تشخیص لیگ از متن خبر."""
+    """اسم مسابقه‌ی اصلی که در متن آمده، یا None."""
 
     if not text:
         return None
 
-    normalized = re.sub(r"\s+", " ", text).casefold()
-
-    for league, keywords in LEAGUES.items():
+    for league, keywords in LEAGUE_KEYWORDS.items():
         for keyword in keywords:
-            if keyword.casefold() in normalized:
+            if keyword_in_text(keyword, text):
                 return league
 
     return None
