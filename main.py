@@ -1,11 +1,22 @@
 """
 KhabarF24 Main Engine
-Priority-based news selection with sports support and safe publishing.
+Priority-based news selection with safe publishing.
+
+اولویت انتشار: خبر فوری ← سیاست ← ایران ← ورزش ← جهان ← بقیه
+(اقتصاد، فناوری، سلامت و ...). اولویت مطلق باعث می‌شد دسته‌های پایین
+هیچ‌وقت نوبت نگیرند (سیاست همیشه خبر تازه دارد)، پس به‌جایش هر دسته
+متناسب با اولویتش «سهم» از پست‌ها می‌گیرد (ROTATION)، و خبر فوری همیشه
+خارج از نوبت اول می‌آید.
 """
 
 import sys
 import time
+import random
 import asyncio
+import logging
+import contextlib
+from collections import defaultdict, deque
+from itertools import zip_longest
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -18,370 +29,176 @@ from app.processors.pipeline import NewsPipeline
 from app.utils.logger import logger
 
 
-# تنظیمات اجرای ربات
 MAX_RUNTIME_SECONDS = 5 * 3600 + 50 * 60
 MAX_PUBLISH_PER_CYCLE = 3
-MAX_CANDIDATES_PER_CYCLE = 50
+MAX_CANDIDATES_PER_CYCLE = 60
 MIN_GAP_BETWEEN_CANDIDATES = 3
 
-MATCH_REPORT_SOURCE_IDS = (
-    "espn_matches",
-    "api_football",
+# نتیجه‌ی ساخت‌یافته‌ی بازی‌ها (ESPN؛ و نام قدیمی API-Football)
+MATCH_REPORT_SOURCE_IDS = ("espn_matches", "api_football")
+
+# دسته‌ها از مهم به کم‌اهمیت. اگر دسته‌ی نوبت‌دار خبر تازه نداشت، سراغ
+# اولین دسته‌ی بعدی (به همین ترتیب) می‌رویم.
+TIER_PRIORITY = ("breaking", "politics", "iran", "sport", "general", "other")
+
+# سهم هر دسته در ۱۲ پست متوالی (خبر فوری خارج از این نوبت‌ها است):
+# سیاست ۴، ایران ۳، ورزش ۲، جهان ۲، بقیه ۱. برای عوض‌کردن سهم‌ها فقط
+# تعداد تکرار هر اسم را در این فهرست تغییر بده.
+ROTATION = (
+    "politics", "iran", "politics", "sport", "general", "iran",
+    "politics", "sport", "other", "iran", "politics", "general",
 )
 
 
-# اولویت دسته‌های خبری
-CATEGORY_PRIORITY = {
-    "breaking": 100,
-    "urgent": 100,
-    "breaking_news": 100,
-    "politics": 90,
-    "iran": 80,
-    "sport": 70,
-    "sports": 70,
-    "football": 70,
-    "world": 60,
-    "international": 60,
-    "economy": 50,
-    "business": 50,
-    "finance": 50,
-    "technology": 40,
-    "tech": 40,
-    "science": 40,
-    "general": 30,
-}
+def classify_tier(news) -> str:
+    """دسته‌ی اولویتِ یک خبر (بعد از تشخیص دسته و ورزش)."""
 
-# کلیدواژه‌های خبر فوری
-BREAKING_KEYWORDS = (
-    "breaking news",
-    "breaking:",
-    "just in:",
-    "urgent:",
-    "خبر فوری",
-    "فوری:",
-    "خبر اضطراری",
-    "فوق العاده",
-    "خبر فوری:",
-)
+    if getattr(news, "is_breaking", False):
+        return "breaking"
 
-# کلیدواژه‌های سیاست
-POLITICS_KEYWORDS = (
-    "politics",
-    "political",
-    "president",
-    "parliament",
-    "government",
-    "election",
-    "minister",
-    "senate",
-    "diplomacy",
-    "sanctions",
-    "سیاست",
-    "سیاسی",
-    "رئیس جمهور",
-    "رئیس‌جمهور",
-    "دولت",
-    "مجلس",
-    "انتخابات",
-    "وزیر",
-    "تحریم",
-    "دیپلماسی",
-)
+    category = str(getattr(news, "category", "") or "").lower()
 
-# کلیدواژه‌های ایران
-IRAN_KEYWORDS = (
-    "iran",
-    "iranian",
-    "tehran",
-    "ایران",
-    "ایرانی",
-    "تهران",
-)
+    if category == "politics":
+        return "politics"
 
-# کلیدواژه‌های جهان
-WORLD_KEYWORDS = (
-    "world",
-    "international",
-    "global",
-    "جهان",
-    "بین الملل",
-    "بین‌الملل",
-)
+    if category == "iran":
+        return "iran"
 
-# کلیدواژه‌های اقتصاد
-ECONOMY_KEYWORDS = (
-    "economy",
-    "economic",
-    "business",
-    "finance",
-    "market",
-    "inflation",
-    "اقتصاد",
-    "اقتصادی",
-    "بازار",
-    "تورم",
-    "بورس",
-    "ارز",
-)
+    if category == "sport" or getattr(news, "sport", None):
+        return "sport"
 
-# کلیدواژه‌های تکنولوژی
-TECH_KEYWORDS = (
-    "technology",
-    "tech",
-    "artificial intelligence",
-    "ai news",
-    "cybersecurity",
-    "science",
-    "تکنولوژی",
-    "فناوری",
-    "هوش مصنوعی",
-    "علم و فناوری",
-)
+    if category in ("", "general", "world"):
+        return "general"
 
-# نشانه‌های منابع ورزشی
-SPORTS_SOURCE_KEYWORDS = (
-    "bbc sport",
-    "bbc football",
-    "espn",
-    "gianluca di marzio",
-    "di marzio",
-    "transfermarkt",
-    "fabrizio romano",
-    "sky sports",
-    "uefa",
-    "fifa",
-    "premier league",
-    "api-football",
-)
-
-SPORTS_CATEGORY_KEYWORDS = (
-    "sport",
-    "sports",
-    "football",
-    "soccer",
-    "basketball",
-    "volleyball",
-    "tennis",
-    "transfer",
-    "premier_league",
-    "champions_league",
-    "europa_league",
-)
+    return "other"
 
 
-def normalize_text(value):
-    """تبدیل مقدار ورودی به متن قابل بررسی."""
-
-    return str(value or "").strip().casefold()
+def _is_persian(news) -> bool:
+    return str(getattr(news, "language", "") or "").lower() == "fa"
 
 
-def is_sports_candidate(news):
-    """تشخیص احتمالی خبر ورزشی از اطلاعات موجود."""
+def _interleave(first, second):
+    merged = []
 
-    source = normalize_text(
-        getattr(news, "source", "")
-    )
+    for a, b in zip_longest(first, second):
+        if a is not None:
+            merged.append(a)
+        if b is not None:
+            merged.append(b)
 
-    source_id = normalize_text(
-        getattr(news, "source_id", "")
-    )
-
-    category = normalize_text(
-        getattr(news, "category", "")
-    )
-
-    sport = normalize_text(
-        getattr(news, "sport", "")
-    )
-
-    if sport:
-        return True
-
-    if any(
-        keyword in source
-        for keyword in SPORTS_SOURCE_KEYWORDS
-    ):
-        return True
-
-    if any(
-        keyword in source_id
-        for keyword in SPORTS_CATEGORY_KEYWORDS
-    ):
-        return True
-
-    if any(
-        keyword in category
-        for keyword in SPORTS_CATEGORY_KEYWORDS
-    ):
-        return True
-
-    return False
+    return merged
 
 
-def get_news_priority(news):
-    """
-    محاسبه اولویت اولیه خبر پیش از اجرای Pipeline.
+def order_tier(tier, items):
+    """ترتیب خبرهای یک دسته."""
 
-    این تابع از دسته موجود، راهنمای دسته منبع،
-    عنوان و خلاصه استفاده می‌کند.
-    """
+    items = list(items)
+    random.shuffle(items)
 
-    title = normalize_text(
-        getattr(news, "title", "")
-    )
+    if tier == "breaking":
+        items.sort(
+            key=lambda n: getattr(n, "importance_score", 0) or 0,
+            reverse=True,
+        )
+        return items
 
-    summary = normalize_text(
-        getattr(news, "summary", "")
-    )
-
-    text = f"{title} {summary}"
-
-    category = normalize_text(
-        getattr(news, "category", "")
-    )
-
-    source_categories = (
-        getattr(news, "source_category_hint", []) or []
-    )
-
-    if isinstance(source_categories, str):
-        source_categories = [source_categories]
-
-    source_categories = [
-        normalize_text(item)
-        for item in source_categories
+    # نتیجه‌ی ساخت‌یافته‌ی بازی‌ها همیشه اول
+    reports = [
+        n for n in items
+        if getattr(n, "source_id", "") in MATCH_REPORT_SOURCE_IDS
     ]
+    report_ids = {id(n) for n in reports}
+    rest = [n for n in items if id(n) not in report_ids]
 
-    # اولویت فوری فقط با نشانه صریح در عنوان
-    # یا دسته‌ای که از قبل مشخص شده باشد.
-    if category in ("breaking", "urgent", "breaking_news"):
-        return 100
+    # فارسی و غیرفارسی نوبتی، تا خبر منابع ایرانی هم دیده شود
+    persian = [n for n in rest if _is_persian(n)]
+    others = [n for n in rest if not _is_persian(n)]
 
-    if any(
-        keyword in title
-        for keyword in BREAKING_KEYWORDS
-    ):
-        return 100
-
-    # دسته خبر یا راهنمای دسته منبع
-    categories = [category] + source_categories
-
-    priority = max(
-        (
-            CATEGORY_PRIORITY.get(item, 0)
-            for item in categories
-        ),
-        default=0,
-    )
-
-    # اگر دسته هنوز مشخص نیست، از متن کمک بگیر.
-    # این تشخیص اولیه است و جای CategoryDetector را نمی‌گیرد.
-    if priority == 0:
-
-        if any(
-            keyword in text
-            for keyword in POLITICS_KEYWORDS
-        ):
-            priority = max(priority, 90)
-
-        if any(
-            keyword in text
-            for keyword in IRAN_KEYWORDS
-        ):
-            priority = max(priority, 80)
-
-        if any(
-            keyword in text
-            for keyword in WORLD_KEYWORDS
-        ):
-            priority = max(priority, 60)
-
-        if any(
-            keyword in text
-            for keyword in ECONOMY_KEYWORDS
-        ):
-            priority = max(priority, 50)
-
-        if any(
-            keyword in text
-            for keyword in TECH_KEYWORDS
-        ):
-            priority = max(priority, 40)
-
-    # ورزش از تشخیص موجود یا منبع ورزشی
-    if is_sports_candidate(news):
-        priority = max(priority, 70)
-
-    # خبرهای مهم ورزشی، در صورت وجود نتیجه ساخت‌یافته
-    if (
-        getattr(news, "source_id", "")
-        in MATCH_REPORT_SOURCE_IDS
-    ):
-        priority = max(priority, 70)
-
-    return priority or CATEGORY_PRIORITY["general"]
+    return reports + _interleave(persian, others)
 
 
-def select_candidates(all_news):
-    """انتخاب و مرتب‌سازی خبرها بر اساس اولویت."""
+class CandidatePicker:
+    """کاندید بعدی را بر اساس اولویت و نوبت انتخاب می‌کند."""
 
-    if not all_news:
-        return []
+    # بین چرخه‌ها حفظ می‌شود (تا ربات ری‌استارت نشده)
+    rotation_index = 0
 
-    # مرتب‌سازی پایدار:
-    # امتیاز بالاتر جلوتر است؛ در امتیاز برابر،
-    # ترتیب اولیه منابع حفظ می‌شود.
-    selected = sorted(
-        all_news,
-        key=get_news_priority,
-        reverse=True,
-    )
+    def __init__(self, tiers):
+        self.queues = {
+            tier: deque(order_tier(tier, tiers.get(tier, [])))
+            for tier in TIER_PRIORITY
+        }
 
-    selected = selected[:MAX_CANDIDATES_PER_CYCLE]
+    def next(self):
+        """(خبر، دسته) یا None وقتی خبری نمانده باشد."""
 
-    sports_count = sum(
-        1
-        for news in selected
-        if is_sports_candidate(news)
-    )
+        if self.queues["breaking"]:
+            return self.queues["breaking"].popleft(), "breaking"
 
-    urgent_count = sum(
-        1
-        for news in selected
-        if get_news_priority(news) == 100
-    )
+        wanted = ROTATION[CandidatePicker.rotation_index % len(ROTATION)]
 
-    logger.info(
-        "Priority selection | "
-        "urgent=%s | sports=%s | selected=%s",
-        urgent_count,
-        sports_count,
-        len(selected),
-    )
+        if self.queues[wanted]:
+            return self.queues[wanted].popleft(), wanted
 
-    return selected
+        for tier in TIER_PRIORITY[1:]:
+            if self.queues[tier]:
+                return self.queues[tier].popleft(), tier
+
+        return None
+
+    @staticmethod
+    def advance():
+        """بعد از هر پست عادی، نوبت به دسته‌ی بعدی می‌رسد."""
+        CandidatePicker.rotation_index += 1
+
+
+@contextlib.contextmanager
+def quiet_logs():
+    """لاگ‌های INFO تشخیص‌دهنده‌ها را موقتاً خاموش می‌کند."""
+
+    logging.disable(logging.INFO)
+
+    try:
+        yield
+    finally:
+        logging.disable(logging.NOTSET)
+
+
+async def classify_all(pipeline, all_news):
+    """
+    رشته‌ی ورزشی، دسته و فوریت همه‌ی خبرها را «قبل از انتخاب» تعیین
+    می‌کنیم تا بشود بر اساس آن‌ها اولویت داد. این مراحل سریع و محلی‌اند
+    (بدون Gemini) و دوباره‌اجراشدنشان داخل pipeline همان نتیجه را می‌دهد.
+    """
+
+    detectors = [
+        getattr(pipeline, name, None)
+        for name in ("sport", "category", "importance")
+    ]
+    detectors = [d for d in detectors if d is not None]
+
+    with quiet_logs():
+        for news in all_news:
+            for detector in detectors:
+                try:
+                    await detector.process(news)
+                except Exception:
+                    break
 
 
 async def main():
     logger.info("KhabarF24 Bot Started Successfully")
 
     start_time = time.monotonic()
-
     fetch_service = FetchService()
     pipeline = NewsPipeline()
     sources = load_sources()
 
-    logger.info("Loaded %s sources", len(sources))
+    logger.info(f"Loaded {len(sources)} sources")
 
     while True:
-
-        if (
-            time.monotonic() - start_time
-            > MAX_RUNTIME_SECONDS
-        ):
-            logger.info(
-                "Maximum runtime reached; exiting cleanly"
-            )
+        if time.monotonic() - start_time > MAX_RUNTIME_SECONDS:
+            logger.info("Maximum runtime reached; exiting cleanly")
             break
 
         try:
@@ -392,51 +209,58 @@ async def main():
             match_reports = sum(
                 1
                 for item in all_news
-                if getattr(item, "source_id", "")
-                in MATCH_REPORT_SOURCE_IDS
+                if getattr(item, "source_id", "") in MATCH_REPORT_SOURCE_IDS
             )
-
             logger.info(
-                "Fetched %s news (%s match reports)",
-                len(all_news),
-                match_reports,
+                f"Fetched {len(all_news)} news "
+                f"({match_reports} match reports)"
             )
 
-            candidates = select_candidates(all_news)
+            await classify_all(pipeline, all_news)
+
+            tiers = defaultdict(list)
+
+            for news in all_news:
+                tiers[classify_tier(news)].append(news)
+
+            persian_sport = sum(
+                1 for n in tiers["sport"] if _is_persian(n)
+            )
+            logger.info(
+                "Tiers: "
+                + ", ".join(f"{t}={len(tiers[t])}" for t in TIER_PRIORITY)
+                + f" | persian_sport={persian_sport}"
+            )
+
+            picker = CandidatePicker(tiers)
 
             published_count = 0
             processed_count = 0
 
-            for news in candidates:
+            while (
+                processed_count < MAX_CANDIDATES_PER_CYCLE
+                and published_count < MAX_PUBLISH_PER_CYCLE
+            ):
+                picked = picker.next()
 
-                if published_count >= MAX_PUBLISH_PER_CYCLE:
+                if picked is None:
                     break
 
-                source = str(
-                    getattr(news, "source", "Unknown")
-                    or "Unknown"
-                )
+                news, tier = picked
 
+                source = str(
+                    getattr(news, "source", "Unknown") or "Unknown"
+                )
                 title = str(
                     getattr(news, "title", "") or ""
                 )[:100]
-
-                priority = get_news_priority(news)
-
-                logger.info(
-                    "Processing candidate | priority=%s | "
-                    "source=%s | title=%s",
-                    priority,
-                    source,
-                    title,
-                )
 
                 try:
                     result = await pipeline.process(news)
                     processed_count += 1
 
-                    # اگر پردازش هوش مصنوعی متوقف یا محدود شده،
-                    # این چرخه را زودتر تمام کن.
+                    # Gemini در حال نوبت‌دهی یا بلوک سهمیه است؛ بقیه‌ی
+                    # کاندیدهای این چرخه را بررسی نمی‌کنیم.
                     if getattr(result, "ai_paused", False):
                         logger.info(
                             "Gemini is pacing or paused; "
@@ -444,43 +268,38 @@ async def main():
                         )
                         break
 
+                    # تکراری‌ها Gemini مصرف نمی‌کنند؛ بدون مکث
                     if getattr(result, "is_duplicate", False):
                         logger.info(
-                            "Skipped duplicate | source=%s | "
-                            "title=%s",
+                            "Skipped duplicate | source=%s | title=%s",
                             source,
                             title,
                         )
-
-                        await asyncio.sleep(
-                            MIN_GAP_BETWEEN_CANDIDATES
-                        )
                         continue
 
-                    if not getattr(
-                        result,
-                        "content_generated",
-                        False,
-                    ):
+                    if not getattr(result, "content_generated", False):
                         logger.info(
                             "Skipped: content not generated | "
                             "source=%s | title=%s",
                             source,
                             title,
                         )
-
-                        await asyncio.sleep(
-                            MIN_GAP_BETWEEN_CANDIDATES
-                        )
+                        await asyncio.sleep(MIN_GAP_BETWEEN_CANDIDATES)
                         continue
 
+                    # این ویژگی در pipeline پس از ارسال تلگرام تنظیم می‌شود.
                     if getattr(result, "published", False):
                         published_count += 1
 
+                        # فقط پست عادی نوبت را جلو می‌برد، نه خبر فوری
+                        if tier != "breaking":
+                            picker.advance()
+
                         logger.info(
-                            "Successful publication: %s/%s",
+                            "Successful publication: %s/%s | tier=%s",
                             published_count,
                             MAX_PUBLISH_PER_CYCLE,
+                            tier,
                         )
                     else:
                         logger.warning(
@@ -498,14 +317,12 @@ async def main():
                         title,
                     )
 
-                await asyncio.sleep(
-                    MIN_GAP_BETWEEN_CANDIDATES
-                )
+                await asyncio.sleep(MIN_GAP_BETWEEN_CANDIDATES)
 
             logger.info(
-                "Cycle finished: processed=%s, published=%s",
-                processed_count,
-                published_count,
+                "Cycle finished: "
+                f"processed={processed_count}, "
+                f"published={published_count}"
             )
 
             await asyncio.sleep(CHECK_INTERVAL)
