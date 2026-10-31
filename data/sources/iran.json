@@ -13,7 +13,8 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "iran"
+      "iran",
+      "general"
     ],
     "priority": 80,
     "check_interval": 60,
@@ -33,7 +34,8 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "iran"
+      "iran",
+      "general"
     ],
     "priority": 80,
     "check_interval": 60,
@@ -53,7 +55,8 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "iran"
+      "iran",
+      "general"
     ],
     "priority": 75,
     "check_interval": 60,
@@ -73,7 +76,8 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "iran"
+      "iran",
+      "general"
     ],
     "priority": 75,
     "check_interval": 60,
@@ -93,7 +97,8 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "iran"
+      "iran",
+      "general"
     ],
     "priority": 70,
     "check_interval": 60,
@@ -199,10 +204,11 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "iran"
+      "iran",
+      "general"
     ],
     "priority": 70,
     "check_interval": 60,
     "enabled": false
   }
-    ]
+]
