@@ -17,7 +17,7 @@
     ],
     "priority": 85,
     "check_interval": 60,
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "bbc_politics",
@@ -37,7 +37,7 @@
     ],
     "priority": 85,
     "check_interval": 60,
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "france24_politics",
@@ -58,7 +58,7 @@
     ],
     "priority": 86,
     "check_interval": 60,
-    "enabled": true
+    "enabled": false
   },
   {
     "id": "al_arabiya_politics",
@@ -124,4 +124,4 @@
     "check_interval": 60,
     "enabled": false
   }
-    ]
+]
