@@ -134,3 +134,4 @@ class _ReputationTable(dict):
 
 
 SOURCE_REPUTATION = _ReputationTable(SOURCE_REPUTATION_MANUAL)
+                         DEFAULT_SOURCE_REPUTATION = 70
