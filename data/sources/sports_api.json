@@ -1,0 +1,21 @@
+[
+  {
+    "id": "espn_matches",
+    "name": "ESPN Matches",
+    "source_type": "sports_api",
+    "url": "",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": false,
+    "has_api": true,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": ["sport", "football"],
+    "priority": 95,
+    "check_interval": 180,
+    "enabled": true
+  }
+]
+
