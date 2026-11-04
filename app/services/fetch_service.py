@@ -4,6 +4,8 @@ Fetch Service
 مدیریت دریافت خبر از تمام منابع
 """
 
+import asyncio
+import time
 from typing import List
 
 from app.fetchers.rss_fetcher import RSSFetcher
@@ -15,6 +17,17 @@ from app.fetchers.sports_api_fetcher import SportsApiFetcher
 from app.models.news_source import NewsSource
 from app.models.raw_news import RawNews
 from app.utils.logger import logger
+
+
+# چند منبع هم‌زمان دریافت شوند. با ۱۰۰+ منبع، دریافت پشت‌سرهم هر چرخه
+# چند دقیقه طول می‌کشید.
+FETCH_CONCURRENCY = 10
+
+# اگر یک منبع بیشتر از این گیر کرد، رد می‌شود و بقیه منتظر آن نمی‌مانند.
+SOURCE_TIMEOUT_SECONDS = 90
+
+# منابع غیرفعال فقط یک‌بار در لاگ نوشته می‌شوند (نه هر چرخه)
+_logged_disabled = set()
 
 
 class FetchService:
@@ -131,31 +144,68 @@ class FetchService:
 
             return []
 
+    async def _fetch_limited(
+        self,
+        source: NewsSource,
+        semaphore: asyncio.Semaphore,
+    ) -> List[RawNews]:
+        """دریافت یک منبع، با سقف هم‌زمانی و مهلت زمانی."""
+
+        async with semaphore:
+            try:
+                return await asyncio.wait_for(
+                    self.fetch_source(source),
+                    timeout=SOURCE_TIMEOUT_SECONDS,
+                )
+
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Fetch timeout ({SOURCE_TIMEOUT_SECONDS}s) for "
+                    f"{source.name}; skipped this cycle"
+                )
+                return []
+
     async def fetch_all(
         self,
         sources: List[NewsSource],
     ) -> List[RawNews]:
         """
-        دریافت خبر از تمام منابع
+        دریافت خبر از تمام منابع (هم‌زمان، حداکثر FETCH_CONCURRENCY تا)
         """
 
-        all_news: List[RawNews] = []
+        started = time.monotonic()
+
+        enabled = []
 
         for source in sources:
 
-            if not getattr(source, "enabled", True):
+            if getattr(source, "enabled", True):
+                enabled.append(source)
+
+            elif source.name not in _logged_disabled:
+                _logged_disabled.add(source.name)
                 logger.info(
                     f"Source disabled: {source.name}"
                 )
-                continue
 
-            news = await self.fetch_source(source)
+        semaphore = asyncio.Semaphore(FETCH_CONCURRENCY)
 
-            all_news.extend(news)
+        results = await asyncio.gather(
+            *[
+                self._fetch_limited(source, semaphore)
+                for source in enabled
+            ]
+        )
+
+        # ترتیب نتیجه‌ها همان ترتیب منابع است
+        all_news: List[RawNews] = [
+            item for batch in results for item in batch
+        ]
 
         logger.info(
             f"Fetched {len(all_news)} news "
-            f"from {len(sources)} sources."
+            f"from {len(enabled)} sources "
+            f"in {time.monotonic() - started:.1f}s."
         )
 
         return all_news
