@@ -7,6 +7,10 @@ Priority-based news selection with safe publishing.
 هیچ‌وقت نوبت نگیرند (سیاست همیشه خبر تازه دارد)، پس به‌جایش هر دسته
 متناسب با اولویتش «سهم» از پست‌ها می‌گیرد (ROTATION)، و خبر فوری همیشه
 خارج از نوبت اول می‌آید.
+
+داخل هر دسته، منابع نوبتی هستند (منبعی که اخیراً کمتر پست داشته جلوتر
+است) و در هر منبع تازه‌ترین خبر اول می‌آید؛ تا یک منبع پرخبر (مثل
+ورزش سه) جلوی بقیه (رومانو، BBC، Sky ...) را نگیرد.
 """
 
 import sys
@@ -15,7 +19,8 @@ import random
 import asyncio
 import logging
 import contextlib
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
+from datetime import datetime, timezone
 from itertools import zip_longest
 from pathlib import Path
 
@@ -49,6 +54,9 @@ ROTATION = (
     "politics", "sport", "other", "iran", "politics", "general",
 )
 
+# منبعِ آخرین پست‌های منتشرشده؛ برای نوبت‌دادن به منابع
+RECENT_SOURCES = deque(maxlen=60)
+
 
 def classify_tier(news) -> str:
     """دسته‌ی اولویتِ یک خبر (بعد از تشخیص دسته و ورزش)."""
@@ -77,27 +85,37 @@ def _is_persian(news) -> bool:
     return str(getattr(news, "language", "") or "").lower() == "fa"
 
 
-def _interleave(first, second):
-    merged = []
+def _source_key(news) -> str:
+    return str(getattr(news, "source", "") or "Unknown")
 
-    for a, b in zip_longest(first, second):
-        if a is not None:
-            merged.append(a)
-        if b is not None:
-            merged.append(b)
 
-    return merged
+def _timestamp(news) -> float:
+    """زمان انتشار خبر (برای تازه‌ترین-اول)؛ نامشخص = ۰."""
+
+    value = getattr(news, "published_at", None)
+
+    if isinstance(value, datetime):
+        try:
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.timestamp()
+        except (ValueError, OverflowError, OSError):
+            return 0.0
+
+    return 0.0
 
 
 def order_tier(tier, items):
     """ترتیب خبرهای یک دسته."""
 
     items = list(items)
-    random.shuffle(items)
 
     if tier == "breaking":
         items.sort(
-            key=lambda n: getattr(n, "importance_score", 0) or 0,
+            key=lambda n: (
+                getattr(n, "importance_score", 0) or 0,
+                _timestamp(n),
+            ),
             reverse=True,
         )
         return items
@@ -110,11 +128,30 @@ def order_tier(tier, items):
     report_ids = {id(n) for n in reports}
     rest = [n for n in items if id(n) not in report_ids]
 
-    # فارسی و غیرفارسی نوبتی، تا خبر منابع ایرانی هم دیده شود
-    persian = [n for n in rest if _is_persian(n)]
-    others = [n for n in rest if not _is_persian(n)]
+    # گروه‌بندی بر اساس منبع؛ در هر منبع تازه‌ترین خبر اول
+    groups = defaultdict(list)
 
-    return reports + _interleave(persian, others)
+    for news in rest:
+        groups[_source_key(news)].append(news)
+
+    for group in groups.values():
+        group.sort(key=_timestamp, reverse=True)
+
+    # منبعی که اخیراً کمتر پست داشته جلوتر است (بین برابرها تصادفی)
+    names = list(groups)
+    random.shuffle(names)
+    recent = Counter(RECENT_SOURCES)
+    names.sort(key=lambda name: recent[name])
+
+    # نوبتی از منبع‌ها: یکی از هر منبع، بعد دور دوم و ...
+    merged = [
+        news
+        for row in zip_longest(*(groups[name] for name in names))
+        for news in row
+        if news is not None
+    ]
+
+    return reports + merged
 
 
 class CandidatePicker:
@@ -186,6 +223,10 @@ async def classify_all(pipeline, all_news):
                     break
 
 
+def _top(counter: Counter, limit: int = 12) -> str:
+    return ", ".join(f"{k}={v}" for k, v in counter.most_common(limit))
+
+
 async def main():
     logger.info("KhabarF24 Bot Started Successfully")
 
@@ -231,11 +272,18 @@ async def main():
                 + ", ".join(f"{t}={len(tiers[t])}" for t in TIER_PRIORITY)
                 + f" | persian_sport={persian_sport}"
             )
+            logger.info(
+                "Sport tier sources: "
+                + _top(Counter(_source_key(n) for n in tiers["sport"]))
+            )
 
             picker = CandidatePicker(tiers)
 
             published_count = 0
             processed_count = 0
+            stats = Counter()
+            published_by_tier = Counter()
+            rejected_sources = Counter()
 
             while (
                 processed_count < MAX_CANDIDATES_PER_CYCLE
@@ -248,9 +296,7 @@ async def main():
 
                 news, tier = picked
 
-                source = str(
-                    getattr(news, "source", "Unknown") or "Unknown"
-                )
+                source = _source_key(news)
                 title = str(
                     getattr(news, "title", "") or ""
                 )[:100]
@@ -262,6 +308,7 @@ async def main():
                     # Gemini در حال نوبت‌دهی یا بلوک سهمیه است؛ بقیه‌ی
                     # کاندیدهای این چرخه را بررسی نمی‌کنیم.
                     if getattr(result, "ai_paused", False):
+                        stats["ai_paused"] += 1
                         logger.info(
                             "Gemini is pacing or paused; "
                             "ending this cycle early"
@@ -270,6 +317,7 @@ async def main():
 
                     # تکراری‌ها Gemini مصرف نمی‌کنند؛ بدون مکث
                     if getattr(result, "is_duplicate", False):
+                        stats["duplicates"] += 1
                         logger.info(
                             "Skipped duplicate | source=%s | title=%s",
                             source,
@@ -278,6 +326,12 @@ async def main():
                         continue
 
                     if not getattr(result, "content_generated", False):
+                        if getattr(result, "is_verified", True) is False:
+                            stats["low_credibility"] += 1
+                            rejected_sources[source] += 1
+                        else:
+                            stats["content_failed"] += 1
+
                         logger.info(
                             "Skipped: content not generated | "
                             "source=%s | title=%s",
@@ -290,18 +344,22 @@ async def main():
                     # این ویژگی در pipeline پس از ارسال تلگرام تنظیم می‌شود.
                     if getattr(result, "published", False):
                         published_count += 1
+                        published_by_tier[tier] += 1
+                        RECENT_SOURCES.append(source)
 
                         # فقط پست عادی نوبت را جلو می‌برد، نه خبر فوری
                         if tier != "breaking":
                             picker.advance()
 
                         logger.info(
-                            "Successful publication: %s/%s | tier=%s",
+                            "Successful publication: %s/%s | tier=%s | source=%s",
                             published_count,
                             MAX_PUBLISH_PER_CYCLE,
                             tier,
+                            source,
                         )
                     else:
+                        stats["publish_failed"] += 1
                         logger.warning(
                             "Not counted as published | "
                             "source=%s | title=%s",
@@ -310,6 +368,7 @@ async def main():
                         )
 
                 except Exception:
+                    stats["errors"] += 1
                     logger.exception(
                         "Candidate failed; continuing | "
                         "source=%s | title=%s",
@@ -322,8 +381,19 @@ async def main():
             logger.info(
                 "Cycle finished: "
                 f"processed={processed_count}, "
-                f"published={published_count}"
+                f"published={published_count} "
+                f"({_top(published_by_tier) or 'none'}), "
+                f"duplicates={stats['duplicates']}, "
+                f"low_credibility={stats['low_credibility']}, "
+                f"content_failed={stats['content_failed']}, "
+                f"publish_failed={stats['publish_failed']}, "
+                f"ai_paused={stats['ai_paused']}"
             )
+
+            if rejected_sources:
+                logger.info(
+                    "Rejected for low credibility: " + _top(rejected_sources)
+                )
 
             await asyncio.sleep(CHECK_INTERVAL)
 
