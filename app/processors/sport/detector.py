@@ -13,9 +13,25 @@ from app.utils.logger import logger
 from app.utils.text_matching import keyword_in_text
 
 
+def _own_names(sport_id: str, sport: dict) -> set:
+    """اسم خود رشته (فارسی و انگلیسی)؛ مثلاً «والیبال» و "volleyball"."""
+
+    names = {
+        str(sport.get("name", "")).lower(),
+        sport_id.replace("_", " ").lower(),
+    }
+
+    return {name for name in names if name}
+
+
 class SportDetector:
     """
     تشخیص رشته ورزشی
+
+    هر کلیدواژه‌ی عادی ۱ امتیاز دارد، ولی خودِ اسم رشته (مثل «والیبال»)
+    ۲ امتیاز. قبلاً اگر دو رشته امتیاز برابر می‌گرفتند، اولین رشته‌ی
+    فهرست (فوتبال) برنده می‌شد؛ برای همین «لیگ برتر والیبال» فوتبال
+    تشخیص داده می‌شد.
     """
 
     async def process(
@@ -37,11 +53,13 @@ class SportDetector:
 
         for sport_id, sport in SPORTS.items():
 
+            own = _own_names(sport_id, sport)
+
             for keyword in sport["keywords"]:
 
                 if keyword_in_text(keyword, text):
 
-                    scores[sport_id] += 1
+                    scores[sport_id] += 2 if keyword.lower() in own else 1
 
         if scores:
 
