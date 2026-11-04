@@ -189,3 +189,9 @@ CATEGORY_KEYWORDS = {
         "Fixture", "Kick-off", "Kickoff",
     ],
 }
+
+from .extra_keywords import EXTRA_KEYWORDS
+
+for _category, _words in EXTRA_KEYWORDS.items():
+    _existing = CATEGORY_KEYWORDS.setdefault(_category, [])
+    _existing.extend([w for w in _words if w not in _existing])
