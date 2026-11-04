@@ -109,6 +109,18 @@ async def _download_video(
                 )
                 return False
 
+            # آدرسی که ویدئو نیست (مثلاً عکس یا صفحه‌ی HTML) را بی‌خطا رد
+            # کن؛ publisher خودش به عکس یا متن برمی‌گردد.
+            content_type = (response.headers.get("Content-Type") or "").lower()
+
+            if content_type.startswith(("image/", "text/")):
+                logger.warning(
+                    "URL is not a video (Content-Type=%s): %s",
+                    content_type,
+                    url[:120],
+                )
+                return False
+
             content_length = response.headers.get("Content-Length")
             if content_length:
                 try:
