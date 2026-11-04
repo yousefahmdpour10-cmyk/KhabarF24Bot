@@ -27,10 +27,17 @@ VIDEO_MIME_TYPES = (
     "application/dash+xml",
 )
 
-VIDEO_KEYS = {
-    "contenturl", "content_url", "videourl", "video_url", "video",
-    "video_src", "videosrc", "playbackurl", "playback_url",
-    "streamurl", "stream_url", "mediacontent", "media_content_url",
+# کلیدهایی که فقط برای ویدئو به کار می‌روند
+STRONG_VIDEO_KEYS = {
+    "videourl", "video_url", "video", "video_src", "videosrc",
+    "playbackurl", "playback_url", "streamurl", "stream_url",
+}
+
+# کلیدهایی که هم برای ویدئو هم برای عکس به کار می‌روند (مثلاً contentUrl
+# در schema.org هم برای VideoObject است هم برای ImageObject). فقط وقتی
+# ویدئو حساب می‌شوند که نوع شیء یا پسوند آدرس نشان بدهد ویدئو است.
+AMBIGUOUS_MEDIA_KEYS = {
+    "contenturl", "content_url", "mediacontent", "media_content_url",
     "mediaurl", "media_url", "fileurl", "file_url",
     "downloadurl", "download_url",
 }
@@ -197,6 +204,9 @@ class MediaCollector:
         elif self.is_player_page(url):
             self.add_embed(url)
 
+        elif looks_like_image(url):
+            return
+
         elif url not in [u for u, _ in self.weak]:
             # آدرسی که صراحتاً در یک فیلد «ویدئو» آمده ولی پسوند ندارد
             # (مثلاً CDN)؛ فقط اگر چیز بهتری نبود استفاده می‌شود.
@@ -338,14 +348,32 @@ def scan_json(text: str, c: MediaCollector) -> None:
             URL_PREFIXES
         )
 
-    def handle_string(key: str, value: str) -> None:
+    def handle_string(
+        key: str,
+        value: str,
+        is_video_node: bool,
+        is_image_node: bool,
+    ) -> None:
         if not is_url_like(value):
             return
 
-        if key in VIDEO_KEYS:
-            c.add_video(value)
-        elif key in IMAGE_KEYS:
+        if key in IMAGE_KEYS:
             c.add_image(value)
+
+        elif key in STRONG_VIDEO_KEYS:
+            c.add_video(value)
+
+        elif key in AMBIGUOUS_MEDIA_KEYS:
+            # نوع شیء تعیین می‌کند: ImageObject عکس است، VideoObject ویدئو.
+            # اگر نوعش معلوم نبود، فقط پسوند آدرس تصمیم می‌گیرد؛ بدون
+            # شواهد کافی هیچ‌کدام حساب نمی‌شود.
+            if is_image_node:
+                c.add_image(value)
+            elif is_video_node or looks_like_video(value):
+                c.add_video(value)
+            elif looks_like_image(value):
+                c.add_image(value)
+
         elif key in {"url", "src", "embedurl"} and looks_like_video(value):
             c.add_video(value)
 
@@ -354,11 +382,17 @@ def scan_json(text: str, c: MediaCollector) -> None:
             return
 
         if isinstance(value, dict):
+            node_type = str(value.get("@type") or value.get("type") or "").lower()
+            encoding = str(value.get("encodingFormat") or "").lower()
+
+            is_video_node = "video" in node_type or encoding.startswith("video/")
+            is_image_node = "image" in node_type or encoding.startswith("image/")
+
             for raw_key, child in value.items():
                 key = re.sub(r"[^a-z0-9_]", "", str(raw_key).lower())
 
                 if isinstance(child, str):
-                    handle_string(key, child)
+                    handle_string(key, child, is_video_node, is_image_node)
                 elif isinstance(child, (dict, list)):
                     walk(child, depth + 1)
 
