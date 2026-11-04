@@ -53,12 +53,16 @@ class HTTPClient:
         self,
         url: str,
         headers: Optional[dict] = None,
+        retries: Optional[int] = None,
     ) -> Optional[str]:
         """
         ارسال GET و بازگرداندن متن پاسخ.
 
         در صورت شکست درخواست، None برمی‌گرداند.
         """
+
+        # retries=1 یعنی فقط یک تلاش (برای صفحه‌های اختیاری مثل صفحه‌ی مقاله)
+        attempts = max(1, retries) if retries is not None else self.retries
 
         request_headers = self.DEFAULT_HEADERS.copy()
 
@@ -72,7 +76,7 @@ class HTTPClient:
             sock_read=self.timeout,
         )
 
-        for attempt in range(1, self.retries + 1):
+        for attempt in range(1, attempts + 1):
             try:
                 async with aiohttp.ClientSession(
                     timeout=timeout,
@@ -96,7 +100,7 @@ class HTTPClient:
                             "HTTP %s | attempt=%s/%s | url=%s",
                             response.status,
                             attempt,
-                            self.retries,
+                            attempts,
                             url,
                         )
 
@@ -111,7 +115,7 @@ class HTTPClient:
                 logger.warning(
                     "HTTP timeout | attempt=%s/%s | url=%s",
                     attempt,
-                    self.retries,
+                    attempts,
                     url,
                 )
 
@@ -119,7 +123,7 @@ class HTTPClient:
                 logger.warning(
                     "HTTP client error | attempt=%s/%s | url=%s | error=%s",
                     attempt,
-                    self.retries,
+                    attempts,
                     url,
                     exc,
                 )
@@ -131,7 +135,7 @@ class HTTPClient:
                 )
                 return None
 
-            if attempt < self.retries:
+            if attempt < attempts:
                 await asyncio.sleep(min(attempt * 2, 6))
 
         return None
