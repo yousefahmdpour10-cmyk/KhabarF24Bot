@@ -16,12 +16,35 @@ _CODE_FENCE_RE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
+# خبری که تیتر کوتاه (کمتر از ۳ کلمه) و متن بسیار کم دارد (مثل «N12»
+# از فیدهای Google News) ارزش یک درخواست Gemini را ندارد.
+MIN_TITLE_WORDS = 3
+MIN_TEXT_CHARS = 40
+
+# خروجی کوتاه‌تر از این بی‌کیفیت است (مثلاً تیتر و خلاصه هر دو «N12»)
+MIN_HEADLINE_CHARS = 12
+MIN_SUMMARY_CHARS = 25
+
 
 class ContentGenerator:
     """تولید تیتر و خلاصه فارسی روان برای خبر خام."""
 
     def __init__(self):
         self.client = GeminiClient()
+
+    @staticmethod
+    def _too_little_input(title: str, text: str) -> bool:
+        words = re.findall(r"\w+", title)
+
+        return len(words) < MIN_TITLE_WORDS and len(text) < MIN_TEXT_CHARS
+
+    @staticmethod
+    def _good_enough(headline: str, summary: str) -> bool:
+        return (
+            len(headline) >= MIN_HEADLINE_CHARS
+            and len(summary) >= MIN_SUMMARY_CHARS
+            and headline.strip() != summary.strip()
+        )
 
     async def process(self, news: RawNews) -> RawNews:
         # متن محتوا و خلاصه را جداگانه دریافت می‌کنیم.
@@ -33,10 +56,23 @@ class ContentGenerator:
 
         news.content_generated = False
         news.ai_paused = False
+        news.junk_content = False
 
-        if not news.title and not source_text:
+        title_text = str(news.title or "").strip()
+
+        if not title_text and not source_text:
             logger.warning(
                 "ContentGenerator: خبر بدون عنوان و متن رد شد"
+            )
+            return news
+
+        # قبل از نوبت‌دهی Gemini: خبرِ بی‌محتوا نه سهمیه مصرف می‌کند نه
+        # منتظر نوبت می‌ماند.
+        if self._too_little_input(title_text, source_text):
+            news.junk_content = True
+            logger.info(
+                "ContentGenerator: متن خبر برای ترجمه کافی نیست -> %s",
+                title_text[:60],
             )
             return news
 
@@ -57,7 +93,7 @@ class ContentGenerator:
             return news
 
         prompt = build_content_prompt(
-            str(news.title or "").strip(),
+            title_text,
             source_text,
         )
 
@@ -89,6 +125,15 @@ class ContentGenerator:
         if not headline or not generated_summary:
             logger.error(
                 "ContentGenerator: تیتر یا خلاصه خالی از Gemini برگشت"
+            )
+            return news
+
+        if not self._good_enough(headline, generated_summary):
+            # دوباره امتحان‌کردنش فقط سهمیه می‌سوزاند
+            news.junk_content = True
+            logger.error(
+                "ContentGenerator: خروجی بی‌کیفیت است (تیتر=%r)",
+                headline[:40],
             )
             return news
 
