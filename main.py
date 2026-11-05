@@ -330,6 +330,18 @@ async def main():
                 + _top(Counter(_source_key(n) for n in tiers["sport"]))
             )
 
+            generic_sport = [
+                n for n in tiers["sport"] if not getattr(n, "sport", None)
+            ]
+            if generic_sport:
+                logger.info(
+                    "Sport category without a specific sport: "
+                    + " | ".join(
+                        f"{_source_key(n)}: {str(getattr(n, 'title', ''))[:50]}"
+                        for n in generic_sport[:8]
+                    )
+                )
+
             picker = CandidatePicker(tiers)
 
             published_count = 0
@@ -373,6 +385,17 @@ async def main():
                         stats["duplicates"] += 1
                         logger.info(
                             "Skipped duplicate | source=%s | title=%s",
+                            source,
+                            title,
+                        )
+                        continue
+
+                    # خبر بی‌محتوا (مثل «N12») برای همیشه رد شد؛ بدون مکث
+                    if getattr(result, "junk_content", False):
+                        stats["junk"] += 1
+                        logger.info(
+                            "Skipped: not enough content | "
+                            "source=%s | title=%s",
                             source,
                             title,
                         )
@@ -438,6 +461,7 @@ async def main():
                 f"({_top(published_by_tier) or 'none'}), "
                 f"duplicates={stats['duplicates']}, "
                 f"low_credibility={stats['low_credibility']}, "
+                f"junk={stats['junk']}, "
                 f"content_failed={stats['content_failed']}, "
                 f"publish_failed={stats['publish_failed']}, "
                 f"ai_paused={stats['ai_paused']}"
