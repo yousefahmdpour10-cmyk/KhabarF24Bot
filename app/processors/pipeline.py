@@ -97,13 +97,49 @@ class NewsPipeline:
 
             news = await self.content_generator.process(news)
 
+            # خبر بی‌محتوا (مثل «N12»): برای همیشه رد می‌شود تا هر چرخه
+            # دوباره امتحان نشود
+            if getattr(news, "junk_content", False):
+                self.duplicate.mark_seen(news)
+
+                logger.info(
+                    "Pipeline Stopped: not enough content | "
+                    "source=%s | title=%s",
+                    source,
+                    title_preview,
+                )
+                return news
+
             if not getattr(news, "content_generated", False):
+
+                # نوبت Gemini نیست: خطا نیست، دوباره امتحان می‌شود
+                if getattr(news, "ai_paused", False):
+                    logger.info(
+                        "Pipeline Paused: Gemini pacing | source=%s",
+                        source,
+                    )
+                    return news
+
                 logger.warning(
                     "Pipeline Stopped: AI content generation failed | "
                     "source=%s | category=%s | sport=%s | title=%s",
                     source,
                     category,
                     sport_name or "not detected",
+                    str(getattr(news, "title", "") or "")[:100],
+                )
+                return news
+
+            # همین خبر قبلاً از منبع دیگری منتشر شده (تیتر فارسی تقریباً
+            # یکسان)؛ دوباره منتشر نمی‌شود.
+            if self.duplicate.is_story_repeat(news):
+                news.is_duplicate = True
+                self.duplicate.mark_seen(news)
+
+                logger.info(
+                    "Pipeline Stopped: same story already published | "
+                    "source=%s | title=%s",
+                    source,
                     str(getattr(news, "title", "") or "")[:100],
                 )
                 return news
@@ -141,4 +177,3 @@ class NewsPipeline:
                 title_preview,
             )
             raise
-                
