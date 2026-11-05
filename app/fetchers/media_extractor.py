@@ -71,6 +71,17 @@ DATA_ATTRS = (
 
 JSON_SCRIPT_IDS = {"__NEXT_DATA__", "__NUXT_DATA__"}
 
+# عکس‌هایی که عکس خبر نیستند: لوگوی Google News (صفحه‌ی میانی لینک‌های
+# news.google.com)، لوگو و آیکن سایت، عکس پیش‌فرض و ...
+PLACEHOLDER_IMAGE_RE = re.compile(
+    r"(googleusercontent\.com|news\.google\.com|gstatic\.com"
+    r"|favicon|apple-touch-icon"
+    r"|[/_.\-]logo[/_.\-]|[/_.\-]logo\."
+    r"|placeholder|default[-_]?(?:image|og|share|thumb)"
+    r"|no[-_]?image|blank\.(?:png|jpe?g|gif)|spacer\.|sprite)",
+    re.IGNORECASE,
+)
+
 URL_PREFIXES = ("http://", "https://", "//", "/")
 
 
@@ -100,6 +111,11 @@ def is_http_url(url: str) -> bool:
         return parsed.scheme in ("http", "https") and bool(parsed.netloc)
     except Exception:
         return False
+
+
+def is_placeholder_image(url: str) -> bool:
+    """آیا این آدرس لوگو/آیکن/عکس پیش‌فرض است، نه عکس خود خبر؟"""
+    return bool(PLACEHOLDER_IMAGE_RE.search(url or ""))
 
 
 def looks_like_image(url: str) -> bool:
@@ -185,6 +201,9 @@ class MediaCollector:
 
     def add_image(self, url: Any) -> None:
         url = self.absolute(url)
+
+        if url and is_placeholder_image(url):
+            return
 
         if url and url not in self.images:
             self.images.append(url)
