@@ -20,12 +20,15 @@ from typing import Dict, List, Optional
 
 from app.fetchers.base_fetcher import BaseFetcher
 from app.models.raw_news import RawNews
-from app.services.sports_api_client import EspnClient, FOLLOWED_LEAGUES
+from app.services.sports_api_client import EspnClient, FOLLOWED_LEAGUES, STATS
 from app.utils.logger import logger
 
 POLL_INTERVAL_SECONDS = 20 * 60
 ACTIVE_HOURS_UTC = set(range(10, 24)) | {0, 1}
 CACHE_TTL_SECONDS = 24 * 3600
+
+# بازی‌ای که بیشتر از این از شروعش گذشته باشد دیگر خبر نیست
+MAX_MATCH_AGE_SECONDS = 36 * 3600
 TEHRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 
 # اگر True شود، بازیکنان ذخیره هم در پست می‌آیند (پست خیلی بلند می‌شود)
@@ -46,6 +49,7 @@ _ASSIST_RE = re.compile(r"Assisted by ([^.]+?)(?: with | following | after |\.|$
 _cache: Dict[str, dict] = {}
 _last_poll_at: Optional[float] = None
 _shape_logged = False
+_last_poll_summary: Optional[str] = None
 
 
 def _to_int(value) -> Optional[int]:
@@ -73,6 +77,11 @@ class SportsApiFetcher(BaseFetcher):
         await self._maybe_poll()
         self._prune()
 
+        logger.info(
+            f"EspnFetcher: cached={len(_cache)} | last poll: "
+            f"{_last_poll_summary or 'not run yet (outside 10:00-01:59 UTC, or waiting)'}"
+        )
+
         return [self._make_news(data) for data in _cache.values()]
 
     # ------------------------------------------------------------------
@@ -80,7 +89,7 @@ class SportsApiFetcher(BaseFetcher):
     # ------------------------------------------------------------------
 
     async def _maybe_poll(self) -> None:
-        global _last_poll_at
+        global _last_poll_at, _last_poll_summary
 
         now = datetime.now(timezone.utc)
 
@@ -95,11 +104,17 @@ class SportsApiFetcher(BaseFetcher):
 
         _last_poll_at = time.monotonic()
 
-        # ESPN روزها را بر اساس ساعت آمریکا می‌شمارد؛ در ساعت‌های اول
-        # روز UTC دیروز را هم می‌گیریم تا بازی‌های دیروقت گم نشوند.
-        dates = [now.strftime("%Y%m%d")]
-        if now.hour <= 5:
-            dates.append((now - timedelta(days=1)).strftime("%Y%m%d"))
+        # فقط بازی‌های «تمام‌شده» را می‌خواهیم. در ساعت‌های میان‌هفته‌ی
+        # روز امروز هنوز بازی‌ای تمام نشده، و بعد از هر ری‌استارت ربات
+        # حافظه خالی است؛ پس همیشه دیروز را هم می‌گیریم (سن بازی با
+        # MAX_MATCH_AGE_SECONDS محدود می‌شود).
+        dates = [
+            now.strftime("%Y%m%d"),
+            (now - timedelta(days=1)).strftime("%Y%m%d"),
+        ]
+
+        before = dict(STATS)
+        total_events = total_finished = new_matches = 0
 
         for slug, league_name in FOLLOWED_LEAGUES.items():
 
@@ -107,6 +122,7 @@ class SportsApiFetcher(BaseFetcher):
 
                 events = await self.client.get_scoreboard(slug, date)
 
+                total_events += len(events)
                 finished = 0
 
                 for event in events:
@@ -118,6 +134,11 @@ class SportsApiFetcher(BaseFetcher):
 
                     finished += 1
 
+                    age = time.time() - data.get("kickoff_ts", data["found_at"])
+
+                    if age > MAX_MATCH_AGE_SECONDS:
+                        continue
+
                     if data["key"] in _cache:
                         continue
 
@@ -128,18 +149,35 @@ class SportsApiFetcher(BaseFetcher):
                         self._apply_summary(data, summary)
 
                     _cache[data["key"]] = data
+                    new_matches += 1
+
+                total_finished += finished
 
                 logger.info(
                     f"EspnFetcher: {league_name} {date} -> {len(events)} بازی، "
                     f"{finished} تمام‌شده"
                 )
 
-        logger.info(f"EspnFetcher: {len(_cache)} بازی در حافظه")
+        requests = {
+            key: value - before.get(key, 0)
+            for key, value in STATS.items()
+            if value - before.get(key, 0)
+        }
+
+        _last_poll_summary = (
+            f"events={total_events}, finished={total_finished}, "
+            f"new={new_matches}, requests={requests}"
+        )
+
+        logger.info(f"EspnFetcher: poll done | {_last_poll_summary} | cached={len(_cache)}")
 
     @staticmethod
     def _prune() -> None:
-        cutoff = time.time() - CACHE_TTL_SECONDS
-        for key in [k for k, d in _cache.items() if d["found_at"] < cutoff]:
+        cutoff = time.time() - MAX_MATCH_AGE_SECONDS
+        for key in [
+            k for k, d in _cache.items()
+            if d.get("kickoff_ts", d["found_at"]) < cutoff
+        ]:
             del _cache[key]
 
     @staticmethod
@@ -253,10 +291,12 @@ class SportsApiFetcher(BaseFetcher):
                 yellow_cards.append(f"{player} ({minute}) - {team}")
 
         match_date = match_time = None
+        kickoff_ts = None
         raw_date = event.get("date") or comp.get("date")
         if raw_date:
             try:
                 dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+                kickoff_ts = dt.timestamp()
                 dt = dt.astimezone(TEHRAN_TZ)
                 match_date = dt.strftime("%Y-%m-%d")
                 match_time = dt.strftime("%H:%M")
@@ -272,6 +312,7 @@ class SportsApiFetcher(BaseFetcher):
             "key": f"{league_name}:{event_id}",
             "event_id": event_id,
             "found_at": time.time(),
+            "kickoff_ts": kickoff_ts or time.time(),
             "home": home_name,
             "away": away_name,
             "home_id": home_id,
