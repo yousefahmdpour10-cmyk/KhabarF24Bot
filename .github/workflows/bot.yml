@@ -43,6 +43,16 @@ jobs:
           python -c "from PIL import Image; print('Pillow OK')"
           python -c "import aiohttp; print('aiohttp OK')"
 
+      # حافظه‌ی خبرهای منتشرشده بین اجراها (برای جلوگیری از انتشار
+      # دوباره‌ی خبرهای قبلی بعد از هر ری‌استارت)
+      - name: Restore seen-news state
+        uses: actions/cache/restore@v4
+        with:
+          path: data/state
+          key: seen-${{ github.run_id }}
+          restore-keys: |
+            seen-
+
       - name: Run bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
@@ -51,4 +61,14 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           SPORTS_API_KEY: ${{ secrets.SPORTS_API_KEY }}
-        run: python main.py
+        run: |
+          mkdir -p data/state
+          python main.py
+
+      # حتی اگر اجرا لغو یا خطادار شد، حافظه ذخیره شود
+      - name: Save seen-news state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/state
+          key: seen-${{ github.run_id }}
