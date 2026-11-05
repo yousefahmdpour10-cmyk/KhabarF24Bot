@@ -57,6 +57,15 @@ ROTATION = (
 # منبعِ آخرین پست‌های منتشرشده؛ برای نوبت‌دادن به منابع
 RECENT_SOURCES = deque(maxlen=60)
 
+# نتیجه‌ی دسته‌بندی هر خبر؛ بیشتر خبرهای هر چرخه همان خبرهای چرخه‌ی قبل‌اند
+# و دسته‌بندی ۲۶۰۰ خبر هر بار حدود ۲۰ ثانیه طول می‌کشید.
+CLASSIFIED = {}
+MAX_CLASSIFIED = 20000
+CLASSIFIED_ATTRS = (
+    "sport", "sport_name", "sport_emoji", "sport_hashtag", "league",
+    "category", "importance_score", "is_breaking", "source_score",
+)
+
 
 def classify_tier(news) -> str:
     """دسته‌ی اولویتِ یک خبر (بعد از تشخیص دسته و ورزش)."""
@@ -201,11 +210,22 @@ def quiet_logs():
         logging.disable(logging.NOTSET)
 
 
+def _classify_key(news) -> str:
+    url = str(getattr(news, "url", "") or "")
+
+    if url:
+        return url
+
+    return f"{_source_key(news)}|{getattr(news, 'title', '')}"
+
+
 async def classify_all(pipeline, all_news):
     """
     رشته‌ی ورزشی، دسته و فوریت همه‌ی خبرها را «قبل از انتخاب» تعیین
     می‌کنیم تا بشود بر اساس آن‌ها اولویت داد. این مراحل سریع و محلی‌اند
     (بدون Gemini) و دوباره‌اجراشدنشان داخل pipeline همان نتیجه را می‌دهد.
+    نتیجه‌ی هر خبر در CLASSIFIED نگه داشته می‌شود تا خبری که قبلاً
+    دسته‌بندی شده دوباره پردازش نشود.
     """
 
     detectors = [
@@ -216,11 +236,28 @@ async def classify_all(pipeline, all_news):
 
     with quiet_logs():
         for news in all_news:
+            key = _classify_key(news)
+            cached = CLASSIFIED.get(key)
+
+            if cached is not None:
+                for attr, value in cached.items():
+                    setattr(news, attr, value)
+                continue
+
             for detector in detectors:
                 try:
                     await detector.process(news)
                 except Exception:
                     break
+
+            if len(CLASSIFIED) >= MAX_CLASSIFIED:
+                CLASSIFIED.pop(next(iter(CLASSIFIED)))
+
+            CLASSIFIED[key] = {
+                attr: getattr(news, attr)
+                for attr in CLASSIFIED_ATTRS
+                if hasattr(news, attr)
+            }
 
 
 def _top(counter: Counter, limit: int = 12) -> str:
@@ -236,6 +273,22 @@ async def main():
     sources = load_sources()
 
     logger.info(f"Loaded {len(sources)} sources")
+
+    api_sources = [
+        src for src in sources
+        if str(getattr(src, "source_type", "")).lower()
+        in ("sports_api", "sports-api", "sportsapi")
+    ]
+    logger.info(
+        "Match-report sources: "
+        + (
+            ", ".join(
+                f"{src.name} (enabled={getattr(src, 'enabled', True)})"
+                for src in api_sources
+            )
+            or "NONE - match reports are disabled (add data/sources/sports_api.json)"
+        )
+    )
 
     while True:
         if time.monotonic() - start_time > MAX_RUNTIME_SECONDS:
