@@ -61,12 +61,20 @@ class SportDetector:
 
                     scores[sport_id] += 2 if keyword.lower() in own else 1
 
+        hint_sport = self._hint_sport(news)
+
         if scores:
 
             best = max(
                 scores,
                 key=scores.get,
             )
+
+            # شواهد ضعیف (فقط یک کلیدواژه‌ی عادی، مثل اسم یک بازیکن) در
+            # برابر منبعی که مشخصاً درباره‌ی یک رشته است: منبع را قبول کن
+            # (مثلاً خبر رئال مادرید که «نادال» دارد، «تنیس» نشود).
+            if hint_sport and best != hint_sport and scores[best] <= 1:
+                best = hint_sport
 
             news.sport = best
 
@@ -88,6 +96,22 @@ class SportDetector:
                     news.league = league
                     logger.info(f"League: {league}")
 
+        elif hint_sport:
+
+            # هیچ کلیدواژه‌ای پیدا نشد ولی منبع مشخصاً فوتبالی (یا ...) است
+            news.sport = hint_sport
+            news.sport_name = SPORTS[hint_sport]["name"]
+            news.sport_emoji = SPORTS[hint_sport]["emoji"]
+            news.sport_hashtag = SPORTS[hint_sport]["hashtag"]
+
+            logger.info(f"Sport: {news.sport_name} (از دسته‌ی منبع)")
+
+            if not getattr(news, "league", None):
+                league = detect_league(text)
+
+                if league:
+                    news.league = league
+
         else:
 
             news.sport = None
@@ -99,3 +123,20 @@ class SportDetector:
             news.sport_hashtag = None
 
         return news
+
+    @staticmethod
+    def _hint_sport(news):
+        """
+        رشته‌ای که دسته‌های منبع مشخصاً نام می‌برند (مثلاً ["sport",
+        "football", "transfer"] ← football). منابع فارسی را کنار
+        می‌گذاریم، چون خبرگزاری‌ها و سایت‌های فارسی چندرشته‌ای‌اند.
+        """
+
+        if str(getattr(news, "language", "") or "").lower() == "fa":
+            return None
+
+        for hint in getattr(news, "source_category_hint", None) or []:
+            if hint in SPORTS:
+                return hint
+
+        return None
