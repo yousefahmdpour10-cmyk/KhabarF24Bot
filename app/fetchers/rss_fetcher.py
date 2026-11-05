@@ -30,6 +30,7 @@ from app.fetchers.media_extractor import (
     extract_page_media,
     guess_video_type,
     is_http_url,
+    is_placeholder_image,
     looks_like_image,
     looks_like_video,
     url_host,
@@ -49,6 +50,10 @@ MAX_CACHED_ARTICLES = 5000
 _ARTICLE_MEDIA_CACHE: Dict[str, Tuple[str, str, str, str]] = {}
 
 BBC_HOSTS = ("bbc.com", "bbc.co.uk", "bbci.co.uk", "bbc.in")
+
+# لینک‌های news.google.com صفحه‌ی میانی (redirect) هستند، نه خود مقاله؛
+# عکسشان همیشه لوگوی Google News است. پس بررسی‌شان نمی‌کنیم.
+NO_PAGE_INSPECTION_HOSTS = ("news.google.com",)
 
 # اگر از یک سایت چند بار پشت‌سرهم خطا گرفتیم (مثلاً ۴۰۱ یا ۴۰۳ چون ربات را
 # بلاک کرده یا مقاله پشت پرداخت است)، مدتی سراغ صفحه‌های آن سایت
@@ -114,6 +119,9 @@ class RSSFetcher(BaseFetcher):
                 if news.video_url or not is_http_url(news.url):
                     continue
 
+                if self._skip_page_inspection(news.url):
+                    continue
+
                 cached = _ARTICLE_MEDIA_CACHE.get(news.url)
 
                 if cached is not None:
@@ -160,7 +168,7 @@ class RSSFetcher(BaseFetcher):
             content=self._extract_content(entry),
             summary=self._clean_text(self._entry_value(entry, "summary", "")),
             url=article_url or "",
-            image_url=self._extract_image_url(entry) or "",
+            image_url=self._clean_image(self._extract_image_url(entry)),
             video_url=video_url or "",
             video_content_type=video_type or "",
             author=self._extract_author(entry),
@@ -197,6 +205,24 @@ class RSSFetcher(BaseFetcher):
             *[inspect_limited(news, url) for news, url in article_jobs],
             return_exceptions=True,
         )
+
+    @staticmethod
+    def _skip_page_inspection(url: str) -> bool:
+        host = url_host(url)
+
+        return any(
+            host == blocked or host.endswith("." + blocked)
+            for blocked in NO_PAGE_INSPECTION_HOSTS
+        )
+
+    @staticmethod
+    def _clean_image(url: str) -> str:
+        """لوگو و عکس پیش‌فرض را عکس خبر حساب نمی‌کنیم."""
+
+        if url and is_placeholder_image(url):
+            return ""
+
+        return url or ""
 
     @staticmethod
     def _remember_article(
@@ -598,31 +624,32 @@ class RSSFetcher(BaseFetcher):
         page_url: str,
     ) -> Tuple[str, str, str, str]:
         return extract_page_media(html, page_url)
-
+ 
     # ------------------------------------------------------------------
     # BBC
     # ------------------------------------------------------------------
-
+ 
     @staticmethod
     def _is_bbc_url(url: str) -> bool:
         host = url_host(url)
-
+ 
         return any(
             host == domain or host.endswith("." + domain)
             for domain in BBC_HOSTS
         )
-
+ 
     @staticmethod
     def _bbc_clips_url(url: str) -> str:
         """Build a bounded BBC clip-discovery URL variant."""
-
+ 
         try:
             parts = urlsplit(url)
-            query = dict(parse_qsl(parts.query, keep_blank_values=True))
-
+            query = 
+dict(parse_qsl(parts.query, keep_blank_values=True))
+ 
             query.setdefault("clips", "1")
             query.setdefault("clip_format", "link")
-
+ 
             return urlunsplit(
                 (
                     parts.scheme,
@@ -633,5 +660,4 @@ class RSSFetcher(BaseFetcher):
                 )
             )
         except Exception:
-            return url
- 
+            return url 
