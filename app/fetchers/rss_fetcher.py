@@ -624,32 +624,31 @@ class RSSFetcher(BaseFetcher):
         page_url: str,
     ) -> Tuple[str, str, str, str]:
         return extract_page_media(html, page_url)
- 
+
     # ------------------------------------------------------------------
     # BBC
     # ------------------------------------------------------------------
- 
+
     @staticmethod
     def _is_bbc_url(url: str) -> bool:
         host = url_host(url)
- 
+
         return any(
             host == domain or host.endswith("." + domain)
             for domain in BBC_HOSTS
         )
- 
+
     @staticmethod
     def _bbc_clips_url(url: str) -> str:
         """Build a bounded BBC clip-discovery URL variant."""
- 
+
         try:
             parts = urlsplit(url)
-            query = 
-dict(parse_qsl(parts.query, keep_blank_values=True))
- 
+            query = dict(parse_qsl(parts.query, keep_blank_values=True))
+
             query.setdefault("clips", "1")
             query.setdefault("clip_format", "link")
- 
+
             return urlunsplit(
                 (
                     parts.scheme,
@@ -660,4 +659,4 @@ dict(parse_qsl(parts.query, keep_blank_values=True))
                 )
             )
         except Exception:
-            return url 
+            return url
