@@ -132,7 +132,11 @@ class NewsPipeline:
 
             # همین خبر قبلاً از منبع دیگری منتشر شده (تیتر فارسی تقریباً
             # یکسان)؛ دوباره منتشر نمی‌شود.
-            if self.duplicate.is_story_repeat(news):
+            # (پست‌های ESPN تیتر فارسیِ قالبی دارند و مستثنی‌اند)
+            if (
+                not getattr(news, "skip_story_repeat", False)
+                and self.duplicate.is_story_repeat(news)
+            ):
                 news.is_duplicate = True
                 self.duplicate.mark_seen(news)
 
