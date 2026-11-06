@@ -44,7 +44,14 @@ MATCH_REPORT_SOURCE_IDS = ("espn_matches", "api_football")
 
 # دسته‌ها از مهم به کم‌اهمیت. اگر دسته‌ی نوبت‌دار خبر تازه نداشت، سراغ
 # اولین دسته‌ی بعدی (به همین ترتیب) می‌رویم.
-TIER_PRIORITY = ("breaking", "politics", "iran", "sport", "general", "other")
+TIER_PRIORITY = (
+    "breaking", "timely", "politics", "iran", "sport", "general", "other",
+)
+
+# پست‌های «وقت‌دار» (ترکیب قبل از بازی، نتیجه‌ی بعد از بازی) زودتر از بقیه
+# می‌آیند، ولی بعد از این‌قدر پست وقت‌دار پشت‌سرهم یک پست عادی نوبت
+# می‌گیرد تا شب‌های پربازی (لیگ قهرمانان) بقیه‌ی خبرها گرسنه نمانند.
+TIMELY_MAX_STREAK = 2
 
 # سهم هر دسته در ۱۲ پست متوالی (خبر فوری خارج از این نوبت‌ها است):
 # سیاست ۴، ایران ۳، ورزش ۲، جهان ۲، بقیه ۱. برای عوض‌کردن سهم‌ها فقط
@@ -72,6 +79,9 @@ def classify_tier(news) -> str:
 
     if getattr(news, "is_breaking", False):
         return "breaking"
+
+    if getattr(news, "timely", False):
+        return "timely"
 
     category = str(getattr(news, "category", "") or "").lower()
 
@@ -129,6 +139,11 @@ def order_tier(tier, items):
         )
         return items
 
+    if tier == "timely":
+        # ترکیب قبل از بازی (بازی نزدیک‌تر اول)، بعد نتیجه‌ی تازه‌ترین بازی
+        items.sort(key=lambda n: getattr(n, "timely_key", (2, 0)))
+        return items
+
     # نتیجه‌ی ساخت‌یافته‌ی بازی‌ها همیشه اول
     reports = [
         n for n in items
@@ -168,6 +183,7 @@ class CandidatePicker:
 
     # بین چرخه‌ها حفظ می‌شود (تا ربات ری‌استارت نشده)
     rotation_index = 0
+    timely_streak = 0
 
     def __init__(self, tiers):
         self.queues = {
@@ -181,14 +197,29 @@ class CandidatePicker:
         if self.queues["breaking"]:
             return self.queues["breaking"].popleft(), "breaking"
 
+        if (
+            self.queues["timely"]
+            and CandidatePicker.timely_streak < TIMELY_MAX_STREAK
+        ):
+            return self.queues["timely"].popleft(), "timely"
+
         wanted = ROTATION[CandidatePicker.rotation_index % len(ROTATION)]
 
         if self.queues[wanted]:
             return self.queues[wanted].popleft(), wanted
 
-        for tier in TIER_PRIORITY[1:]:
+        # دسته‌ی نوبت‌دار خبر تازه نداشت: اول بقیه‌ی دسته‌ها به ترتیب اولویت
+        # (وقت‌دار را کنار می‌گذاریم، وگرنه سقف پشت‌سرهم دور زده می‌شود)
+        for tier in TIER_PRIORITY:
+            if tier in ("breaking", "timely"):
+                continue
+
             if self.queues[tier]:
                 return self.queues[tier].popleft(), tier
+
+        # خبر عادی‌ای نمانده: پست وقت‌دارِ باقی‌مانده سقف را ندارد
+        if self.queues["timely"]:
+            return self.queues["timely"].popleft(), "timely"
 
         return None
 
@@ -423,8 +454,12 @@ async def main():
                         published_by_tier[tier] += 1
                         RECENT_SOURCES.append(source)
 
-                        # فقط پست عادی نوبت را جلو می‌برد، نه خبر فوری
-                        if tier != "breaking":
+                        # پست وقت‌دار سهم خودش را دارد؛ خبر فوری هم نوبت
+                        # را جلو نمی‌برد. فقط پست عادی نوبت را جلو می‌برد.
+                        if tier == "timely":
+                            CandidatePicker.timely_streak += 1
+                        elif tier != "breaking":
+                            CandidatePicker.timely_streak = 0
                             picker.advance()
 
                         logger.info(
