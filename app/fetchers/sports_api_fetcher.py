@@ -34,6 +34,20 @@ TEHRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 # اگر True شود، بازیکنان ذخیره هم در پست می‌آیند (پست خیلی بلند می‌شود)
 INCLUDE_SUBSTITUTES = False
 
+# ترکیب اصلی در یک پست جدا «قبل از بازی» می‌آید؛ پس در پست نتیجه تکرار
+# نمی‌شود. (اگر True شود، پست نتیجه ترکیب را هم دارد.)
+INCLUDE_LINEUP_IN_RESULT = False
+
+# ESPN ترکیب اصلی را حدود یک ساعت قبل از شروع در گزارش بازی می‌گذارد.
+# بازی‌ای را بررسی می‌کنیم که کمتر از این مدت تا شروعش مانده...
+LINEUP_WINDOW_SECONDS = 95 * 60
+# ... یا حداکثر این‌قدر از شروعش گذشته (پست ترکیب بعد از آن بی‌ارزش است)
+LINEUP_LATE_SECONDS = 10 * 60
+# هر تیم حداقل این‌قدر بازیکن اصلی داشته باشد تا «ترکیب اعلام‌شده» حساب شود
+MIN_STARTERS = 9
+# پست ترکیب بعد از این مدت از شروع بازی دیگر ارسال نمی‌شود
+LINEUP_EXPIRY_AFTER_KICKOFF_SECONDS = 2 * 3600
+
 # (اسم آمار در ESPN, برچسب فارسی)
 STAT_LABELS = [
     ("possessionPct", "مالکیت توپ"),
@@ -114,7 +128,7 @@ class SportsApiFetcher(BaseFetcher):
         ]
 
         before = dict(STATS)
-        total_events = total_finished = new_matches = 0
+        total_events = total_finished = new_matches = new_lineups = 0
 
         for slug, league_name in FOLLOWED_LEAGUES.items():
 
@@ -130,6 +144,9 @@ class SportsApiFetcher(BaseFetcher):
                     data = self._extract(event, league_name)
 
                     if not data:
+                        # بازی هنوز تمام نشده: شاید ترکیب اصلی اعلام شده
+                        if await self._maybe_lineup(slug, league_name, event):
+                            new_lineups += 1
                         continue
 
                     finished += 1
@@ -166,19 +183,146 @@ class SportsApiFetcher(BaseFetcher):
 
         _last_poll_summary = (
             f"events={total_events}, finished={total_finished}, "
-            f"new={new_matches}, requests={requests}"
+            f"new={new_matches}, lineups={new_lineups}, requests={requests}"
         )
 
         logger.info(f"EspnFetcher: poll done | {_last_poll_summary} | cached={len(_cache)}")
 
+    async def _maybe_lineup(self, slug: str, league_name: str, event: dict) -> bool:
+        """
+        اگر بازی نزدیک است و ترکیب اصلی دو تیم اعلام شده، یک «پست ترکیب»
+        می‌سازد. True یعنی پست جدید ساخته شد.
+        """
+
+        base = self._extract_upcoming(event, league_name)
+
+        if not base:
+            return False
+
+        key = f"lineup:{league_name}:{base['event_id']}"
+
+        if key in _cache or f"{league_name}:{base['event_id']}" in _cache:
+            return False
+
+        until_kickoff = base["kickoff_ts"] - time.time()
+
+        if not (-LINEUP_LATE_SECONDS <= until_kickoff <= LINEUP_WINDOW_SECONDS):
+            return False
+
+        summary = await self.client.get_summary(slug, base["event_id"])
+
+        if not summary:
+            return False
+
+        self._log_shape_once(summary)
+
+        for part in (self._apply_info, self._apply_rosters):
+            try:
+                part(base, summary)
+            except Exception as e:
+                logger.warning(f"EspnFetcher: بخش {part.__name__} ناموفق -> {e}")
+
+        lineup = base.get("lineup") or {}
+
+        ready = all(
+            len((lineup.get(side) or {}).get("starting") or []) >= MIN_STARTERS
+            for side in ("home", "away")
+        )
+
+        if not ready:
+            return False
+
+        base["key"] = key
+        base["kind"] = "lineup"
+        _cache[key] = base
+
+        logger.info(
+            f"EspnFetcher: ترکیب اصلی اعلام شد -> {base['home']} - {base['away']}"
+        )
+
+        return True
+
+    @staticmethod
+    def _extract_upcoming(event: dict, league_name: str) -> Optional[dict]:
+        """بازی‌ای که هنوز شروع نشده (یا تازه شروع شده)."""
+
+        competitions = event.get("competitions") or []
+        comp = competitions[0] if competitions else {}
+
+        status = (comp.get("status") or event.get("status") or {}).get("type") or {}
+
+        if status.get("completed") or status.get("state") not in ("pre", "in"):
+            return None
+
+        competitors = comp.get("competitors") or []
+        home = next((c for c in competitors if c.get("homeAway") == "home"), None)
+        away = next((c for c in competitors if c.get("homeAway") == "away"), None)
+
+        if not home or not away:
+            return None
+
+        home_name = (home.get("team") or {}).get("displayName")
+        away_name = (away.get("team") or {}).get("displayName")
+
+        if not home_name or not away_name:
+            return None
+
+        kickoff_ts = match_date = match_time = None
+        raw_date = event.get("date") or comp.get("date")
+
+        if raw_date:
+            try:
+                dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+                kickoff_ts = dt.timestamp()
+                dt = dt.astimezone(TEHRAN_TZ)
+                match_date = dt.strftime("%Y-%m-%d")
+                match_time = dt.strftime("%H:%M")
+            except ValueError:
+                pass
+
+        if kickoff_ts is None:
+            return None
+
+        notes = comp.get("notes") or []
+
+        return {
+            "event_id": str(event.get("id", "")),
+            "found_at": time.time(),
+            "kickoff_ts": kickoff_ts,
+            "home": home_name,
+            "away": away_name,
+            "home_id": str((home.get("team") or {}).get("id", "")),
+            "away_id": str((away.get("team") or {}).get("id", "")),
+            "league": league_name,
+            "stage": (notes[0].get("headline") if notes else None) or None,
+            "stadium": (comp.get("venue") or {}).get("fullName"),
+            "referee": None,
+            "match_date": match_date,
+            "match_time": match_time,
+            "lineup": None,
+            "coach": None,
+        }
+
     @staticmethod
     def _prune() -> None:
-        cutoff = time.time() - MAX_MATCH_AGE_SECONDS
-        for key in [
-            k for k, d in _cache.items()
-            if d.get("kickoff_ts", d["found_at"]) < cutoff
-        ]:
-            del _cache[key]
+        now = time.time()
+        cutoff = now - MAX_MATCH_AGE_SECONDS
+
+        for key, data in list(_cache.items()):
+            kickoff = data.get("kickoff_ts", data["found_at"])
+
+            if kickoff < cutoff:
+                del _cache[key]
+
+            elif data.get("kind") == "lineup":
+                # پست ترکیب وقتی دیگر ارزش دارد که بازی شروع نشده باشد
+                result_key = f"{data['league']}:{data['event_id']}"
+
+                if (
+                    result_key in _cache
+                    or now > kickoff + LINEUP_EXPIRY_AFTER_KICKOFF_SECONDS
+                ):
+                    del _cache[key]
 
     @staticmethod
     def _log_shape_once(summary: dict) -> None:
@@ -273,7 +417,7 @@ class SportsApiFetcher(BaseFetcher):
 
             athletes = detail.get("athletesInvolved") or []
             player = _name_of(athletes[0]) if athletes else None
-            player = player or "?"
+            player = player or "بازیکن نامشخص"
             minute = (detail.get("clock") or {}).get("displayValue") or ""
             team = team_names.get(str((detail.get("team") or {}).get("id", "")), "")
 
@@ -501,6 +645,9 @@ class SportsApiFetcher(BaseFetcher):
         تغییر می‌دهد و نباید نسخه‌ی تغییرکرده دوباره استفاده شود.
         """
 
+        if data.get("kind") == "lineup":
+            return self._make_lineup_news(data)
+
         summary = (
             f"Full-time in the {data['league']}: "
             f"{data['home']} {data['home_goals']}-{data['away_goals']} {data['away']}."
@@ -530,7 +677,8 @@ class SportsApiFetcher(BaseFetcher):
         news.assists = list(data["assists"])
         news.yellow_cards = list(data["yellow_cards"])
         news.red_cards = list(data["red_cards"])
-        news.lineup = copy.deepcopy(data["lineup"])
+        # ترکیب در پست جدای «قبل از بازی» آمده؛ اینجا تکرار نمی‌شود
+        news.lineup = copy.deepcopy(data["lineup"]) if INCLUDE_LINEUP_IN_RESULT else None
         news.coach = data["coach"]
         news.stats = list(data["stats"])
         news.tournament = data["league"]
@@ -542,5 +690,70 @@ class SportsApiFetcher(BaseFetcher):
         news.match_time = data["match_time"]
 
         news.source_category_hint = getattr(self.source, "categories", None)
+
+        # نتیجه‌ی بازی وقت‌دار است: main.py آن را زودتر از بقیه‌ی خبرها
+        # (با سقف پشت‌سرهم) منتشر می‌کند. تیتر فارسی همه‌ی نتیجه‌ها شبیه هم
+        # است، پس به «همان خبر از منبع دیگر» هم حساب نمی‌شود.
+        news.timely = True
+        news.timely_key = (1, -data["kickoff_ts"])
+        news.skip_story_repeat = True
+
+        return news
+
+    def _make_lineup_news(self, data: dict) -> RawNews:
+        """پست «ترکیب اصلی» قبل از بازی."""
+
+        lineup = data["lineup"] or {}
+        home_line = (lineup.get("home") or {}).get("name") or data["home"]
+        away_line = (lineup.get("away") or {}).get("name") or data["away"]
+
+        summary = (
+            f"Confirmed starting lineups for {data['home']} vs {data['away']} "
+            f"in the {data['league']}"
+        )
+        if data.get("stadium"):
+            summary += f" at {data['stadium']}"
+        if data.get("match_time"):
+            summary += f". Kick-off {data['match_time']} Tehran time"
+        summary += f". Starting XI: {home_line} and {away_line}."
+
+        news = RawNews(
+            source_id="espn_matches",
+            source="ESPN",
+            title=f"{data['home']} vs {data['away']}: confirmed starting lineups",
+            summary=summary,
+            language="en",
+        )
+
+        news.sport = "football"
+        news.sport_name = "فوتبال"
+        news.sport_emoji = "⚽"
+        news.sport_hashtag = "#فوتبال"
+        news.category = "sport"
+
+        # پست قبل از بازی: نه نتیجه، نه گل، نه آمار
+        news.result = ""
+        news.goals = []
+        news.assists = []
+        news.yellow_cards = []
+        news.red_cards = []
+        news.lineup = copy.deepcopy(data["lineup"])
+        news.coach = data["coach"]
+        news.stats = []
+        news.tournament = data["league"]
+        news.league = data["league"]
+        news.stage = data["stage"]
+        news.stadium = data["stadium"]
+        news.referee = data["referee"]
+        news.match_date = data["match_date"]
+        news.match_time = data["match_time"]
+
+        news.source_category_hint = getattr(self.source, "categories", None)
+
+        # ترکیب فقط تا شروع بازی ارزش دارد: زودتر از بقیه، و اول از همه‌ی
+        # پست‌های وقت‌دار (بازی نزدیک‌تر اول)
+        news.timely = True
+        news.timely_key = (0, data["kickoff_ts"])
+        news.skip_story_repeat = True
 
         return news
