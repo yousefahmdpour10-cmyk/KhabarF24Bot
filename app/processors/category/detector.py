@@ -9,15 +9,26 @@ from app.utils.text_matching import keyword_in_text
 MIN_CATEGORY_SCORE = 2
 
 # در صورت برابر بودن امتیازها، این ترتیب برای انتخاب دسته استفاده می‌شود.
+# «ورزش» آخر است: خبر ورزشیِ واقعی را SportDetector قبل از این مرحله
+# مشخص می‌کند (و همین‌جا برمی‌گردد)، پس ورزش اینجا فقط با کلیدواژه‌های
+# کلی می‌آید و نباید در تساوی بر بقیه‌ی دسته‌ها غلبه کند. (قبلاً اول بود و
+# یک کلمه‌ی مبهم مثل Manager در «asset manager» خبر رمزارز را ورزش می‌کرد.)
 CATEGORY_PRIORITY = (
-    "sport",
     "politics",
     "economy",
     "technology",
     "health",
     "weather",
     "iran",
+    "sport",
 )
+
+# منبعی که اولین دسته‌اش یکی از این‌هاست (BBC Business ← economy،
+# CoinDesk ← economy، BBC Health ← health ...)، مشخصاً درباره‌ی همان
+# موضوع است و ۲ امتیاز اولیه می‌گیرد. politics و iran عمداً نیستند: فیدهای
+# چندموضوعی (جهان، خبرگزاری‌های ایرانی) آن را برای همه‌ی خبرها دارند.
+SOURCE_PRIOR_CATEGORIES = {"economy", "technology", "health"}
+SOURCE_PRIOR_SCORE = 2
 
 
 class CategoryDetector:
@@ -68,6 +79,12 @@ class CategoryDetector:
 
         if normalized_hints & {"sport", "sports", "football"}:
             scores["sport"] += 2
+
+        # منبع تک‌موضوعی (اولین دسته‌اش اقتصاد/فناوری/سلامت): امتیاز اولیه
+        first_hint = str(source_hints[0]).strip().lower() if source_hints else ""
+
+        if first_hint in SOURCE_PRIOR_CATEGORIES:
+            scores[first_hint] += SOURCE_PRIOR_SCORE
 
         # نام ایران به‌تنهایی نباید باعث شود دسته خبر «ایران» شود.
         # برای دسته iran باید نشانه‌های محتوایی کافی وجود داشته باشد.
