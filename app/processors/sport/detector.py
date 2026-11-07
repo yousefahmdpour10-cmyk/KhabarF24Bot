@@ -13,12 +13,22 @@ from app.utils.logger import logger
 from app.utils.text_matching import keyword_in_text
 
 
-def _own_names(sport_id: str, sport: dict) -> set:
-    """اسم خود رشته (فارسی و انگلیسی)؛ مثلاً «والیبال» و "volleyball"."""
+# حداقل امتیاز لازم برای تشخیص یک رشته ورزشی.
+# یک کلیدواژه ضعیف به‌تنهایی نباید خبر را ورزشی کند.
+MIN_SPORT_SCORE = 2
 
+
+def _own_names(sport_id: str, sport: dict) -> set:
+    """
+    اسم خود رشته (فارسی و انگلیسی).
+
+    مثلاً:
+    volleyball / والیبال
+    basketball / بسکتبال
+    """
     names = {
-        str(sport.get("name", "")).lower(),
-        sport_id.replace("_", " ").lower(),
+        str(sport.get("name", "")).strip().lower(),
+        sport_id.replace("_", " ").strip().lower(),
     }
 
     return {name for name in names if name}
@@ -26,12 +36,15 @@ def _own_names(sport_id: str, sport: dict) -> set:
 
 class SportDetector:
     """
-    تشخیص رشته ورزشی
+    تشخیص رشته ورزشی.
 
-    هر کلیدواژه‌ی عادی ۱ امتیاز دارد، ولی خودِ اسم رشته (مثل «والیبال»)
-    ۲ امتیاز. قبلاً اگر دو رشته امتیاز برابر می‌گرفتند، اولین رشته‌ی
-    فهرست (فوتبال) برنده می‌شد؛ برای همین «لیگ برتر والیبال» فوتبال
-    تشخیص داده می‌شد.
+    امتیازدهی:
+    - نام مستقیم رشته: 3 امتیاز
+    - کلیدواژه تخصصی/قوی: 2 امتیاز
+    - کلیدواژه عمومی‌تر: 1 امتیاز
+
+    برای جلوگیری از تشخیص اشتباه، امتیاز نهایی باید حداقل
+    MIN_SPORT_SCORE باشد.
     """
 
     async def process(
@@ -39,27 +52,58 @@ class SportDetector:
         news: RawNews,
     ) -> RawNews:
 
-        # اگر fetcher مطمئنی (مثل ESPN) رشته را از قبل مشخص کرده، آن را
-        # با حدسِ کلیدواژه‌ای خراب نمی‌کنیم.
+        # اگر fetcher مطمئنی (مثل ESPN) رشته را از قبل مشخص کرده،
+        # آن را با حدس کلیدواژه‌ای خراب نمی‌کنیم.
         if getattr(news, "sport", None):
             logger.info(
-                f"Sport: {getattr(news, 'sport_name', news.sport)} (از منبع مشخص شده)"
+                "Sport: %s (از منبع مشخص شده)",
+                getattr(news, "sport_name", news.sport),
             )
             return news
 
-        text = f"{news.title} {news.summary}"
+        title = getattr(news, "title", "") or ""
+        summary = getattr(news, "summary", "") or ""
+
+        # عنوان و خلاصه برای تشخیص رشته کافی هستند و نباید متن کامل
+        # باعث ورود کلیدواژه‌های تصادفی و بی‌ربط شود.
+        text = f"{title} {summary}".strip()
 
         scores = defaultdict(int)
 
         for sport_id, sport in SPORTS.items():
 
-            own = _own_names(sport_id, sport)
+            own_names = _own_names(sport_id, sport)
 
-            for keyword in sport["keywords"]:
+            # کلیدواژه‌های قوی‌تر هر رشته.
+            strong_keywords = set(
+                str(keyword).strip().lower()
+                for keyword in sport.get("strong_keywords", [])
+                if keyword
+            )
 
-                if keyword_in_text(keyword, text):
+            for keyword in sport.get("keywords", []):
 
-                    scores[sport_id] += 2 if keyword.lower() in own else 1
+                if not keyword:
+                    continue
+
+                keyword_normalized = str(keyword).strip().lower()
+
+                if not keyword_in_text(keyword, text):
+                    continue
+
+                # نام مستقیم رشته:
+                # فوتبال / football / بسکتبال / basketball ...
+                if keyword_normalized in own_names:
+                    scores[sport_id] += 3
+
+                # نشانه تخصصی رشته:
+                # MLB / pitcher / NBA / Wimbledon / UFC ...
+                elif keyword_normalized in strong_keywords:
+                    scores[sport_id] += 2
+
+                # سایر کلیدواژه‌ها
+                else:
+                    scores[sport_id] += 1
 
         hint_sport = self._hint_sport(news)
 
@@ -70,73 +114,109 @@ class SportDetector:
                 key=scores.get,
             )
 
-            # شواهد ضعیف (فقط یک کلیدواژه‌ی عادی، مثل اسم یک بازیکن) در
-            # برابر منبعی که مشخصاً درباره‌ی یک رشته است: منبع را قبول کن
-            # (مثلاً خبر رئال مادرید که «نادال» دارد، «تنیس» نشود).
-            if hint_sport and best != hint_sport and scores[best] <= 1:
-                best = hint_sport
+            best_score = scores[best]
 
-            news.sport = best
+            # اگر شواهد کافی برای هیچ رشته‌ای وجود ندارد،
+            # صرفاً به خاطر یک کلمه عمومی نباید ورزش تشخیص داده شود.
+            if best_score < MIN_SPORT_SCORE:
 
-            news.sport_name = SPORTS[best]["name"]
+                # فقط در صورتی از hint منبع استفاده می‌کنیم که
+                # منبع واقعاً تک‌رشته‌ای باشد.
+                if hint_sport:
+                    best = hint_sport
+                    best_score = MIN_SPORT_SCORE
+                else:
+                    best = None
 
-            news.sport_emoji = SPORTS[best]["emoji"]
+            # اگر منبع مشخصاً متعلق به یک رشته است و شواهد متنی
+            # برای رشته دیگری بسیار ضعیف است، hint منبع اولویت دارد.
+            elif hint_sport and best != hint_sport and best_score <= 2:
 
-            news.sport_hashtag = SPORTS[best]["hashtag"]
+                hint_score = scores.get(hint_sport, 0)
 
-            logger.info(
-                f"Sport: {news.sport_name}"
-            )
+                if hint_score >= 2 or best_score <= 1:
+                    best = hint_sport
 
-            # مسابقه (لیگ یا جام) برای هشتگ دوم پست
-            if not getattr(news, "league", None):
-                league = detect_league(text)
+            if best:
 
-                if league:
-                    news.league = league
-                    logger.info(f"League: {league}")
+                news.sport = best
+                news.sport_name = SPORTS[best]["name"]
+                news.sport_emoji = SPORTS[best]["emoji"]
+                news.sport_hashtag = SPORTS[best]["hashtag"]
+
+                logger.info(
+                    "Sport: %s | score=%s | source_hint=%s",
+                    news.sport_name,
+                    scores.get(best, best_score),
+                    hint_sport,
+                )
+
+                # مسابقه / لیگ / جام برای هشتگ دوم پست
+                if not getattr(news, "league", None):
+
+                    league = detect_league(text)
+
+                    if league:
+                        news.league = league
+
+                        logger.info(
+                            "League: %s",
+                            league,
+                        )
+
+                return news
 
         elif hint_sport:
 
-            # هیچ کلیدواژه‌ای پیدا نشد ولی منبع مشخصاً فوتبالی (یا ...) است
+            # هیچ کلیدواژه‌ای پیدا نشده ولی منبع مشخصاً
+            # درباره یک رشته خاص است.
             news.sport = hint_sport
             news.sport_name = SPORTS[hint_sport]["name"]
             news.sport_emoji = SPORTS[hint_sport]["emoji"]
             news.sport_hashtag = SPORTS[hint_sport]["hashtag"]
 
-            logger.info(f"Sport: {news.sport_name} (از دسته‌ی منبع)")
+            logger.info(
+                "Sport: %s (از دسته‌ی منبع)",
+                news.sport_name,
+            )
 
             if not getattr(news, "league", None):
+
                 league = detect_league(text)
 
                 if league:
                     news.league = league
 
-        else:
+            return news
 
-            news.sport = None
-
-            news.sport_name = None
-
-            news.sport_emoji = None
-
-            news.sport_hashtag = None
+        # هیچ تشخیص معتبر ورزشی وجود ندارد.
+        news.sport = None
+        news.sport_name = None
+        news.sport_emoji = None
+        news.sport_hashtag = None
 
         return news
 
     @staticmethod
     def _hint_sport(news):
         """
-        رشته‌ای که دسته‌های منبع مشخصاً نام می‌برند (مثلاً ["sport",
-        "football", "transfer"] ← football). منابع فارسی را کنار
-        می‌گذاریم، چون خبرگزاری‌ها و سایت‌های فارسی چندرشته‌ای‌اند.
+        رشته‌ای که دسته‌های منبع مشخصاً نام می‌برند.
+
+        مثال:
+        ["sport", "football", "transfer"] → football
+
+        منابع فارسی را عمداً کنار می‌گذاریم، چون بسیاری از
+        خبرگزاری‌های فارسی چندرشته‌ای هستند.
         """
 
         if str(getattr(news, "language", "") or "").lower() == "fa":
             return None
 
         for hint in getattr(news, "source_category_hint", None) or []:
-            if hint in SPORTS:
-                return hint
+
+            normalized = str(hint).strip().lower()
+
+            if normalized in SPORTS:
+                return normalized
 
         return None
