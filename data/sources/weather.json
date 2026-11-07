@@ -1,1 +1,176 @@
-[]
+[
+  {
+    "id": "open_meteo",
+    "name": "Open-Meteo",
+    "source_type": "api",
+    "url": "https://api.open-meteo.com/v1/forecast",
+    "country": "CH",
+    "flag": "🌐",
+    "language": "en",
+    "has_rss": false,
+    "has_api": true,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather",
+      "forecast"
+    ],
+    "priority": 100,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "irimo_fa",
+    "name": "Iran Meteorological Organization",
+    "source_type": "rss",
+    "url": "https://cap-sources.s3.amazonaws.com/ir-irimo-fa/rss.xml",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather",
+      "warnings",
+      "severe_weather",
+      "iran"
+    ],
+    "priority": 100,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "irimo_en",
+    "name": "Iran Meteorological Organization",
+    "source_type": "rss",
+    "url": "https://cap-sources.s3.amazonaws.com/ir-irimo-en/rss.xml",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather",
+      "warnings",
+      "severe_weather",
+      "iran"
+    ],
+    "priority": 90,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "bbc_weather",
+    "name": "BBC Weather",
+    "source_type": "rss",
+    "url": "https://weather-broker-cdn.api.bbci.co.uk/en/forecast/rss/3day/2643743",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather"
+    ],
+    "priority": 90,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "noaa_weather",
+    "name": "NOAA Weather",
+    "source_type": "rss",
+    "url": "https://www.noaa.gov/rss.xml",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather",
+      "climate"
+    ],
+    "priority": 95,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "noaa_nws",
+    "name": "US National Weather Service",
+    "source_type": "rss",
+    "url": "https://www.weather.gov/rss",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather",
+      "warnings",
+      "severe_weather"
+    ],
+    "priority": 95,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "metoffice",
+    "name": "Met Office",
+    "source_type": "rss",
+    "url": "https://weather.metoffice.gov.uk/rss",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather",
+      "warnings",
+      "climate"
+    ],
+    "priority": 90,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "noaa_hurricane",
+    "name": "NOAA Hurricane Center",
+    "source_type": "rss",
+    "url": "https://www.nhc.noaa.gov/nhc_at4.xml",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "weather",
+      "hurricane",
+      "severe_weather"
+    ],
+    "priority": 90,
+    "check_interval": 60,
+    "enabled": true
+  }
+]
