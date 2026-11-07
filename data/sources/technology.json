@@ -33,10 +33,9 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "technology",
-      "business"
+      "technology"
     ],
-    "priority": 87,
+    "priority": 90,
     "check_interval": 60,
     "enabled": true
   },
@@ -55,10 +54,9 @@
     "requires_auth": false,
     "categories": [
       "technology",
-      "business",
       "startups"
     ],
-    "priority": 86,
+    "priority": 90,
     "check_interval": 60,
     "enabled": true
   },
@@ -79,7 +77,7 @@
       "technology",
       "science"
     ],
-    "priority": 83,
+    "priority": 88,
     "check_interval": 60,
     "enabled": true
   },
@@ -97,9 +95,10 @@
     "requires_browser": false,
     "requires_auth": false,
     "categories": [
-      "technology"
+      "technology",
+      "gadgets"
     ],
-    "priority": 80,
+    "priority": 84,
     "check_interval": 60,
     "enabled": true
   },
@@ -118,9 +117,360 @@
     "requires_auth": false,
     "categories": [
       "technology",
+      "science",
+      "ai"
+    ],
+    "priority": 87,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "mit_technology_review",
+    "name": "MIT Technology Review",
+    "source_type": "rss",
+    "url": "https://www.technologyreview.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "ai",
       "science"
     ],
+    "priority": 92,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "cnet",
+    "name": "CNET",
+    "source_type": "rss",
+    "url": "https://www.cnet.com/rss/news/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "gadgets",
+      "software"
+    ],
+    "priority": 83,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "zdnet",
+    "name": "ZDNET",
+    "source_type": "rss",
+    "url": "https://www.zdnet.com/news/rss.xml",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "enterprise",
+      "security"
+    ],
+    "priority": 82,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "techradar",
+    "name": "TechRadar",
+    "source_type": "rss",
+    "url": "https://www.techradar.com/rss",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "gadgets"
+    ],
+    "priority": 82,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "android_authority",
+    "name": "Android Authority",
+    "source_type": "rss",
+    "url": "https://www.androidauthority.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "mobile",
+      "android"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "9to5google",
+    "name": "9to5Google",
+    "source_type": "rss",
+    "url": "https://9to5google.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "mobile",
+      "android",
+      "google"
+    ],
+    "priority": 83,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "9to5mac",
+    "name": "9to5Mac",
+    "source_type": "rss",
+    "url": "https://9to5mac.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "mobile",
+      "apple"
+    ],
+    "priority": 83,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "toms_hardware",
+    "name": "Tom's Hardware",
+    "source_type": "rss",
+    "url": "https://www.tomshardware.com/feeds/all",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "hardware",
+      "chips"
+    ],
+    "priority": 84,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "the_register",
+    "name": "The Register",
+    "source_type": "rss",
+    "url": "https://www.theregister.com/headlines.atom",
+    "country": "GB",
+    "flag": "🇬🇧",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "enterprise",
+      "security"
+    ],
     "priority": 81,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "venturebeat",
+    "name": "VentureBeat",
+    "source_type": "rss",
+    "url": "https://venturebeat.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "ai",
+      "startups"
+    ],
+    "priority": 82,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "siliconangle",
+    "name": "SiliconANGLE",
+    "source_type": "rss",
+    "url": "https://siliconangle.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "enterprise",
+      "cloud"
+    ],
+    "priority": 78,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "the_hacker_news",
+    "name": "The Hacker News",
+    "source_type": "rss",
+    "url": "https://feeds.feedburner.com/TheHackersNews",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "security",
+      "cybersecurity"
+    ],
+    "priority": 90,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "bleepingcomputer",
+    "name": "BleepingComputer",
+    "source_type": "rss",
+    "url": "https://www.bleepingcomputer.com/feed/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "security",
+      "cybersecurity"
+    ],
+    "priority": 88,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "hacker_news",
+    "name": "Hacker News",
+    "source_type": "rss",
+    "url": "https://news.ycombinator.com/rss",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "programming",
+      "startups"
+    ],
+    "priority": 78,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "google_ai",
+    "name": "Google AI",
+    "source_type": "rss",
+    "url": "https://blog.google/technology/ai/rss/",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "ai"
+    ],
+    "priority": 86,
+    "check_interval": 60,
+    "enabled": true
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "source_type": "rss",
+    "url": "https://openai.com/news/rss.xml",
+    "country": "US",
+    "flag": "🇺🇸",
+    "language": "en",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": false,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "ai"
+    ],
+    "priority": 88,
     "check_interval": 60,
     "enabled": true
   },
@@ -141,10 +491,35 @@
       "technology",
       "iran"
     ],
-    "priority": 89,
+    "priority": 90,
     "check_interval": 60,
-    "enabled": false,
+    "enabled": true,
     "website_url": "https://digiato.com/"
+  },
+  {
+    "id": "zoomit",
+    "name": "زومیت",
+    "source_type": "rss",
+    "url": "https://www.zoomit.ir/feed/",
+    "country": "IR",
+    "flag": "🇮🇷",
+    "language": "fa",
+    "has_rss": true,
+    "has_api": false,
+    "supports_scraping": true,
+    "requires_browser": false,
+    "requires_auth": false,
+    "categories": [
+      "technology",
+      "ai",
+      "gadgets",
+      "hardware",
+      "iran"
+    ],
+    "priority": 92,
+    "check_interval": 60,
+    "enabled": true,
+    "website_url": "https://www.zoomit.ir/"
   },
   {
     "id": "vigiato",
@@ -163,9 +538,9 @@
       "technology",
       "gaming"
     ],
-    "priority": 87,
+    "priority": 80,
     "check_interval": 60,
-    "enabled": false,
+    "enabled": true,
     "website_url": "https://vigiato.net/"
   }
-    ]
+]
