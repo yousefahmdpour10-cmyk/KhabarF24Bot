@@ -40,7 +40,7 @@ LEAGUE_FA = {
 
 TEAM_COUNTRY_FLAGS = {
     # England
-    "Manchester United": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "Manchester United": "🇬🇧",
     "Man Utd": "🇬🇧",
     "Manchester Utd": "🇬🇧",
     "Liverpool": "🇬🇧",
