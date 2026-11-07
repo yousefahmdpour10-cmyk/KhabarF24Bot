@@ -1,6 +1,9 @@
 """
-KhabarF24 Sports API Fetcher
-دریافت مسابقات فوتبال، نتایج، ترکیب‌های اصلی و اطلاعات تکمیلی
+Sports API Fetcher - KhabarF24
+
+دریافت مسابقات فوتبال از API ورزشی
+و تبدیل آن‌ها به RawNews سازگار با
+Football Match Formatter و Match Prompt.
 """
 
 import asyncio
@@ -10,7 +13,7 @@ import logging
 import os
 import time
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -22,9 +25,9 @@ from app.models.raw_news import RawNews
 logger = logging.getLogger(__name__)
 
 
-# ----------------------------------------------------------------------
-# تنظیمات
-# ----------------------------------------------------------------------
+# =========================================================
+# Configuration
+# =========================================================
 
 POLL_INTERVAL_SECONDS = 20 * 60
 
@@ -34,100 +37,110 @@ CACHE_TTL_SECONDS = 24 * 3600
 
 MAX_MATCH_AGE_SECONDS = 36 * 3600
 
-TEHRAN_TZ = timezone(
-    timedelta(hours=3, minutes=30)
-)
+TEHRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 
-INCLUDE_SUBSTITUTES = False
-
-INCLUDE_LINEUP_IN_RESULT = False
-
-LINEUP_WINDOW_SECONDS = 95 * 60
-
+LINEUP_WINDOW_MINUTES = 95
 LINEUP_LATE_SECONDS = 10 * 60
 
 MIN_STARTERS = 9
 
 LINEUP_EXPIRY_AFTER_KICKOFF_SECONDS = 2 * 3600
 
+INCLUDE_SUBSTITUTES = True
+INCLUDE_LINEUP_IN_RESULT = False
 
-# ----------------------------------------------------------------------
+
+# =========================================================
 # Cache
-# ----------------------------------------------------------------------
+# =========================================================
 
 _cache: Dict[str, Dict[str, Any]] = {}
 
 
-# ----------------------------------------------------------------------
+# =========================================================
 # Sports API Client
-# ----------------------------------------------------------------------
+# =========================================================
 
 class SportsApiClient:
     """
-    کلاینت دریافت اطلاعات مسابقات فوتبال.
+    Client for sports API.
     """
 
-    BASE_URL = os.getenv(
-        "SPORTS_API_BASE_URL",
-        "",
-    )
+    def __init__(self):
+        self.base_url = (
+            os.getenv("SPORTS_API_BASE_URL", "").strip()
+        ).rstrip("/")
 
-    API_KEY = os.getenv(
-        "SPORTS_API_KEY",
-        "",
-    )
+        self.api_key = os.getenv(
+            "SPORTS_API_KEY",
+            ""
+        ).strip()
 
     async def _request(
         self,
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
     ) -> Any:
-
-        if not self.BASE_URL:
-            logger.warning(
-                "SPORTS_API_BASE_URL is not configured"
-            )
+        if not self.base_url:
+            logger.error("SPORTS_API_BASE_URL is not configured.")
             return None
 
         headers = {}
 
-        if self.API_KEY:
-            headers["x-api-key"] = self.API_KEY
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
+            headers["X-API-Key"] = self.api_key
 
-        url = (
-            self.BASE_URL.rstrip("/")
-            + "/"
-            + endpoint.lstrip("/")
-        )
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+
+        timeout = aiohttp.ClientTimeout(total=20)
 
         try:
-            timeout = aiohttp.ClientTimeout(
-                total=30
-            )
-
             async with aiohttp.ClientSession(
-                timeout=timeout,
-                headers=headers,
+                timeout=timeout
             ) as session:
 
                 async with session.get(
                     url,
-                    params=params,
+                    params=params or {},
+                    headers=headers,
                 ) as response:
 
                     if response.status != 200:
                         logger.warning(
-                            "Sports API returned HTTP %s",
+                            "Sports API returned HTTP %s for %s",
                             response.status,
+                            endpoint,
                         )
                         return None
 
-                    return await response.json()
+                    content_type = (
+                        response.headers.get("Content-Type", "")
+                        .lower()
+                    )
 
-        except Exception:
-            logger.exception(
-                "Sports API request failed: %s",
+                    if "json" in content_type:
+                        return await response.json()
+
+                    text = await response.text()
+
+                    try:
+                        return json.loads(text)
+                    except Exception:
+                        return text
+
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Sports API timeout for endpoint: %s",
                 endpoint,
+            )
+            return None
+
+        except Exception as exc:
+            logger.exception(
+                "Sports API request error for %s: %s",
+                endpoint,
+                exc,
             )
             return None
 
@@ -135,16 +148,20 @@ class SportsApiClient:
         self,
         date: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        """
+        دریافت مسابقات پایان‌یافته روز.
+        """
 
-        if date is None:
+        if not date:
             date = datetime.now(
                 timezone.utc
             ).strftime("%Y-%m-%d")
 
         data = await self._request(
-            "fixtures",
-            {
+            "/fixtures",
+            params={
                 "date": date,
+                "status": "FT",
             },
         )
 
@@ -152,17 +169,15 @@ class SportsApiClient:
             return []
 
         if isinstance(data, dict):
-            for key in (
-                "response",
-                "fixtures",
-                "data",
-                "results",
-            ):
-                if isinstance(
-                    data.get(key),
-                    list,
-                ):
-                    return data[key]
+
+            if isinstance(data.get("response"), list):
+                return data["response"]
+
+            if isinstance(data.get("fixtures"), list):
+                return data["fixtures"]
+
+            if isinstance(data.get("data"), list):
+                return data["data"]
 
         if isinstance(data, list):
             return data
@@ -173,9 +188,12 @@ class SportsApiClient:
         self,
         event_id: Any,
     ) -> Optional[Dict[str, Any]]:
+        """
+        دریافت اطلاعات کامل یک مسابقه.
+        """
 
         data = await self._request(
-            f"fixtures/{event_id}"
+            f"/fixtures/{event_id}"
         )
 
         if not data:
@@ -183,41 +201,40 @@ class SportsApiClient:
 
         if isinstance(data, dict):
 
-            for key in (
-                "response",
-                "fixture",
-                "data",
-                "result",
-            ):
-                value = data.get(key)
+            if isinstance(data.get("response"), list):
+                if data["response"]:
+                    return data["response"][0]
 
-                if isinstance(value, dict):
-                    return value
+            if isinstance(data.get("data"), dict):
+                return data["data"]
 
-                if isinstance(value, list) and value:
-                    return value[0]
+            if isinstance(data.get("fixture"), dict):
+                return data["fixture"]
 
             return data
 
         return None
 
 
-# ----------------------------------------------------------------------
+# =========================================================
 # Sports API Fetcher
-# ----------------------------------------------------------------------
+# =========================================================
 
 class SportsApiFetcher:
     """
-    دریافت و تبدیل اطلاعات مسابقات فوتبال
-    به RawNews قابل پردازش در KhabarF24.
+    Fetcher مخصوص منابع ورزشی.
+
+    سازگار با:
+        FetchService -> SportsApiFetcher(source)
     """
 
-    def __init__(self):
+    def __init__(self, source=None):
+        self.source = source
         self.client = SportsApiClient()
 
-    # ------------------------------------------------------------------
-    # ابزارهای کمکی
-    # ------------------------------------------------------------------
+    # =====================================================
+    # Generic helpers
+    # =====================================================
 
     @staticmethod
     def _get(
@@ -226,1675 +243,1271 @@ class SportsApiFetcher:
         default: Any = None,
     ) -> Any:
 
-        if not isinstance(data, dict):
-            return default
+        current = data
 
         for key in keys:
-            if key in data:
-                return data[key]
 
-        return default
+            if isinstance(current, dict):
+                current = current.get(key)
+
+            else:
+                return default
+
+            if current is None:
+                return default
+
+        return current
 
     @staticmethod
-    def _safe_text(
-        value: Any,
-    ) -> str:
+    def _safe_text(value: Any) -> str:
 
         if value is None:
             return ""
 
+        if isinstance(value, str):
+            return value.strip()
+
         return str(value).strip()
 
     @staticmethod
-    def _parse_timestamp(
-        value: Any,
-    ) -> Optional[float]:
+    def _parse_timestamp(value: Any) -> Optional[datetime]:
 
         if value is None:
             return None
 
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                return value.replace(
+                    tzinfo=timezone.utc
+                )
+            return value
+
         if isinstance(value, (int, float)):
-            return float(value)
 
-        text = str(value).strip()
+            try:
+                return datetime.fromtimestamp(
+                    value,
+                    tz=timezone.utc,
+                )
+            except Exception:
+                return None
 
-        if not text:
+        value = str(value).strip()
+
+        if not value:
             return None
 
         try:
-            return float(text)
-        except ValueError:
-            pass
+            if value.endswith("Z"):
+                value = value[:-1] + "+00:00"
 
-        try:
-            dt = datetime.fromisoformat(
-                text.replace(
-                    "Z",
-                    "+00:00",
-                )
-            )
+            dt = datetime.fromisoformat(value)
 
             if dt.tzinfo is None:
                 dt = dt.replace(
                     tzinfo=timezone.utc
                 )
 
-            return dt.timestamp()
+            return dt
 
         except Exception:
-            return None
+            pass
+
+        formats = [
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+            "%Y-%m-%d",
+        ]
+
+        for fmt in formats:
+            try:
+                return datetime.strptime(
+                    value,
+                    fmt,
+                ).replace(tzinfo=timezone.utc)
+            except Exception:
+                continue
+
+        return None
 
     @staticmethod
     def _format_tehran_time(
-        timestamp: Optional[float],
-    ) -> str:
-
-        if timestamp is None:
-            return ""
-
-        try:
-            dt = datetime.fromtimestamp(
-                timestamp,
-                tz=TEHRAN_TZ,
-            )
-
-            return dt.strftime("%H:%M")
-
-        except Exception:
-            return ""
-
-    @staticmethod
-    def _format_tehran_date(
-        timestamp: Optional[float],
-    ) -> str:
-
-        if timestamp is None:
-            return ""
-
-        try:
-            dt = datetime.fromtimestamp(
-                timestamp,
-                tz=TEHRAN_TZ,
-            )
-
-            return dt.strftime("%Y-%m-%d")
-
-        except Exception:
-            return ""
-
-    @staticmethod
-    def _country_flag(
-        country: str,
-    ) -> str:
-
-        mapping = {
-            "England": "🇬🇧",
-            "United Kingdom": "🇬🇧",
-            "UK": "🇬🇧",
-            "Italy": "🇮🇹",
-            "Spain": "🇪🇸",
-            "Germany": "🇩🇪",
-            "France": "🇫🇷",
-            "Portugal": "🇵🇹",
-            "Netherlands": "🇳🇱",
-            "Belgium": "🇧🇪",
-            "Brazil": "🇧🇷",
-            "Argentina": "🇦🇷",
-            "Iran": "🇮🇷",
-            "Turkey": "🇹🇷",
-            "United States": "🇺🇸",
-            "USA": "🇺🇸",
-            "Saudi Arabia": "🇸🇦",
-            "Scotland": "🏴",
-            "Wales": "🏴",
-            "Ireland": "🇮🇪",
-            "Austria": "🇦🇹",
-            "Switzerland": "🇨🇭",
-            "Denmark": "🇩🇰",
-            "Sweden": "🇸🇪",
-            "Norway": "🇳🇴",
-            "Greece": "🇬🇷",
-            "Croatia": "🇭🇷",
-            "Serbia": "🇷🇸",
-            "Ukraine": "🇺🇦",
-            "Poland": "🇵🇱",
-            "Mexico": "🇲🇽",
-        }
-
-        return mapping.get(
-            country.strip(),
-            "",
-        )
-
-    @staticmethod
-    def _extract_team(
         value: Any,
     ) -> str:
 
-        if isinstance(value, str):
-            return value.strip()
-
-        if isinstance(value, dict):
-
-            return (
-                value.get("name")
-                or value.get("team_name")
-                or value.get("title")
-                or ""
-            )
-
-        return ""
-
-    # ------------------------------------------------------------------
-    # استخراج مسابقات آینده
-    # ------------------------------------------------------------------
-
-    def _extract_upcoming(
-        self,
-        fixtures: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-
-        results = []
-
-        now_ts = time.time()
-
-        for fixture in fixtures:
-
-            if not isinstance(
-                fixture,
-                dict,
-            ):
-                continue
-
-            event_id = (
-                self._get(
-                    fixture,
-                    "id",
-                    "event_id",
-                    "fixture_id",
-                )
-            )
-
-            if event_id is None:
-                continue
-
-            timestamp = self._parse_timestamp(
-                self._get(
-                    fixture,
-                    "timestamp",
-                    "kickoff_ts",
-                    "start_timestamp",
-                    "date",
-                )
-            )
-
-            if timestamp is None:
-                continue
-
-            # مسابقه‌هایی که خیلی دور یا خیلی قدیمی هستند
-            if timestamp < (
-                now_ts
-                - LINEUP_EXPIRY_AFTER_KICKOFF_SECONDS
-            ):
-                continue
-
-            if timestamp > (
-                now_ts
-                + LINEUP_WINDOW_SECONDS
-            ):
-                continue
-
-            teams = self._get(
-                fixture,
-                "teams",
-                default={},
-            )
-
-            home_data = (
-                self._get(
-                    teams,
-                    "home",
-                    default={},
-                )
-                if isinstance(teams, dict)
-                else {}
-            )
-
-            away_data = (
-                self._get(
-                    teams,
-                    "away",
-                    default={},
-                )
-                if isinstance(teams, dict)
-                else {}
-            )
-
-            home = self._extract_team(
-                home_data
-            )
-
-            away = self._extract_team(
-                away_data
-            )
-
-            if not home or not away:
-
-                home = self._extract_team(
-                    self._get(
-                        fixture,
-                        "home",
-                    )
-                )
-
-                away = self._extract_team(
-                    self._get(
-                        fixture,
-                        "away",
-                    )
-                )
-
-            if not home or not away:
-                continue
-
-            league_data = self._get(
-                fixture,
-                "league",
-                default={},
-            )
-
-            if isinstance(
-                league_data,
-                dict,
-            ):
-                league = (
-                    league_data.get("name")
-                    or ""
-                )
-
-                stage = (
-                    league_data.get("round")
-                    or league_data.get("stage")
-                    or ""
-                )
-
-            else:
-                league = self._safe_text(
-                    league_data
-                )
-                stage = ""
-
-            venue_data = self._get(
-                fixture,
-                "venue",
-                default={},
-            )
-
-            stadium = ""
-
-            if isinstance(
-                venue_data,
-                dict,
-            ):
-                stadium = (
-                    venue_data.get("name")
-                    or ""
-                )
-
-            referee = self._safe_text(
-                self._get(
-                    fixture,
-                    "referee",
-                )
-            )
-
-            home_country = ""
-
-            away_country = ""
-
-            if isinstance(
-                home_data,
-                dict,
-            ):
-                home_country = (
-                    home_data.get("country")
-                    or ""
-                )
-
-            if isinstance(
-                away_data,
-                dict,
-            ):
-                away_country = (
-                    away_data.get("country")
-                    or ""
-                )
-
-            result = {
-                "event_id": event_id,
-                "found_at": now_ts,
-                "kickoff_ts": timestamp,
-
-                "home": home,
-                "away": away,
-
-                "home_id": (
-                    home_data.get("id")
-                    if isinstance(
-                        home_data,
-                        dict,
-                    )
-                    else None
-                ),
-
-                "away_id": (
-                    away_data.get("id")
-                    if isinstance(
-                        away_data,
-                        dict,
-                    )
-                    else None
-                ),
-
-                "home_country": home_country,
-                "away_country": away_country,
-
-                "league": league,
-                "stage": stage,
-
-                "stadium": stadium,
-                "referee": referee,
-
-                "match_date":
-                    self._format_tehran_date(
-                        timestamp
-                    ),
-
-                "match_time":
-                    self._format_tehran_time(
-                        timestamp
-                    ),
-
-                "lineup": {
-                    "home": {
-                        "name": home,
-                        "starting": [],
-                        "substitutes": [],
-                    },
-                    "away": {
-                        "name": away,
-                        "starting": [],
-                        "substitutes": [],
-                    },
-                },
-
-                "coach": {
-                    "home": "",
-                    "away": "",
-                },
-            }
-
-            results.append(result)
-
-        return results
-
-    # ------------------------------------------------------------------
-    # اعمال اطلاعات تکمیلی مسابقه
-    # ------------------------------------------------------------------
-
-    def _apply_info(
-        self,
-        base: Dict[str, Any],
-        summary: Dict[str, Any],
-    ) -> None:
-
-        if not isinstance(
-            summary,
-            dict,
-        ):
-            return
-
-        venue = self._get(
-            summary,
-            "venue",
-            default={},
+        dt = (
+            value
+            if isinstance(value, datetime)
+            else SportsApiFetcher._parse_timestamp(value)
         )
 
-        if isinstance(
-            venue,
-            dict,
-        ):
-            base["stadium"] = (
-                venue.get("name")
-                or base.get("stadium")
-                or ""
-            )
+        if not dt:
+            return ""
 
-        referee = self._get(
-            summary,
-            "referee",
+        return dt.astimezone(
+            TEHRAN_TZ
+        ).strftime("%H:%M")
+
+    @staticmethod
+    def _format_tehran_date(
+        value: Any,
+    ) -> str:
+
+        dt = (
+            value
+            if isinstance(value, datetime)
+            else SportsApiFetcher._parse_timestamp(value)
         )
 
-        if referee:
-            base["referee"] = (
-                self._safe_text(
-                    referee
-                )
-            )
-
-        league = self._get(
-            summary,
-            "league",
-            default={},
-        )
-
-        if isinstance(
-            league,
-            dict,
-        ):
-            base["league"] = (
-                league.get("name")
-                or base.get("league")
-                or ""
-            )
-
-            base["stage"] = (
-                league.get("round")
-                or league.get("stage")
-                or base.get("stage")
-                or ""
-            )
-
-    # ------------------------------------------------------------------
-    # استخراج ترکیب
-    # ------------------------------------------------------------------
-
-    def _apply_rosters(
-        self,
-        base: Dict[str, Any],
-        summary: Dict[str, Any],
-    ) -> None:
-
-        if not isinstance(
-            summary,
-            dict,
-        ):
-            return
-
-        lineups = (
-            summary.get("lineups")
-            or summary.get("lineup")
-            or []
-        )
-
-        if isinstance(
-            lineups,
-            dict,
-        ):
-            lineups = [
-                {
-                    "team": {
-                        "name": key
-                    },
-                    **(
-                        value
-                        if isinstance(
-                            value,
-                            dict,
-                        )
-                        else {}
-                    ),
-                }
-                for key, value in lineups.items()
-            ]
-
-        if not isinstance(
-            lineups,
-            list,
-        ):
-            return
-
-        for lineup in lineups:
-
-            if not isinstance(
-                lineup,
-                dict,
-            ):
-                continue
-
-            team_data = self._get(
-                lineup,
-                "team",
-                default={},
-            )
-
-            team_name = self._extract_team(
-                team_data
-            )
-
-            if not team_name:
-                team_name = self._safe_text(
-                    lineup.get("team_name")
-                )
-
-            if not team_name:
-                continue
-
-            side = None
-
-            if (
-                team_name
-                == base["home"]
-            ):
-                side = "home"
-
-            elif (
-                team_name
-                == base["away"]
-            ):
-                side = "away"
-
-            else:
-                team_id = (
-                    team_data.get("id")
-                    if isinstance(
-                        team_data,
-                        dict,
-                    )
-                    else None
-                )
-
-                if (
-                    team_id
-                    and team_id
-                    == base.get(
-                        "home_id"
-                    )
-                ):
-                    side = "home"
-
-                elif (
-                    team_id
-                    and team_id
-                    == base.get(
-                        "away_id"
-                    )
-                ):
-                    side = "away"
-
-            if side is None:
-                continue
-
-            formation = (
-                lineup.get("formation")
-                or ""
-            )
-
-            base["lineup"][side][
-                "name"
-            ] = (
-                team_name
-                + (
-                    f" ({formation})"
-                    if formation
-                    else ""
-                )
-            )
-
-            starters = (
-                lineup.get(
-                    "startXI"
-                )
-                or lineup.get(
-                    "starting"
-                )
-                or []
-            )
-
-            substitutes = (
-                lineup.get(
-                    "substitutes"
-                )
-                or lineup.get(
-                    "bench"
-                )
-                or []
-            )
-
-            def parse_players(
-                players: Any,
-            ) -> List[str]:
-
-                output = []
-
-                if not isinstance(
-                    players,
-                    list,
-                ):
-                    return output
-
-                for player in players:
-
-                    if not isinstance(
-                        player,
-                        dict,
-                    ):
-                        continue
-
-                    player_data = (
-                        player.get(
-                            "player",
-                            player,
-                        )
-                    )
-
-                    if not isinstance(
-                        player_data,
-                        dict,
-                    ):
-                        continue
-
-                    number = (
-                        player_data.get(
-                            "number"
-                        )
-                        or player.get(
-                            "number"
-                        )
-                        or ""
-                    )
-
-                    name = (
-                        player_data.get(
-                            "name"
-                        )
-                        or player_data.get(
-                            "fullname"
-                        )
-                        or player.get(
-                            "name"
-                        )
-                        or ""
-                    )
-
-                    name = self._safe_text(
-                        name
-                    )
-
-                    if not name:
-                        continue
-
-                    if number:
-                        output.append(
-                            f"{number} {name}"
-                        )
-                    else:
-                        output.append(
-                            name
-                        )
-
-                return output
-
-            base["lineup"][side][
-                "starting"
-            ] = parse_players(
-                starters
-            )
-
-            base["lineup"][side][
-                "substitutes"
-            ] = parse_players(
-                substitutes
-            )
-
-            coach = (
-                lineup.get("coach")
-                or {}
-            )
-
-            if isinstance(
-                coach,
-                dict,
-            ):
-                coach_name = (
-                    coach.get("name")
-                    or ""
-                )
-
-                base["coach"][side] = (
-                    self._safe_text(
-                        coach_name
-                    )
-                )
-
-    # ------------------------------------------------------------------
-    # بررسی ترکیب
-    # ------------------------------------------------------------------
-
-    async def _maybe_lineup(
-        self,
-        fixtures: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-
-        upcoming = (
-            self._extract_upcoming(
-                fixtures
-            )
-        )
-
-        results = []
-
-        now_ts = time.time()
-
-        for base in upcoming:
-
-            kickoff_ts = base.get(
-                "kickoff_ts"
-            )
-
-            if kickoff_ts is None:
-                continue
-
-            # فقط بازه مناسب اعلام ترکیب
-            if (
-                kickoff_ts - now_ts
-                > LINEUP_WINDOW_SECONDS
-            ):
-                continue
-
-            if (
-                now_ts - kickoff_ts
-                > LINEUP_EXPIRY_AFTER_KICKOFF_SECONDS
-            ):
-                continue
-
-            event_id = base.get(
-                "event_id"
-            )
-
-            if event_id is None:
-                continue
-
-            key = (
-                f"lineup:{event_id}"
-            )
-
-            cached = _cache.get(
-                key
-            )
-
-            if cached:
-
-                cached_at = cached.get(
-                    "found_at",
-                    0,
-                )
-
-                if (
-                    now_ts
-                    - cached_at
-                    < CACHE_TTL_SECONDS
-                ):
-                    results.append(
-                        cached
-                    )
-                    continue
-
-            summary = (
-                await self.client
-                .get_fixture_summary(
-                    event_id
-                )
-            )
-
-            if not summary:
-                continue
-
-            self._apply_info(
-                base,
-                summary,
-            )
-
-            self._apply_rosters(
-                base,
-                summary,
-            )
-
-            home_starters = len(
-                base["lineup"]["home"][
-                    "starting"
-                ]
-            )
-
-            away_starters = len(
-                base["lineup"]["away"][
-                    "starting"
-                ]
-            )
-
-            if (
-                home_starters
-                < MIN_STARTERS
-                or away_starters
-                < MIN_STARTERS
-            ):
-                continue
-
-            base["key"] = key
-
-            # ----------------------------------------------------------
-            # تعیین نوع پست
-            # ----------------------------------------------------------
-            # این مقدار برای انتخاب قالب اختصاصی
-            # match_post.py ضروری است.
-
-            base["kind"] = "lineup"
-
-            _cache[key] = base
-
-            results.append(
-                base
-            )
-
-        return results
-
-    # ------------------------------------------------------------------
-    # ساخت RawNews برای نتیجه
-    # ------------------------------------------------------------------
-
-    def _make_news(
-        self,
-        data: Dict[str, Any],
-    ) -> RawNews:
-
-        home = data["home"]
-
-        away = data["away"]
-
-        home_goals = data.get(
-            "home_goals",
-            0,
-        )
-
-        away_goals = data.get(
-            "away_goals",
-            0,
-        )
-
-        title = (
-            f"{home} {home_goals} - "
-            f"{away_goals} {away}"
-        )
-
-        summary = (
-            f"نتیجه دیدار {home} و "
-            f"{away} در "
-            f"{data.get('league', '')}"
-        )
-
-        news = RawNews(
-            title=title,
-            content=summary,
-            summary=summary,
-            url="",
-            image_url=None,
-            source="ESPN",
-            source_id="espn",
-            country="US",
-            language="en",
-            category="sport",
-        )
-
-        # --------------------------------------------------------------
-        # اطلاعات ورزشی
-        # --------------------------------------------------------------
-
-        news.sport = "football"
-
-        news.sport_name = "فوتبال"
-
-        news.sport_emoji = "⚽"
-
-        news.sport_hashtag = "#فوتبال"
-
-        news.category = "sport"
-
-        # --------------------------------------------------------------
-        # نتیجه
-        # --------------------------------------------------------------
-
-        news.home_team = home
-
-        news.away_team = away
-
-        news.home_goals = home_goals
-
-        news.away_goals = away_goals
-
-        news.goals = data.get(
-            "goals",
-            [],
-        )
-
-        news.assists = data.get(
-            "assists",
-            [],
-        )
-
-        news.cards = data.get(
-            "cards",
-            [],
-        )
-
-        news.lineup = copy.deepcopy(
-            data.get(
-                "lineup",
-                {},
-            )
-        )
-
-        news.stats = data.get(
-            "stats",
-            {},
-        )
-
-        # --------------------------------------------------------------
-        # اطلاعات مسابقه
-        # --------------------------------------------------------------
-
-        news.tournament = data.get(
-            "league",
-            "",
-        )
-
-        news.league = data.get(
-            "league",
-            "",
-        )
-
-        news.stage = data.get(
-            "stage",
-            "",
-        )
-
-        news.stadium = data.get(
-            "stadium",
-            "",
-        )
-
-        news.referee = data.get(
-            "referee",
-            "",
-        )
-
-        news.match_date = data.get(
-            "match_date",
-            "",
-        )
-
-        news.match_time = data.get(
-            "match_time",
-            "",
-        )
-
-        # --------------------------------------------------------------
-        # اطلاعات اختصاصی Match Post
-        # --------------------------------------------------------------
-        # match_post.py برای انتخاب قالب نتیجه
-        # به این دو فیلد نیاز دارد.
-
-        news.match_phase = "result"
-
-        news.match_info = {
-            "home": data["home"],
-            "away": data["away"],
-            "home_goals": data["home_goals"],
-            "away_goals": data["away_goals"],
-            "home_country": data.get(
-                "home_country",
-                "",
-            ),
-            "away_country": data.get(
-                "away_country",
-                "",
-            ),
-            "home_flag": "",
-            "away_flag": "",
+        if not dt:
+            return ""
+
+        return dt.astimezone(
+            TEHRAN_TZ
+        ).strftime("%Y-%m-%d")
+
+    @staticmethod
+    def _country_flag(
+        country: Any,
+    ) -> str:
+
+        if not country:
+            return ""
+
+        value = str(country).strip().lower()
+
+        mapping = {
+            "iran": "🇮🇷",
+            "ir": "🇮🇷",
+
+            "england": "🇬🇧",
+            "gb": "🇬🇧",
+            "uk": "🇬🇧",
+
+            "italy": "🇮🇹",
+            "it": "🇮🇹",
+
+            "spain": "🇪🇸",
+            "es": "🇪🇸",
+
+            "france": "🇫🇷",
+            "fr": "🇫🇷",
+
+            "germany": "🇩🇪",
+            "de": "🇩🇪",
+
+            "portugal": "🇵🇹",
+            "pt": "🇵🇹",
+
+            "netherlands": "🇳🇱",
+            "nl": "🇳🇱",
+
+            "belgium": "🇧🇪",
+            "be": "🇧🇪",
+
+            "brazil": "🇧🇷",
+            "br": "🇧🇷",
+
+            "argentina": "🇦🇷",
+            "ar": "🇦🇷",
+
+            "turkey": "🇹🇷",
+            "tr": "🇹🇷",
+
+            "usa": "🇺🇸",
+            "us": "🇺🇸",
+
+            "united states": "🇺🇸",
+
+            "mexico": "🇲🇽",
+            "mx": "🇲🇽",
+
+            "saudi arabia": "🇸🇦",
+            "sa": "🇸🇦",
+
+            "japan": "🇯🇵",
+            "jp": "🇯🇵",
+
+            "south korea": "🇰🇷",
+            "korea republic": "🇰🇷",
+            "kr": "🇰🇷",
+
+            "australia": "🇦🇺",
+            "au": "🇦🇺",
+
+            "scotland": "🏴",
+            "wales": "🏴",
+            "ireland": "🇮🇪",
+            "republic of ireland": "🇮🇪",
+
+            "switzerland": "🇨🇭",
+            "ch": "🇨🇭",
+
+            "austria": "🇦🇹",
+            "at": "🇦🇹",
+
+            "denmark": "🇩🇰",
+            "dk": "🇩🇰",
+
+            "sweden": "🇸🇪",
+            "se": "🇸🇪",
+
+            "norway": "🇳🇴",
+            "no": "🇳🇴",
+
+            "poland": "🇵🇱",
+            "pl": "🇵🇱",
+
+            "ukraine": "🇺🇦",
+            "ua": "🇺🇦",
+
+            "croatia": "🇭🇷",
+            "hr": "🇭🇷",
+
+            "serbia": "🇷🇸",
+            "rs": "🇷🇸",
+
+            "greece": "🇬🇷",
+            "gr": "🇬🇷",
+
+            "czech republic": "🇨🇿",
+            "czechia": "🇨🇿",
+            "cz": "🇨🇿",
+
+            "colombia": "🇨🇴",
+            "co": "🇨🇴",
+
+            "chile": "🇨🇱",
+            "cl": "🇨🇱",
+
+            "uruguay": "🇺🇾",
+            "uy": "🇺🇾",
+
+            "ecuador": "🇪🇨",
+            "ec": "🇪🇨",
         }
 
-        # --------------------------------------------------------------
-        # کشورها
-        # --------------------------------------------------------------
+        return mapping.get(value, "")
 
-        news.home_country = data.get(
-            "home_country",
-            "",
-        )
+    # =====================================================
+    # Team extraction
+    # =====================================================
 
-        news.away_country = data.get(
-            "away_country",
-            "",
-        )
-
-        # --------------------------------------------------------------
-        # منبع
-        # --------------------------------------------------------------
-
-        news.source = "ESPN"
-
-        news.source_id = "espn"
-
-        news.country = "US"
-
-        news.language = "en"
-
-        # --------------------------------------------------------------
-        # زمان
-        # --------------------------------------------------------------
-
-        news.published_at = (
-            datetime.now(
-                timezone.utc
-            )
-        )
-
-        news.fetched_at = (
-            datetime.now(
-                timezone.utc
-            )
-        )
-
-        return news
-
-    # ------------------------------------------------------------------
-    # ساخت RawNews برای ترکیب
-    # ------------------------------------------------------------------
-
-    def _make_lineup_news(
+    def _extract_team(
         self,
-        data: Dict[str, Any],
-    ) -> RawNews:
+        team_data: Any,
+    ) -> Dict[str, str]:
 
-        home = data["home"]
+        if not isinstance(team_data, dict):
+            return {
+                "name": self._safe_text(team_data),
+                "country": "",
+                "flag": "",
+            }
 
-        away = data["away"]
-
-        league = data.get(
-            "league",
-            "",
-        )
-
-        title = (
-            f"ترکیب‌های رسمی تیم‌های "
-            f"{home} و {away}"
-            + (
-                f" در {league}"
-                if league
+        name = (
+            self._safe_text(
+                team_data.get("name")
+            )
+            or self._safe_text(
+                team_data.get("team", {}).get("name")
+                if isinstance(team_data.get("team"), dict)
                 else ""
             )
         )
 
-        summary = (
-            f"ترکیب‌های رسمی تیم‌های "
-            f"{home} و {away} "
-            f"برای این دیدار اعلام شد."
-        )
-
-        news = RawNews(
-            title=title,
-            content=summary,
-            summary=summary,
-            url="",
-            image_url=None,
-            source="ESPN",
-            source_id="espn",
-            country="US",
-            language="en",
-            category="sport",
-        )
-
-        # --------------------------------------------------------------
-        # اطلاعات ورزشی
-        # --------------------------------------------------------------
-
-        news.sport = "football"
-
-        news.sport_name = "فوتبال"
-
-        news.sport_emoji = "⚽"
-
-        news.sport_hashtag = "#فوتبال"
-
-        news.category = "sport"
-
-        # --------------------------------------------------------------
-        # اطلاعات نتیجه
-        # --------------------------------------------------------------
-
-        news.home_team = home
-
-        news.away_team = away
-
-        news.home_goals = None
-
-        news.away_goals = None
-
-        news.goals = data.get(
-            "goals",
-            [],
-        )
-
-        news.assists = data.get(
-            "assists",
-            [],
-        )
-
-        news.cards = data.get(
-            "cards",
-            [],
-        )
-
-        # --------------------------------------------------------------
-        # ترکیب
-        # --------------------------------------------------------------
-
-        news.lineup = copy.deepcopy(
-            data["lineup"]
-        )
-
-        news.coach = copy.deepcopy(
-            data.get(
-                "coach",
-                {},
+        country = (
+            self._safe_text(
+                team_data.get("country")
+            )
+            or self._safe_text(
+                team_data.get("nationality")
+            )
+            or self._safe_text(
+                team_data.get("team", {}).get("country")
+                if isinstance(team_data.get("team"), dict)
+                else ""
             )
         )
 
-        # --------------------------------------------------------------
-        # اطلاعات مسابقه
-        # --------------------------------------------------------------
-
-        news.stats = data.get(
-            "stats",
-            {},
+        flag = (
+            self._safe_text(
+                team_data.get("flag")
+            )
+            or self._country_flag(country)
         )
 
-        news.tournament = data.get(
-            "league",
-            "",
-        )
-
-        news.league = data.get(
-            "league",
-            "",
-        )
-
-        news.stage = data.get(
-            "stage",
-            "",
-        )
-
-        news.stadium = data.get(
-            "stadium",
-            "",
-        )
-
-        news.referee = data.get(
-            "referee",
-            "",
-        )
-
-        news.match_date = data.get(
-            "match_date",
-            "",
-        )
-
-        news.match_time = data.get(
-            "match_time",
-            "",
-        )
-
-        # --------------------------------------------------------------
-        # اطلاعات اختصاصی Match Post
-        # --------------------------------------------------------------
-        # این بخش مهم‌ترین اصلاح این فایل است.
-        #
-        # match_post.py با بررسی match_phase متوجه می‌شود
-        # که این خبر مربوط به ترکیب است و باید
-        # _render_lineup() را اجرا کند.
-        #
-        # match_info نیز نام تیم‌ها و کشورها را در اختیار
-        # قالب اختصاصی قرار می‌دهد.
-
-        news.match_phase = "lineup"
-
-        news.match_info = {
-            "home": data["home"],
-            "away": data["away"],
-            "home_country": data.get(
-                "home_country",
-                "",
-            ),
-            "away_country": data.get(
-                "away_country",
-                "",
-            ),
-            "home_flag": "",
-            "away_flag": "",
-            "home_goals": "",
-            "away_goals": "",
+        return {
+            "name": name,
+            "country": country,
+            "flag": flag,
         }
 
-        # --------------------------------------------------------------
-        # کشورها
-        # --------------------------------------------------------------
+    # =====================================================
+    # Upcoming / lineup helpers
+    # =====================================================
 
-        news.home_country = data.get(
-            "home_country",
-            "",
-        )
-
-        news.away_country = data.get(
-            "away_country",
-            "",
-        )
-
-        # --------------------------------------------------------------
-        # منبع
-        # --------------------------------------------------------------
-
-        news.source = "ESPN"
-
-        news.source_id = "espn"
-
-        news.country = "US"
-
-        news.language = "en"
-
-        # --------------------------------------------------------------
-        # زمان
-        # --------------------------------------------------------------
-
-        news.published_at = (
-            datetime.now(
-                timezone.utc
-            )
-        )
-
-        news.fetched_at = (
-            datetime.now(
-                timezone.utc
-            )
-        )
-
-        return news
-
-    # ------------------------------------------------------------------
-    # دریافت اخبار
-    # ------------------------------------------------------------------
-
-    async def fetch(
+    def _extract_upcoming(
         self,
-    ) -> List[RawNews]:
+        fixture: Dict[str, Any],
+    ) -> Dict[str, Any]:
+
+        teams = fixture.get("teams") or {}
+
+        home = self._extract_team(
+            teams.get("home") or {}
+        )
+
+        away = self._extract_team(
+            teams.get("away") or {}
+        )
+
+        fixture_data = (
+            fixture.get("fixture")
+            if isinstance(fixture.get("fixture"), dict)
+            else fixture
+        )
+
+        event_id = (
+            fixture_data.get("id")
+            or fixture.get("id")
+            or fixture.get("event_id")
+        )
+
+        timestamp = (
+            fixture_data.get("timestamp")
+            or fixture_data.get("date")
+            or fixture.get("timestamp")
+            or fixture.get("date")
+        )
+
+        league = fixture.get("league") or {}
+
+        venue = fixture_data.get("venue") or {}
+
+        if isinstance(venue, dict):
+            stadium = (
+                venue.get("name")
+                or venue.get("stadium")
+                or ""
+            )
+        else:
+            stadium = self._safe_text(venue)
+
+        referee = (
+            fixture_data.get("referee")
+            or ""
+        )
+
+        return {
+            "event_id": event_id,
+            "home": home,
+            "away": away,
+            "timestamp": timestamp,
+            "league": league,
+            "stadium": self._safe_text(stadium),
+            "referee": self._safe_text(referee),
+        }
+
+    def _apply_info(
+        self,
+        info: Dict[str, Any],
+        fixture: Dict[str, Any],
+    ) -> None:
+
+        extracted = self._extract_upcoming(
+            fixture
+        )
+
+        info.update(extracted)
+
+    def _apply_rosters(
+        self,
+        info: Dict[str, Any],
+        fixture: Dict[str, Any],
+    ) -> None:
+
+        rosters = (
+            fixture.get("lineups")
+            or fixture.get("rosters")
+            or []
+        )
+
+        if not isinstance(rosters, list):
+            return
+
+        info["lineups"] = rosters
+
+    async def _maybe_lineup(
+        self,
+        fixture: Dict[str, Any],
+    ) -> Optional[RawNews]:
+
+        info = self._extract_upcoming(
+            fixture
+        )
+
+        timestamp = info.get("timestamp")
+
+        match_dt = self._parse_timestamp(
+            timestamp
+        )
+
+        if not match_dt:
+            return None
 
         now = datetime.now(
             timezone.utc
         )
 
-        current_hour = now.hour
+        seconds_until_kickoff = (
+            match_dt - now
+        ).total_seconds()
 
         if (
-            current_hour
-            not in ACTIVE_HOURS_UTC
+            seconds_until_kickoff > LINEUP_WINDOW_MINUTES * 60
+            or seconds_until_kickoff < -LINEUP_LATE_SECONDS
         ):
+            return None
+
+        event_id = info.get("event_id")
+
+        if not event_id:
+            return None
+
+        cache_key = f"lineup:{event_id}"
+
+        cached = _cache.get(
+            cache_key
+        )
+
+        if cached:
+            cached_at = cached.get(
+                "timestamp",
+                0,
+            )
+
+            if (
+                time.time() - cached_at
+                < CACHE_TTL_SECONDS
+            ):
+                return None
+
+        summary = await self.client.get_fixture_summary(
+            event_id
+        )
+
+        if not summary:
+            return None
+
+        self._apply_info(
+            info,
+            summary,
+        )
+
+        self._apply_rosters(
+            info,
+            summary,
+        )
+
+        lineups = (
+            info.get("lineups")
+            or []
+        )
+
+        if not lineups:
+            return None
+
+        starters_count = 0
+
+        for lineup in lineups:
+
+            if not isinstance(lineup, dict):
+                continue
+
+            start_xi = (
+                lineup.get("startXI")
+                or lineup.get("starting_xi")
+                or lineup.get("starters")
+                or []
+            )
+
+            if isinstance(start_xi, list):
+                starters_count += len(start_xi)
+
+        if starters_count < MIN_STARTERS:
+            return None
+
+        news = self._make_lineup_news(
+            info,
+            summary,
+        )
+
+        if news:
+            _cache[cache_key] = {
+                "timestamp": time.time(),
+            }
+
+        return news
+
+    # =====================================================
+    # Result News
+    # =====================================================
+
+    def _make_news(
+        self,
+        info: Dict[str, Any],
+        fixture: Dict[str, Any],
+    ) -> Optional[RawNews]:
+
+        home = info.get("home") or {}
+        away = info.get("away") or {}
+
+        home_name = self._safe_text(
+            home.get("name")
+        )
+
+        away_name = self._safe_text(
+            away.get("name")
+        )
+
+        if not home_name or not away_name:
+            return None
+
+        fixture_data = (
+            fixture.get("fixture")
+            if isinstance(fixture.get("fixture"), dict)
+            else fixture
+        )
+
+        event_id = (
+            info.get("event_id")
+            or fixture_data.get("id")
+            or fixture.get("id")
+        )
+
+        timestamp = (
+            info.get("timestamp")
+            or fixture_data.get("timestamp")
+            or fixture_data.get("date")
+        )
+
+        league = (
+            info.get("league")
+            or fixture.get("league")
+            or {}
+        )
+
+        if isinstance(league, dict):
+            league_name = (
+                league.get("name")
+                or league.get("league")
+                or ""
+            )
+
+            league_country = (
+                league.get("country")
+                or ""
+            )
+
+            league_logo = (
+                league.get("logo")
+                or ""
+            )
+        else:
+            league_name = self._safe_text(
+                league
+            )
+            league_country = ""
+            league_logo = ""
+
+        goals = (
+            fixture.get("events")
+            or fixture.get("goals")
+            or []
+        )
+
+        assists = (
+            fixture.get("assists")
+            or []
+        )
+
+        cards = (
+            fixture.get("cards")
+            or []
+        )
+
+        statistics = (
+            fixture.get("statistics")
+            or []
+        )
+
+        venue = (
+            fixture_data.get("venue")
+            or fixture.get("venue")
+            or {}
+        )
+
+        if isinstance(venue, dict):
+            stadium = (
+                venue.get("name")
+                or venue.get("stadium")
+                or info.get("stadium")
+                or ""
+            )
+        else:
+            stadium = self._safe_text(
+                venue
+            )
+
+        referee = (
+            fixture_data.get("referee")
+            or fixture.get("referee")
+            or info.get("referee")
+            or ""
+        )
+
+        score = (
+            fixture.get("score")
+            or fixture.get("scores")
+            or {}
+        )
+
+        home_goals = None
+        away_goals = None
+
+        if isinstance(score, dict):
+
+            fulltime = (
+                score.get("fulltime")
+                or score.get("full_time")
+                or {}
+            )
+
+            if isinstance(fulltime, dict):
+
+                home_goals = (
+                    fulltime.get("home")
+                    if fulltime.get("home") is not None
+                    else score.get("home")
+                )
+
+                away_goals = (
+                    fulltime.get("away")
+                    if fulltime.get("away") is not None
+                    else score.get("away")
+                )
+
+            else:
+
+                home_goals = score.get(
+                    "home"
+                )
+
+                away_goals = score.get(
+                    "away"
+                )
+
+        if home_goals is None:
+            home_goals = (
+                fixture.get("home_goals")
+                or fixture.get("goals_home")
+            )
+
+        if away_goals is None:
+            away_goals = (
+                fixture.get("away_goals")
+                or fixture.get("goals_away")
+            )
+
+        # -------------------------------------------------
+        # Country + flag
+        # -------------------------------------------------
+
+        home_country = (
+            self._safe_text(
+                home.get("country")
+            )
+            or self._safe_text(
+                fixture.get("home_country")
+            )
+        )
+
+        away_country = (
+            self._safe_text(
+                away.get("country")
+            )
+            or self._safe_text(
+                fixture.get("away_country")
+            )
+        )
+
+        home_flag = (
+            self._safe_text(
+                home.get("flag")
+            )
+            or self._country_flag(
+                home_country
+            )
+        )
+
+        away_flag = (
+            self._safe_text(
+                away.get("flag")
+            )
+            or self._country_flag(
+                away_country
+            )
+        )
+
+        # -------------------------------------------------
+        # RawNews
+        # -------------------------------------------------
+
+        news = RawNews(
+            title=f"{home_name} {home_goals} - {away_goals} {away_name}",
+
+            content="",
+
+            summary="",
+
+            url=(
+                fixture_data.get("url")
+                or fixture.get("url")
+                or ""
+            ),
+
+            image_url="",
+
+            author="ESPN",
+
+            published_at=(
+                self._parse_timestamp(timestamp)
+                or datetime.now(
+                    timezone.utc
+                )
+            ),
+
+            fetched_at=datetime.now(
+                timezone.utc
+            ),
+
+            source="ESPN",
+
+            source_id="espn",
+
+            country="US",
+
+            language="en",
+
+            category="sport",
+
+            tags=[
+                "football",
+                "sport",
+            ],
+
+            related_urls=[],
+
+            raw_data=fixture,
+        )
+
+        # =================================================
+        # Football metadata
+        # =================================================
+
+        news.sport = "football"
+        news.sport_name = "فوتبال"
+        news.sport_emoji = "⚽"
+        news.sport_hashtag = "#فوتبال"
+
+        news.home_team = home_name
+        news.away_team = away_name
+
+        news.home_country = home_country
+        news.away_country = away_country
+
+        news.home_flag = home_flag
+        news.away_flag = away_flag
+
+        news.home_goals = home_goals
+        news.away_goals = away_goals
+
+        news.goals = goals
+        news.assists = assists
+
+        news.yellow_cards = []
+        news.red_cards = []
+
+        news.cards = cards
+
+        news.statistics = statistics
+
+        news.lineups = []
+
+        news.coaches = {}
+
+        news.tournament = league_name
+        news.league = league_name
+        news.league_country = league_country
+        news.league_logo = league_logo
+
+        news.stage = (
+            fixture.get("stage")
+            or self._get(
+                league,
+                "round",
+                default=""
+            )
+            or ""
+        )
+
+        news.stadium = self._safe_text(
+            stadium
+        )
+
+        news.referee = self._safe_text(
+            referee
+        )
+
+        news.match_date = (
+            self._format_tehran_date(
+                timestamp
+            )
+        )
+
+        news.match_time = (
+            self._format_tehran_time(
+                timestamp
+            )
+        )
+
+        news.match_phase = "result"
+
+        # -------------------------------------------------
+        # IMPORTANT:
+        # Match Post directly consumes these fields.
+        # -------------------------------------------------
+
+        news.match_info = {
+            "home": home_name,
+            "away": away_name,
+
+            "home_goals": home_goals,
+            "away_goals": away_goals,
+
+            "home_country": home_country,
+            "away_country": away_country,
+
+            "home_flag": home_flag,
+            "away_flag": away_flag,
+        }
+
+        return news
+
+    # =====================================================
+    # Lineup News
+    # =====================================================
+
+    def _make_lineup_news(
+        self,
+        info: Dict[str, Any],
+        fixture: Dict[str, Any],
+    ) -> Optional[RawNews]:
+
+        home = info.get("home") or {}
+        away = info.get("away") or {}
+
+        home_name = self._safe_text(
+            home.get("name")
+        )
+
+        away_name = self._safe_text(
+            away.get("name")
+        )
+
+        if not home_name or not away_name:
+            return None
+
+        timestamp = (
+            info.get("timestamp")
+        )
+
+        league = (
+            info.get("league")
+            or fixture.get("league")
+            or {}
+        )
+
+        if isinstance(league, dict):
+            league_name = (
+                league.get("name")
+                or league.get("league")
+                or ""
+            )
+
+            league_country = (
+                league.get("country")
+                or ""
+            )
+
+            league_logo = (
+                league.get("logo")
+                or ""
+            )
+        else:
+            league_name = self._safe_text(
+                league
+            )
+            league_country = ""
+            league_logo = ""
+
+        home_country = (
+            self._safe_text(
+                home.get("country")
+            )
+        )
+
+        away_country = (
+            self._safe_text(
+                away.get("country")
+            )
+        )
+
+        # -------------------------------------------------
+        # FIX:
+        # پرچم واقعی تیم‌ها را همین‌جا تولید می‌کنیم
+        # -------------------------------------------------
+
+        home_flag = (
+            self._safe_text(
+                home.get("flag")
+            )
+            or self._country_flag(
+                home_country
+            )
+        )
+
+        away_flag = (
+            self._safe_text(
+                away.get("flag")
+            )
+            or self._country_flag(
+                away_country
+            )
+        )
+
+        lineups = (
+            info.get("lineups")
+            or fixture.get("lineups")
+            or fixture.get("rosters")
+            or []
+        )
+
+        venue = (
+            info.get("stadium")
+            or fixture.get("stadium")
+            or ""
+        )
+
+        referee = (
+            info.get("referee")
+            or fixture.get("referee")
+            or ""
+        )
+
+        event_id = (
+            info.get("event_id")
+            or fixture.get("id")
+            or fixture.get("event_id")
+        )
+
+        news = RawNews(
+            title=(
+                f"ترکیب اصلی {home_name} و {away_name} اعلام شد"
+            ),
+
+            content="",
+
+            summary="",
+
+            url=(
+                fixture.get("url")
+                or ""
+            ),
+
+            image_url="",
+
+            author="ESPN",
+
+            published_at=(
+                self._parse_timestamp(timestamp)
+                or datetime.now(
+                    timezone.utc
+                )
+            ),
+
+            fetched_at=datetime.now(
+                timezone.utc
+            ),
+
+            source="ESPN",
+
+            source_id="espn",
+
+            country="US",
+
+            language="en",
+
+            category="sport",
+
+            tags=[
+                "football",
+                "sport",
+            ],
+
+            related_urls=[],
+
+            raw_data=fixture,
+        )
+
+        # =================================================
+        # Football metadata
+        # =================================================
+
+        news.sport = "football"
+        news.sport_name = "فوتبال"
+        news.sport_emoji = "⚽"
+        news.sport_hashtag = "#فوتبال"
+
+        news.home_team = home_name
+        news.away_team = away_name
+
+        news.home_country = home_country
+        news.away_country = away_country
+
+        news.home_flag = home_flag
+        news.away_flag = away_flag
+
+        news.home_goals = None
+        news.away_goals = None
+
+        news.goals = []
+        news.assists = []
+
+        news.yellow_cards = []
+        news.red_cards = []
+
+        news.cards = []
+
+        news.statistics = (
+            fixture.get("statistics")
+            or []
+        )
+
+        news.lineups = lineups
+
+        news.coaches = (
+            fixture.get("coaches")
+            or {}
+        )
+
+        news.tournament = league_name
+        news.league = league_name
+        news.league_country = league_country
+        news.league_logo = league_logo
+
+        news.stage = (
+            fixture.get("stage")
+            or self._get(
+                league,
+                "round",
+                default=""
+            )
+            or ""
+        )
+
+        news.stadium = self._safe_text(
+            venue
+        )
+
+        news.referee = self._safe_text(
+            referee
+        )
+
+        news.match_date = (
+            self._format_tehran_date(
+                timestamp
+            )
+        )
+
+        news.match_time = (
+            self._format_tehran_time(
+                timestamp
+            )
+        )
+
+        news.match_phase = "lineup"
+
+        # -------------------------------------------------
+        # IMPORTANT:
+        # Match Post uses these exact keys.
+        # -------------------------------------------------
+
+        news.match_info = {
+            "home": home_name,
+            "away": away_name,
+
+            "home_country": home_country,
+            "away_country": away_country,
+
+            "home_flag": home_flag,
+            "away_flag": away_flag,
+
+            "home_goals": "",
+            "away_goals": "",
+        }
+
+        return news
+
+    # =====================================================
+    # Main fetch
+    # =====================================================
+
+    async def fetch(self) -> List[RawNews]:
+
+        now_utc = datetime.now(
+            timezone.utc
+        )
+
+        if now_utc.hour not in ACTIVE_HOURS_UTC:
+            logger.debug(
+                "Sports API outside active hours; skipped."
+            )
             return []
 
-        today = now.strftime(
+        today = now_utc.strftime(
             "%Y-%m-%d"
         )
 
-        try:
+        fixtures = await self.client.get_finished_fixtures(
+            today
+        )
 
-            fixtures = (
-                await self.client
-                .get_finished_fixtures(
-                    today
-                )
+        if not fixtures:
+            logger.info(
+                "Sports API: no fixtures found for %s",
+                today,
             )
+            return []
 
-            if not fixtures:
-                return []
+        results: List[RawNews] = []
 
-            news_list = []
+        # =================================================
+        # Lineup detection
+        # =================================================
 
-            # ----------------------------------------------------------
-            # ترکیب‌های رسمی
-            # ----------------------------------------------------------
+        for fixture in fixtures:
 
-            lineup_data = (
-                await self._maybe_lineup(
-                    fixtures
-                )
-            )
+            try:
 
-            lineup_keys = set()
-
-            for data in lineup_data:
-
-                key = data.get(
-                    "key"
+                lineup_news = await self._maybe_lineup(
+                    fixture
                 )
 
-                if key:
-                    lineup_keys.add(
-                        key
+                if lineup_news:
+                    results.append(
+                        lineup_news
                     )
 
-                news_list.append(
-                    self._make_lineup_news(
-                        data
-                    )
+            except Exception as exc:
+
+                logger.exception(
+                    "Lineup processing error: %s",
+                    exc,
                 )
 
-            # ----------------------------------------------------------
-            # نتایج نهایی
-            # ----------------------------------------------------------
+        # =================================================
+        # Finished matches
+        # =================================================
 
-            for fixture in fixtures:
+        for fixture in fixtures:
 
-                if not isinstance(
-                    fixture,
-                    dict,
-                ):
+            try:
+
+                info = self._extract_upcoming(
+                    fixture
+                )
+
+                event_id = info.get(
+                    "event_id"
+                )
+
+                if not event_id:
                     continue
 
-                event_id = (
-                    self._get(
-                        fixture,
-                        "id",
-                        "event_id",
-                        "fixture_id",
-                    )
+                cache_key = f"result:{event_id}"
+
+                cached = _cache.get(
+                    cache_key
                 )
 
-                if event_id is None:
-                    continue
+                if cached:
 
-                result_key = (
-                    f"result:{event_id}"
-                )
-
-                # اگر قبلاً نتیجه منتشر شده
-                # دوباره تولید نکن.
-
-                if result_key in _cache:
-                    cached_at = _cache[
-                        result_key
-                    ].get(
-                        "found_at",
+                    cached_at = cached.get(
+                        "timestamp",
                         0,
                     )
 
                     if (
-                        time.time()
-                        - cached_at
+                        time.time() - cached_at
                         < CACHE_TTL_SECONDS
                     ):
                         continue
 
-                teams = self._get(
-                    fixture,
-                    "teams",
-                    default={},
+                summary = await self.client.get_fixture_summary(
+                    event_id
                 )
 
-                home_data = (
-                    teams.get(
-                        "home",
-                        {},
-                    )
-                    if isinstance(
-                        teams,
-                        dict,
-                    )
-                    else {}
-                )
+                if summary:
 
-                away_data = (
-                    teams.get(
-                        "away",
-                        {},
-                    )
-                    if isinstance(
-                        teams,
-                        dict,
-                    )
-                    else {}
-                )
-
-                home = self._extract_team(
-                    home_data
-                )
-
-                away = self._extract_team(
-                    away_data
-                )
-
-                if not home or not away:
-                    continue
-
-                goals = self._get(
-                    fixture,
-                    "goals",
-                    default={},
-                )
-
-                if not isinstance(
-                    goals,
-                    dict,
-                ):
-                    goals = {}
-
-                home_goals = (
-                    goals.get(
-                        "home"
-                    )
-                    if "home" in goals
-                    else 0
-                )
-
-                away_goals = (
-                    goals.get(
-                        "away"
-                    )
-                    if "away" in goals
-                    else 0
-                )
-
-                if home_goals is None:
-                    home_goals = 0
-
-                if away_goals is None:
-                    away_goals = 0
-
-                timestamp = (
-                    self._parse_timestamp(
-                        self._get(
-                            fixture,
-                            "timestamp",
-                            "kickoff_ts",
-                            "start_timestamp",
-                            "date",
-                        )
-                    )
-                )
-
-                if timestamp is None:
-                    timestamp = time.time()
-
-                league_data = self._get(
-                    fixture,
-                    "league",
-                    default={},
-                )
-
-                if isinstance(
-                    league_data,
-                    dict,
-                ):
-                    league = (
-                        league_data.get(
-                            "name"
-                        )
-                        or ""
+                    fixture_data = copy.deepcopy(
+                        summary
                     )
 
-                    stage = (
-                        league_data.get(
-                            "round"
-                        )
-                        or league_data.get(
-                            "stage"
-                        )
-                        or ""
-                    )
-                else:
-                    league = (
-                        self._safe_text(
-                            league_data
-                        )
-                    )
-                    stage = ""
-
-                venue_data = self._get(
-                    fixture,
-                    "venue",
-                    default={},
-                )
-
-                stadium = ""
-
-                if isinstance(
-                    venue_data,
-                    dict,
-                ):
-                    stadium = (
-                        venue_data.get(
-                            "name"
-                        )
-                        or ""
+                    self._apply_info(
+                        info,
+                        fixture_data
                     )
 
-                referee = self._safe_text(
-                    self._get(
-                        fixture,
-                        "referee",
-                    )
-                )
-
-                data = {
-                    "event_id":
-                        event_id,
-
-                    "home":
-                        home,
-
-                    "away":
-                        away,
-
-                    "home_goals":
-                        home_goals,
-
-                    "away_goals":
-                        away_goals,
-
-                    "home_country":
-                        (
-                            home_data.get(
-                                "country",
-                                "",
-                            )
-                            if isinstance(
-                                home_data,
-                                dict,
-                            )
-                            else ""
-                        ),
-
-                    "away_country":
-                        (
-                            away_data.get(
-                                "country",
-                                "",
-                            )
-                            if isinstance(
-                                away_data,
-                                dict,
-                            )
-                            else ""
-                        ),
-
-                    "league":
-                        league,
-
-                    "stage":
-                        stage,
-
-                    "stadium":
-                        stadium,
-
-                    "referee":
-                        referee,
-
-                    "match_date":
-                        self._format_tehran_date(
-                            timestamp
-                        ),
-
-                    "match_time":
-                        self._format_tehran_time(
-                            timestamp
-                        ),
-
-                    "goals":
-                        self._get(
-                            fixture,
-                            "events",
-                            "goals",
-                            default=[],
-                        ),
-
-                    "assists":
-                        [],
-
-                    "cards":
-                        [],
-
-                    "lineup":
-                        {},
-
-                    "stats":
-                        {},
-                }
+                    fixture = fixture_data
 
                 news = self._make_news(
-                    data
+                    info,
+                    fixture
                 )
 
-                _cache[result_key] = {
-                    "found_at":
-                        time.time(),
-                    "news":
-                        news,
+                if not news:
+                    continue
+
+                _cache[cache_key] = {
+                    "timestamp": time.time(),
                 }
 
-                news_list.append(
+                results.append(
                     news
                 )
 
-            return news_list
+            except Exception as exc:
 
-        except Exception:
-            logger.exception(
-                "SportsApiFetcher.fetch failed"
-            )
-            return []
+                logger.exception(
+                    "Result processing error: %s",
+                    exc,
+                )
+
+        logger.info(
+            "Sports API fetched %d football news.",
+            len(results),
+        )
+
+        return results
