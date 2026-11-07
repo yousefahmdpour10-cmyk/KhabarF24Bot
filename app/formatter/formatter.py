@@ -32,6 +32,7 @@ class Formatter:
         self,
         news: RawNews,
     ) -> str:
+
         category = getattr(
             news,
             "category",
