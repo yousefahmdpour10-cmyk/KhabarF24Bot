@@ -21,6 +21,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from app.fetchers.base_fetcher import BaseFetcher
+from app.fetchers.media_extractor import extract_page_media
 from app.models.raw_news import RawNews
 from app.utils.logger import logger
 
@@ -36,11 +37,11 @@ class WebsiteFetcher(BaseFetcher):
         super().__init__(source)
 
         self.timeout = aiohttp.ClientTimeout(
-    total=30,
-    connect=10,
-    sock_connect=10,
-    sock_read=20,
-)
+            total=30,
+            connect=10,
+            sock_connect=10,
+            sock_read=20,
+        )
 
         self.headers = {
             "User-Agent": (
@@ -81,11 +82,11 @@ class WebsiteFetcher(BaseFetcher):
 
         try:
             async with aiohttp.ClientSession(
-    timeout=self.timeout,
-    headers=self.headers,
-    max_field_size=16384,
-    max_headers=200,
-) as session:
+                timeout=self.timeout,
+                headers=self.headers,
+                max_field_size=16384,
+                max_headers=200,
+            ) as session:
                 html = await self._download_page(
                     session,
                     website_url,
@@ -340,11 +341,72 @@ class WebsiteFetcher(BaseFetcher):
 
         soup = BeautifulSoup(html, "lxml")
 
+        # --------------------------------------------------------------
+        # استخراج ویدئو و رسانه‌های صفحه
+        # --------------------------------------------------------------
+        try:
+            (
+                direct_video_url,
+                video_content_type,
+                extracted_image_url,
+                embedded_player_url,
+            ) = extract_page_media(
+                html,
+                news.url,
+            )
+
+            if direct_video_url:
+                news.video_url = direct_video_url
+                news.video_content_type = (
+                    video_content_type or ""
+                )
+
+                news.raw_data.update({
+                    "video_url": direct_video_url,
+                    "video_content_type": (
+                        video_content_type or ""
+                    ),
+                })
+
+                logger.info(
+                    "Video extracted | source=%s | title=%s | url=%s",
+                    self.source.name,
+                    news.title[:70],
+                    direct_video_url[:180],
+                )
+
+            elif embedded_player_url:
+                news.raw_data["embedded_player_url"] = (
+                    embedded_player_url
+                )
+
+                logger.info(
+                    "Video player detected | source=%s | title=%s | player=%s",
+                    self.source.name,
+                    news.title[:70],
+                    embedded_player_url[:180],
+                )
+
+            # اگر Extractor عکس بهتری از صفحه پیدا کرده باشد،
+            # فقط زمانی جایگزین کن که عکس قبلی نداریم.
+            if extracted_image_url and not news.image_url:
+                news.image_url = extracted_image_url
+
+        except Exception as error:
+            logger.debug(
+                "Media extraction failed for %s: %s",
+                news.url,
+                error,
+            )
+
+        # --------------------------------------------------------------
         # متادیتای مقاله
+        # --------------------------------------------------------------
         meta_title = self._get_meta(
             soup,
             ("og:title", "twitter:title"),
         )
+
         if meta_title and (
             not news.title or len(meta_title) > len(news.title)
         ):
@@ -363,13 +425,18 @@ class WebsiteFetcher(BaseFetcher):
             soup,
             ("og:image", "twitter:image"),
         )
+
         if meta_image and not news.image_url:
-            news.image_url = urljoin(news.url, meta_image)
+            news.image_url = urljoin(
+                news.url,
+                meta_image,
+            )
 
         author = self._get_meta(
             soup,
             ("author", "article:author"),
         )
+
         if author and not news.author:
             news.author = author
 
@@ -381,8 +448,10 @@ class WebsiteFetcher(BaseFetcher):
                 "pubdate",
             ),
         )
+
         if published:
             parsed_date = self._parse_datetime(published)
+
             if parsed_date:
                 news.published_at = parsed_date
 
@@ -454,7 +523,10 @@ class WebsiteFetcher(BaseFetcher):
 
         # حذف پاراگراف‌های تکراری
         unique = list(dict.fromkeys(paragraphs))
-        return " ".join(unique)[:WebsiteFetcher.MAX_TEXT_LENGTH]
+
+        return " ".join(unique)[
+            :WebsiteFetcher.MAX_TEXT_LENGTH
+        ]
 
     @staticmethod
     def _find_article_container(link):
@@ -463,15 +535,24 @@ class WebsiteFetcher(BaseFetcher):
         current = link
 
         for _ in range(4):
-            if not current or not getattr(current, "parent", None):
+            if not current or not getattr(
+                current,
+                "parent",
+                None,
+            ):
                 break
 
             current = current.parent
 
             name = getattr(current, "name", "")
-            classes = " ".join(
-                current.get("class", [])
-            ).lower() if hasattr(current, "get") else ""
+
+            classes = (
+                " ".join(
+                    current.get("class", [])
+                ).lower()
+                if hasattr(current, "get")
+                else ""
+            )
 
             if (
                 name in ("article", "li")
@@ -491,7 +572,10 @@ class WebsiteFetcher(BaseFetcher):
         return link.parent
 
     @staticmethod
-    def _extract_card_description(card, title: str) -> str:
+    def _extract_card_description(
+        card,
+        title: str,
+    ) -> str:
         """پیداکردن خلاصه از کارت خبر."""
 
         for selector in (
@@ -509,7 +593,11 @@ class WebsiteFetcher(BaseFetcher):
                 element.get_text(" ", strip=True)
             )
 
-            if text and text != title and len(text) >= 30:
+            if (
+                text
+                and text != title
+                and len(text) >= 30
+            ):
                 return text[:1000]
 
         return ""
@@ -524,6 +612,7 @@ class WebsiteFetcher(BaseFetcher):
         """استخراج تصویر از لینک، کارت خبر یا متادیتای صفحه."""
 
         containers = [link]
+
         if card and card is not link:
             containers.append(card)
 
@@ -542,23 +631,44 @@ class WebsiteFetcher(BaseFetcher):
 
                     if value:
                         # srcset ممکن است چند اندازه تصویر داشته باشد.
-                        value = str(value).split(",")[0].strip().split(" ")[0]
+                        value = (
+                            str(value)
+                            .split(",")[0]
+                            .strip()
+                            .split(" ")[0]
+                        )
 
                         if value.startswith("data:"):
                             continue
 
-                        return urljoin(base_url, value)
+                        return urljoin(
+                            base_url,
+                            value,
+                        )
 
         # fallback به تصویر معرفی‌شده در صفحه
         for attribute in (
             ("property", "og:image"),
             ("name", "twitter:image"),
         ):
-            meta = soup.find("meta", attrs={attribute[0]: attribute[1]})
+            meta = soup.find(
+                "meta",
+                attrs={
+                    attribute[0]: attribute[1],
+                },
+            )
+
             if meta and meta.get("content"):
                 value = meta["content"].strip()
-                if value and not value.startswith("data:"):
-                    return urljoin(base_url, value)
+
+                if (
+                    value
+                    and not value.startswith("data:")
+                ):
+                    return urljoin(
+                        base_url,
+                        value,
+                    )
 
         return None
 
@@ -582,47 +692,91 @@ class WebsiteFetcher(BaseFetcher):
                 value = WebsiteFetcher._clean_text(
                     meta.get("content", "")
                 )
+
                 if value:
                     return value
 
             # پشتیبانی ابتدایی از JSON-LD
-            if key in ("datePublished", "author"):
+            if key in (
+                "datePublished",
+                "author",
+            ):
                 for script in soup.find_all(
                     "script",
-                    attrs={"type": "application/ld+json"},
+                    attrs={
+                        "type": "application/ld+json",
+                    },
                 ):
                     try:
-                        data = json.loads(script.string or script.get_text())
-                        objects = data if isinstance(data, list) else [data]
+                        data = json.loads(
+                            script.string
+                            or script.get_text()
+                        )
+
+                        objects = (
+                            data
+                            if isinstance(data, list)
+                            else [data]
+                        )
 
                         for obj in objects:
-                            if not isinstance(obj, dict):
+                            if not isinstance(
+                                obj,
+                                dict,
+                            ):
                                 continue
 
                             candidates = [obj]
-                            if isinstance(obj.get("@graph"), list):
-                                candidates.extend(obj["@graph"])
+
+                            if isinstance(
+                                obj.get("@graph"),
+                                list,
+                            ):
+                                candidates.extend(
+                                    obj["@graph"]
+                                )
 
                             for candidate in candidates:
-                                if not isinstance(candidate, dict):
+                                if not isinstance(
+                                    candidate,
+                                    dict,
+                                ):
                                     continue
 
                                 value = candidate.get(key)
-                                if isinstance(value, dict):
+
+                                if isinstance(
+                                    value,
+                                    dict,
+                                ):
                                     value = (
                                         value.get("name")
-                                        or value.get("datePublished")
+                                        or value.get(
+                                            "datePublished"
+                                        )
                                     )
 
-                                if isinstance(value, str) and value.strip():
+                                if (
+                                    isinstance(
+                                        value,
+                                        str,
+                                    )
+                                    and value.strip()
+                                ):
                                     return value.strip()
-                    except (ValueError, TypeError):
+
+                    except (
+                        ValueError,
+                        TypeError,
+                    ):
                         continue
 
         return None
 
     @staticmethod
-    def _parse_datetime(value: str) -> Optional[datetime]:
+    def _parse_datetime(
+        value: str,
+    ) -> Optional[datetime]:
         """تبدیل تاریخ‌های رایج به datetime."""
 
         if not value:
@@ -632,42 +786,69 @@ class WebsiteFetcher(BaseFetcher):
 
         try:
             parsed = datetime.fromisoformat(
-                value.replace("Z", "+00:00")
-            )
-            if parsed.tzinfo:
-                return parsed.astimezone(timezone.utc).replace(
-                    tzinfo=None
+                value.replace(
+                    "Z",
+                    "+00:00",
                 )
+            )
+
+            if parsed.tzinfo:
+                return parsed.astimezone(
+                    timezone.utc
+                ).replace(tzinfo=None)
+
             return parsed
+
         except ValueError:
             pass
 
         try:
             parsed = parsedate_to_datetime(value)
+
             if parsed.tzinfo:
-                return parsed.astimezone(timezone.utc).replace(
-                    tzinfo=None
-                )
+                return parsed.astimezone(
+                    timezone.utc
+                ).replace(tzinfo=None)
+
             return parsed
-        except (TypeError, ValueError, OverflowError):
+
+        except (
+            TypeError,
+            ValueError,
+            OverflowError,
+        ):
             return None
 
     @staticmethod
-    def _clean_text(value: str) -> str:
+    def _clean_text(
+        value: str,
+    ) -> str:
         """یکنواخت‌سازی فاصله‌ها و حذف نویز متنی."""
 
         if not value:
             return ""
 
-        value = value.replace("\xa0", " ")
-        value = re.sub(r"\s+", " ", value)
+        value = value.replace(
+            "\xa0",
+            " ",
+        )
+
+        value = re.sub(
+            r"\s+",
+            " ",
+            value,
+        )
+
         return value.strip()
 
     @staticmethod
-    def _normalize_url(url: str) -> str:
+    def _normalize_url(
+        url: str,
+    ) -> str:
         """حذف fragment و پارامترهای رهگیری رایج."""
 
         url, _fragment = urldefrag(url)
+
         parsed = urlparse(url)
 
         blocked_tracking = {
@@ -703,10 +884,16 @@ class WebsiteFetcher(BaseFetcher):
             article = urlparse(article_url)
             base = urlparse(base_url)
 
-            if article.scheme not in ("http", "https"):
+            if article.scheme not in (
+                "http",
+                "https",
+            ):
                 return False
 
-            if article.netloc.lower() != base.netloc.lower():
+            if (
+                article.netloc.lower()
+                != base.netloc.lower()
+            ):
                 return False
 
             path = article.path.lower()
@@ -734,19 +921,24 @@ class WebsiteFetcher(BaseFetcher):
                 "/gallery/",
             )
 
-            if any(part in path for part in blocked_parts):
+            if any(
+                part in path
+                for part in blocked_parts
+            ):
                 return False
 
-            if path.endswith((
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".gif",
-                ".webp",
-                ".svg",
-                ".pdf",
-                ".zip",
-            )):
+            if path.endswith(
+                (
+                    ".jpg",
+                    ".jpeg",
+                    ".png",
+                    ".gif",
+                    ".webp",
+                    ".svg",
+                    ".pdf",
+                    ".zip",
+                )
+            ):
                 return False
 
             return True
