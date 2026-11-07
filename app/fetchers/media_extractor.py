@@ -23,9 +23,10 @@ Media Extractor
     embedded_player_url
 
 نکته:
-- direct_video_url باید قابل دانلود مستقیم باشد.
-- embedded_player_url فقط آدرس player / iframe است و
-  نباید مستقیماً به video downloader داده شود.
+- direct_video_url باید قابل دانلود مستقیم یا قابل پردازش
+  مستقیم توسط FFmpeg باشد.
+- embedded_player_url فقط آدرس player / iframe است.
+- فایل‌های صوتی مثل MP3 هرگز نباید به عنوان video_url برگردند.
 """
 
 import json
@@ -56,6 +57,21 @@ STREAM_EXTENSIONS = (
     ".mpd",
 )
 
+AUDIO_EXTENSIONS = (
+    ".mp3",
+    ".m4a",
+    ".aac",
+    ".wav",
+    ".ogg",
+    ".oga",
+    ".opus",
+    ".flac",
+    ".wma",
+    ".aiff",
+    ".aif",
+    ".amr",
+)
+
 IMAGE_EXTENSIONS = (
     ".jpg",
     ".jpeg",
@@ -70,6 +86,10 @@ VIDEO_MIME_TYPES = (
     "application/vnd.apple.mpegurl",
     "application/x-mpegurl",
     "application/dash+xml",
+)
+
+AUDIO_MIME_TYPES = (
+    "audio/",
 )
 
 STRONG_VIDEO_KEYS = {
@@ -255,6 +275,32 @@ def is_placeholder_image(url: str) -> bool:
     )
 
 
+def looks_like_audio(
+    url: str,
+    media_type: str = "",
+) -> bool:
+    """
+    تشخیص فایل صوتی.
+
+    این تابع عمداً قبل از looks_like_video استفاده می‌شود
+    تا MP3 و سایر فایل‌های صوتی هرگز video_url نشوند.
+    """
+
+    media_type = (
+        media_type or ""
+    ).lower().split(";")[0].strip()
+
+    if any(
+        media_type.startswith(media)
+        for media in AUDIO_MIME_TYPES
+    ):
+        return True
+
+    return url_path(url).endswith(
+        AUDIO_EXTENSIONS
+    )
+
+
 def looks_like_image(url: str) -> bool:
     """تشخیص تصویر بر اساس پسوند."""
     return url_path(url).endswith(
@@ -269,7 +315,8 @@ def looks_like_video(
     """
     تشخیص ویدئو بر اساس MIME یا پسوند.
 
-    نکته:
+    فایل‌های صوتی همیشه رد می‌شوند.
+
     URLهای بدون پسوند فقط زمانی ویدئو شناخته می‌شوند
     که media_type صراحتاً ویدئویی باشد.
     """
@@ -277,6 +324,14 @@ def looks_like_video(
     media_type = (
         media_type or ""
     ).lower().split(";")[0].strip()
+
+    # مهم:
+    # MP3 / M4A / AAC و سایر audio/* هرگز video نیستند.
+    if looks_like_audio(
+        url,
+        media_type,
+    ):
+        return False
 
     if any(
         media_type.startswith(media)
@@ -371,7 +426,8 @@ class MediaCollector:
     جمع‌آوری کاندیدهای ویدئو، player و تصویر.
 
     direct:
-        ویدئویی که احتمالاً مستقیماً قابل دانلود است.
+        ویدئویی که احتمالاً مستقیماً قابل دانلود یا
+        پردازش توسط FFmpeg است.
 
     weak:
         URLی که در یک فیلد ویدئویی آمده ولی پسوند/MIME واضح ندارد.
@@ -469,6 +525,9 @@ class MediaCollector:
         if is_placeholder_image(url):
             return
 
+        if looks_like_audio(url):
+            return
+
         if looks_like_video(url):
             return
 
@@ -493,7 +552,20 @@ class MediaCollector:
             media_type or ""
         ).lower().split(";")[0].strip()
 
+        # ----------------------------------------------------------
+        # مهم:
+        # فایل صوتی را در هر شرایطی رد کن.
+        # حتی اگر URL از فیلدی با نام video آمده باشد.
+        # ----------------------------------------------------------
+        if looks_like_audio(
+            url,
+            media_type,
+        ):
+            return
+
+        # ----------------------------------------------------------
         # ویدئوی مستقیم یا stream
+        # ----------------------------------------------------------
         if looks_like_video(
             url,
             media_type,
@@ -512,17 +584,28 @@ class MediaCollector:
 
             return
 
+        # ----------------------------------------------------------
         # Player / iframe
+        # ----------------------------------------------------------
         if self.is_player_page(url):
             self.add_embed(url)
             return
 
+        # ----------------------------------------------------------
         # تصویر را هرگز ویدئو حساب نکن
+        # ----------------------------------------------------------
         if looks_like_image(url):
             return
 
-        # اگر صراحتاً در فیلد ویدئو آمده ولی پسوند ندارد،
-        # به عنوان weak candidate نگه می‌داریم.
+        # ----------------------------------------------------------
+        # اگر صراحتاً در یک فیلد ویدئویی آمده ولی
+        # پسوند ندارد، فقط در این حالت weak candidate است.
+        #
+        # مثال:
+        # https://cdn.example.com/media/123456
+        #
+        # اما MP3 اینجا قبلاً رد شده است.
+        # ----------------------------------------------------------
         if url not in [
             item[0]
             for item in self.weak
@@ -574,23 +657,39 @@ class MediaCollector:
             Tuple[str, str]
         ] = None
 
-        # اول MP4/WebM/MOV و ...
+        # ----------------------------------------------------------
+        # اول ویدئوی معمولی:
+        # MP4 / WebM / MOV / M4V / MKV / AVI
+        # ----------------------------------------------------------
         if progressive:
             chosen = progressive[0]
 
-        # سپس CDN بدون پسوند
+        # ----------------------------------------------------------
+        # سپس CDN ویدئویی بدون پسوند
+        #
+        # فقط weak candidateهایی که از فیلد ویدئویی
+        # آمده‌اند اینجا قرار دارند.
+        # فایل صوتی قبلاً حذف شده است.
+        # ----------------------------------------------------------
         elif self.weak:
             chosen = self.weak[0]
 
-        # m3u8/mpd فعلاً به عنوان embed
-        # برگردانده می‌شود تا publisher آن را
-        # به عنوان فایل معمولی دانلود نکند.
+        # ----------------------------------------------------------
+        # اگر فقط stream داشتیم، خود stream را به عنوان
+        # direct_video_url برگردان.
+        #
+        # video_watermark.py جدید ما m3u8/mpd را مستقیماً
+        # با FFmpeg پردازش می‌کند.
+        # ----------------------------------------------------------
+        elif streams:
+            chosen = streams[0]
+
+        # ----------------------------------------------------------
+        # Player فقط زمانی embed است که هیچ direct video
+        # قابل استفاده‌ای نداریم.
+        # ----------------------------------------------------------
         if self.embeds:
             embed = self.embeds[0]
-
-        elif streams:
-            embed = streams[0][0]
-
         else:
             embed = ""
 
@@ -678,8 +777,6 @@ def _scan_iframes(
             collector.add_video(src)
 
         else:
-            # iframeهای ناشناس ممکن است
-            # player اختصاصی سایت باشند.
             path = url_path(src)
 
             if any(
@@ -907,6 +1004,15 @@ def scan_json(
         ):
             return
 
+        # ----------------------------------------------------------
+        # فایل صوتی در هر کلید و هر context رد شود.
+        # ----------------------------------------------------------
+        if looks_like_audio(
+            value,
+            media_type,
+        ):
+            return
+
         if key in IMAGE_KEYS:
             collector.add_image(
                 value
@@ -990,7 +1096,6 @@ def scan_json(
         inherited_video: bool = False,
         inherited_image: bool = False,
     ) -> None:
-        # عمق بالا می‌تواند JSONهای بسیار بزرگ ایجاد کند.
         if depth > 16:
             return
 
@@ -1099,9 +1204,6 @@ def scan_json(
         TypeError,
         ValueError,
     ):
-        # بعضی JSها JSON کامل نیستند.
-        # در این حالت raw URL scan پایین‌تر
-        # همچنان کار می‌کند.
         pass
 
     # URLهای داخل JSON/JS حتی اگر JSON کامل parse نشود.
@@ -1143,7 +1245,6 @@ def _scan_scripts(
         if not text:
             continue
 
-        # JSON-LD / Next.js / Nuxt / Apollo
         if (
             "json" in script_type
             or script_id in JSON_SCRIPT_IDS
@@ -1154,8 +1255,6 @@ def _scan_scripts(
                 collector,
             )
 
-        # حتی scriptهای غیر JSON نیز
-        # ممکن است URL ویدئو داشته باشند.
         else:
             _scan_raw_urls(
                 text,
