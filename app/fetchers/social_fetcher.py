@@ -412,7 +412,23 @@ class SocialFetcher(BaseFetcher):
 
     @staticmethod
     def _extract_image(message) -> Optional[str]:
-        """استخراج تصویر یا تصویر پیش‌نمایش از پست تلگرام."""
+        """
+        استخراج تصویر واقعی خود پست تلگرام.
+
+        اولویت:
+        1. تصویر رسانه‌ای خود پیام از photo_wrap
+        2. تصویر داخل photo container
+        3. fallback محدود به photo/video media
+
+        عمداً از selector عمومی
+        '.tgme_widget_message img'
+        استفاده نمی‌شود؛ چون ممکن است تصویر پروفایل
+        کانال را به‌عنوان تصویر خبر برگرداند.
+        """
+
+        # --------------------------------------------------
+        # 1) تصویر اصلی پست
+        # --------------------------------------------------
 
         photo = message.select_one(
             ".tgme_widget_message_photo_wrap"
@@ -430,28 +446,90 @@ class SocialFetcher(BaseFetcher):
             if match:
                 value = match.group(2).strip()
 
-                if value.startswith(("http://", "https://")):
+                if value.startswith(
+                    ("http://", "https://")
+                ):
                     return value
 
-        # بعضی قالب‌ها تصویر را در img قرار می‌دهند.
-        image = message.select_one(
-            ".tgme_widget_message_video img, "
-            ".tgme_widget_message_photo img, "
-            ".tgme_widget_message img"
-        )
-
-        if image:
+            # بعضی نسخه‌های HTML ممکن است تصویر را
+            # به‌صورت data attribute نگه دارند.
             for attribute in (
-                "src",
                 "data-src",
                 "data-original",
+                "src",
             ):
-                value = image.get(attribute)
+                value = photo.get(attribute)
 
                 if value and value.startswith(
                     ("http://", "https://")
                 ):
                     return value
+
+            # اگر خود photo_wrap شامل img باشد،
+            # فقط همان container رسانه‌ای را بررسی می‌کنیم.
+            image = photo.select_one("img")
+
+            if image:
+                for attribute in (
+                    "src",
+                    "data-src",
+                    "data-original",
+                ):
+                    value = image.get(attribute)
+
+                    if value and value.startswith(
+                        ("http://", "https://")
+                    ):
+                        return value
+
+        # --------------------------------------------------
+        # 2) photo containerهای جایگزین
+        # --------------------------------------------------
+
+        photo_image = message.select_one(
+            ".tgme_widget_message_photo img"
+        )
+
+        if photo_image:
+            for attribute in (
+                "src",
+                "data-src",
+                "data-original",
+            ):
+                value = photo_image.get(attribute)
+
+                if value and value.startswith(
+                    ("http://", "https://")
+                ):
+                    return value
+
+        # --------------------------------------------------
+        # 3) fallback فقط برای media واقعی
+        # --------------------------------------------------
+
+        # اگر Telegram در HTML ساختار متفاوتی داشت،
+        # فقط imgهای داخل media container را بررسی می‌کنیم.
+        media_image = message.select_one(
+            ".tgme_widget_message_media img"
+        )
+
+        if media_image:
+            for attribute in (
+                "src",
+                "data-src",
+                "data-original",
+            ):
+                value = media_image.get(attribute)
+
+                if value and value.startswith(
+                    ("http://", "https://")
+                ):
+                    return value
+
+        # مهم:
+        # اینجا عمداً به صورت عمومی دنبال
+        # '.tgme_widget_message img'
+        # نمی‌گردیم تا avatar کانال انتخاب نشود.
 
         return None
 
