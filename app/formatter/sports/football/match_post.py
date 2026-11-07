@@ -121,8 +121,8 @@ TEAM_COUNTRY_FLAGS = {
     "Genk": "🇧🇪",
 
     # Scotland
-    "Celtic": "🏴",
-    "Rangers": "🏴",
+    "Celtic": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "Rangers": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
 
     # Saudi Arabia
     "Al Hilal": "🇸🇦",
