@@ -4,33 +4,24 @@ Source Importance Scores
 
 امتیاز از 1 تا 10:
 10 = بسیار مهم
-9  = بسیار معتبر / مهم
-8  = معتبر
-7  = متوسط رو به بالا
-6  = متوسط
-5  = مقدار پیش‌فرض
+8-9 = مهم
+6-7 = متوسط
+5 = مقدار پیش‌فرض
 
-نکته:
-این امتیاز با Credibility Score که معمولاً در بازه 70 تا 100
-محاسبه می‌شود متفاوت است.
-
-SOURCE_ID_SCORES:
-    امتیاز بر اساس شناسه واقعی منبع در data/sources/
-
-SOURCE_SCORES:
-    امتیاز بر اساس نام منبع برای سازگاری با کدهای قدیمی
+منابع شناخته‌شده با SOURCE_ID_SCORES امتیاز دقیق می‌گیرند.
+برای منابع جدیدی که هنوز در این جدول نیستند، priority منبع
+در data/sources/*.json به امتیاز 1 تا 10 تبدیل می‌شود.
 """
 
 # ============================================================
-# امتیاز بر اساس شناسه واقعی منبع
+# امتیاز بر اساس شناسه واقعی منبع در data/sources/
 # ============================================================
 
 SOURCE_ID_SCORES = {
 
-    # ========================================================
-    # INTERNATIONAL / خبرگزاری‌های بین‌المللی
-    # ========================================================
-
+    # --------------------------------------------------------
+    # خبرگزاری‌های بین‌المللی
+    # --------------------------------------------------------
     "reuters_google_news": 10,
     "ap_google_news": 10,
     "afp_google_news": 10,
@@ -45,6 +36,7 @@ SOURCE_ID_SCORES = {
     "france24_world": 9,
     "france24_middle_east": 9,
     "euronews": 9,
+
     "sky_news_world": 9,
     "sky_news_home": 8,
 
@@ -66,8 +58,8 @@ SOURCE_ID_SCORES = {
 
     "politico": 8,
     "politico_europe": 8,
-    "the_hill": 8,
 
+    "the_hill": 8,
     "la_times": 8,
     "independent": 8,
     "cbc_world": 8,
@@ -76,54 +68,20 @@ SOURCE_ID_SCORES = {
     "times_of_india": 8,
     "scmp_world": 8,
     "ndtv_world": 8,
-
     "spiegel": 8,
-    "economist_world": 9,
 
+    "economist_world": 9,
     "google_news_world": 7,
 
-    # ========================================================
-    # روسیه / چین / آسیا / اروپا
-    # ========================================================
-
-    "tass": 8,
-    "ria_novosti": 8,
-    "interfax_russia": 8,
-    "rbc_russia": 7,
-    "kommersant": 7,
-
-    "xinhua_world": 9,
-    "china_daily": 8,
-    "cctv_world": 8,
-
-    "kyodo_world": 9,
-    "jiji_news": 8,
-    "nhk_world": 9,
-    "yonhap_world": 9,
-    "kbs_world": 8,
-
-    "pti_india": 9,
-    "ani_india": 8,
-    "the_hindu": 8,
-
-    "anadolu_world": 9,
-    "trt_world": 8,
-
-    "ansa_world": 8,
-    "efe_world": 8,
-    "dpa_world": 9,
-    "pap_world": 8,
-    "ukrinform": 9,
-
-    # ========================================================
-    # خاورمیانه / منابع رسمی
-    # ========================================================
-
+    # --------------------------------------------------------
+    # خاورمیانه و منابع رسمی
+    # --------------------------------------------------------
     "al_arabiya": 8,
     "i24news": 8,
 
     "israel_hayom": 7,
     "israel_14": 7,
+
     "kan_news": 8,
     "channel_12": 8,
 
@@ -132,14 +90,47 @@ SOURCE_ID_SCORES = {
 
     "centcom": 9,
 
-    "spa_saudi": 9,
+    # --------------------------------------------------------
+    # روسیه / چین / آسیا / اروپا
+    # --------------------------------------------------------
+    "tass": 7,
+    "ria_novosti": 7,
+    "interfax_russia": 7,
+    "rbc_russia": 7,
+    "kommersant": 7,
+
+    "xinhua_world": 7,
+    "china_daily": 7,
+    "cctv_world": 7,
+
+    "kyodo_world": 8,
+    "jiji_news": 8,
+    "nhk_world": 8,
+
+    "yonhap_world": 8,
+    "kbs_world": 8,
+
+    "pti_india": 8,
+    "ani_india": 8,
+    "the_hindu": 8,
+
+    "anadolu_world": 8,
+    "trt_world": 8,
+
+    "ansa_world": 8,
+    "efe_world": 8,
+    "dpa_world": 8,
+    "pap_world": 7,
+
+    "ukrinform": 8,
+
+    "spa_saudi": 8,
     "arab_news": 8,
-    "qna_world": 9,
+    "qna_world": 8,
 
-    # ========================================================
+    # --------------------------------------------------------
     # ایران
-    # ========================================================
-
+    # --------------------------------------------------------
     "irna": 9,
     "isna": 9,
     "tasnim": 8,
@@ -152,154 +143,54 @@ SOURCE_ID_SCORES = {
 
     "khabaronline": 8,
     "tabnak": 8,
-    "asriran": 8,
 
+    "asriran": 7,
     "iranintl_fa": 9,
+
     "hengaw": 8,
-    "khabarfouri": 7,
+    "khabarfouri": 8,
 
     "mashregh": 7,
     "alef": 7,
     "entekhab": 8,
+
     "borna": 7,
-    "mizan": 7,
+    "mizan": 8,
     "snn": 7,
-    "defapress": 7,
+
+    "defapress": 8,
     "icana": 8,
 
-    "fararu": 8,
-    "hamshahrionline": 8,
-    "nournews": 8,
+    "fararu": 7,
+    "hamshahrionline": 7,
+
+    "nournews": 7,
     "iqna": 7,
-    "shabestan": 6,
+    "shabestan": 7,
 
-    "ana": 7,
-    "qudsonline": 7,
-    "javanonline": 7,
-    "aftabnews": 7,
+    # --------------------------------------------------------
+    # فوتبال و ورزش
+    # --------------------------------------------------------
+    "fabrizio_romano_telegram": 10,
+    "di_marzio": 10,
 
-    "ettelaat": 8,
-    "jamejam": 7,
-    "dana": 6,
+    "sky_sports_football": 9,
+    "sky_sports": 9,
 
-    "kayhan": 7,
-    "shargh": 8,
-    "etemadonline": 7,
-
-    "jomhouri_eslami": 7,
-    "resalat": 7,
-    "siasatrooz": 6,
-    "khorasannews": 7,
-    "vatanemrooz": 7,
-    "ebtekar": 7,
-    "farhikhtegan": 7,
-    "jahannews": 7,
-    "parsine": 7,
-    "serat": 6,
-    "mojnews": 7,
-    "imna": 6,
-
-    # ========================================================
-    # ECONOMY / اقتصاد جهانی
-    # ========================================================
-
-    "bbc_business": 9,
-
-    "wsj_markets": 9,
-    "wsj_business": 9,
-
-    "cnbc_top_news": 9,
-    "cnbc_business": 9,
-
-    "marketwatch_top": 8,
-
-    "bloomberg_markets": 10,
-    "bloomberg_economics": 10,
-
-    "financial_times": 10,
-    "economist_finance": 9,
-
-    "fortune": 8,
-    "business_insider": 8,
-    "hbr": 8,
-
-    "investing_com": 8,
-
-    # ========================================================
-    # CRYPTO
-    # ========================================================
-
-    "coindesk": 8,
-    "cointelegraph": 7,
-    "decrypt": 7,
-
-    # ========================================================
-    # ECONOMY / اقتصاد ایران
-    # ========================================================
-
-    "tejaratnews": 9,
-    "eghtesadonline": 9,
-    "donya_e_eqtesad": 9,
-    "eghtesadnews": 8,
-    "ecoiran": 8,
-    "ibena": 8,
-    "boursepress": 7,
-    "tejarat_farda": 8,
-    "eghtesad24": 7,
-    "poolnews": 6,
-    "gostaresh": 6,
-    "iran_economy": 6,
-
-    # ========================================================
-    # شرکت‌ها / منابع رسمی اقتصادی
-    # ========================================================
-
-    "tesla_newsroom": 7,
-
-    # ========================================================
-    # HEALTH / سلامت
-    # ========================================================
-
-    "bbc_health": 9,
-    "stat": 10,
-    "kff_health": 9,
-    "npr_health": 8,
-    "guardian_health": 9,
-    "nytimes_health": 9,
-
-    "sciencedaily_health": 8,
-
-    "who_news": 10,
-    "who_disease_outbreaks": 10,
-
-    "fda_medwatch": 10,
-    "fda_news": 9,
-
-    "cdc_mmwr": 10,
-    "niehs": 9,
-
-    "psychology_today": 7,
-
-    # ========================================================
-    # SPORTS / ورزش
-    # ========================================================
-
-    "bbc_sport": 9,
     "bbc_football": 9,
+    "bbc_sport": 9,
     "bbc_premier_league": 9,
 
     "espn_soccer": 9,
     "espn_sports": 9,
 
-    "sky_sports_football": 9,
-    "sky_sports": 9,
-
     "the_athletic": 9,
     "the_athletic_football": 9,
 
     "guardian_football": 9,
-    "guardian_sport": 9,
+    "guardian_sport": 8,
 
+    "transfermarkt": 9,
     "marca": 9,
     "as_com_football": 8,
 
@@ -307,67 +198,40 @@ SOURCE_ID_SCORES = {
     "goal_football": 8,
     "talksport": 8,
 
-    # ========================================================
-    # FOOTBALL TRANSFERS
-    # ========================================================
-
-    "di_marzio": 10,
-    "fabrizio_romano_telegram": 10,
-    "transfermarkt": 9,
-
     "manchester_evening_news": 9,
 
     "cbs_sports": 8,
     "yahoo_sports": 8,
 
-    # ========================================================
-    # MOTORSPORT
-    # ========================================================
-
-    "formula1": 9,
-    "autosport": 9,
-
-    # ========================================================
-    # OTHER SPORTS
-    # ========================================================
-
+    "formula1": 8,
+    "autosport": 8,
     "mlb": 8,
     "espncricinfo": 8,
     "ufc": 8,
 
-    # ========================================================
-    # OFFICIAL FOOTBALL ORGANIZATIONS
-    # ========================================================
-
-    "uefa": 10,
-    "fifa": 10,
-    "premier_league": 10,
+    "uefa": 9,
+    "fifa": 9,
+    "premier_league": 9,
 
     "manutd_official": 8,
     "realmadrid_official": 8,
     "fcbarcelona_official": 8,
 
-    # ========================================================
-    # IRAN FOOTBALL
-    # ========================================================
-
     "varzesh3": 9,
     "tasnim_sport": 8,
 
-    # ========================================================
-    # TECHNOLOGY
-    # ========================================================
-
+    # --------------------------------------------------------
+    # فناوری
+    # --------------------------------------------------------
     "bbc_technology": 9,
     "the_verge": 9,
     "techcrunch": 9,
+
     "arstechnica": 8,
-
     "engadget": 8,
-    "wired": 9,
+    "wired": 8,
 
-    "mit_technology_review": 10,
-
+    "mit_technology_review": 9,
     "cnet": 8,
     "zdnet": 8,
     "techradar": 8,
@@ -382,44 +246,50 @@ SOURCE_ID_SCORES = {
     "venturebeat": 8,
     "siliconangle": 7,
 
-    # ========================================================
-    # CYBERSECURITY
-    # ========================================================
-
-    "the_hacker_news": 9,
-    "bleepingcomputer": 9,
-    "hacker_news": 7,
-
-    # ========================================================
-    # AI
-    # ========================================================
+    "the_hacker_news": 8,
+    "bleepingcomputer": 8,
+    "hacker_news": 8,
 
     "google_ai": 9,
     "openai": 9,
-
-    # ========================================================
-    # IRAN TECHNOLOGY
-    # ========================================================
 
     "digiato": 9,
     "zoomit": 9,
     "vigiato": 7,
 
-    # ========================================================
-    # WEATHER
-    # ========================================================
+    # --------------------------------------------------------
+    # اقتصاد و بازار
+    # --------------------------------------------------------
+    "cnbc": 9,
+    "cnbc_top": 9,
 
+    "wsj_markets": 9,
+    "marketwatch": 8,
+
+    "coindesk": 8,
+    "cointelegraph": 7,
+    "decrypt": 7,
+
+    "investing_com": 8,
+
+    "tejaratnews": 9,
+    "eghtesadonline": 9,
+    "donya_eqtesad": 9,
+    "eghtesadnews": 9,
+    "eghtesad_iran": 8,
+
+    # --------------------------------------------------------
+    # آب‌وهوا
+    # --------------------------------------------------------
     "open_meteo": 9,
-
-    "irimo_fa": 10,
+    "irimo_fa": 9,
     "irimo_en": 9,
 
     "bbc_weather": 9,
-
-    "noaa_weather": 10,
-    "noaa_nws": 10,
+    "noaa_weather": 9,
+    "noaa_nws": 9,
     "metoffice": 9,
-    "noaa_hurricane": 10,
+    "noaa_hurricane": 9,
 }
 
 
@@ -430,22 +300,29 @@ SOURCE_ID_SCORES = {
 
 SOURCE_SCORES = {
 
-    # ========================================================
-    # International
-    # ========================================================
-
+    # --------------------------------------------------------
+    # خبرگزاری‌های بین‌المللی
+    # --------------------------------------------------------
     "Reuters": 10,
     "Associated Press": 10,
+    "AP": 10,
     "AP News": 10,
     "AFP": 10,
 
-    "BBC": 9,
+    "BBC": 10,
     "BBC World": 10,
     "BBC News": 9,
     "BBC Top Stories": 10,
+    "BBC Sport": 9,
+    "BBC Football": 9,
+    "BBC Business": 9,
+    "BBC Technology": 9,
+    "BBC Weather": 9,
 
     "Al Jazeera": 9,
     "The Guardian": 9,
+    "The Guardian World": 9,
+    "The Guardian Football": 9,
     "The New York Times": 9,
     "DW": 9,
     "Deutsche Welle": 9,
@@ -453,13 +330,12 @@ SOURCE_SCORES = {
     "Euronews": 9,
 
     "Sky News": 8,
-
+    "Sky News World": 9,
     "CNN": 9,
     "Fox News": 8,
 
     "The Wall Street Journal": 9,
     "Wall Street Journal": 9,
-
     "The Washington Post": 9,
     "NPR": 8,
     "NBC News": 8,
@@ -469,58 +345,16 @@ SOURCE_SCORES = {
     "Axios": 9,
     "Politico": 8,
     "The Hill": 8,
-
     "The Independent": 8,
     "Los Angeles Times": 8,
     "CBC News": 8,
-    "ABC News Australia": 8,
 
-    "Times of India": 8,
     "South China Morning Post": 8,
-    "NDTV": 8,
-
-    "Der Spiegel": 8,
     "The Economist": 9,
 
-    "Google News": 7,
-
-    # ========================================================
-    # International / Regional
-    # ========================================================
-
-    "TASS": 8,
-    "RIA Novosti": 8,
-    "Interfax": 8,
-    "RBC": 7,
-    "Kommersant": 7,
-
-    "Xinhua": 9,
-    "China Daily": 8,
-    "CCTV": 8,
-
-    "Kyodo News": 9,
-    "Jiji Press": 8,
-    "NHK World": 9,
-    "Yonhap": 9,
-    "KBS News": 8,
-
-    "Press Trust of India": 9,
-    "ANI": 8,
-    "The Hindu": 8,
-
-    "Anadolu Agency": 9,
-    "TRT World": 8,
-
-    "ANSA": 8,
-    "EFE": 8,
-    "dpa": 9,
-    "Polish Press Agency": 8,
-    "Ukrinform": 9,
-
-    # ========================================================
-    # Middle East
-    # ========================================================
-
+    # --------------------------------------------------------
+    # خاورمیانه و منابع رسمی
+    # --------------------------------------------------------
     "Al Arabiya": 8,
     "i24NEWS": 8,
     "Israel Hayom": 7,
@@ -531,146 +365,81 @@ SOURCE_SCORES = {
     "The Jerusalem Post": 8,
     "CENTCOM": 9,
 
-    "Saudi Press Agency": 9,
-    "Arab News": 8,
-    "Qatar News Agency": 9,
-
-    # ========================================================
-    # Iran
-    # ========================================================
-
+    # --------------------------------------------------------
+    # ایران
+    # --------------------------------------------------------
     "IRNA": 9,
     "ISNA": 9,
     "Tasnim": 8,
-    "Fars News": 8,
+    "Tasnim News": 8,
     "Mehr News": 8,
+    "Fars": 8,
+    "Fars News": 8,
+
     "ILNA": 8,
-    "YJC": 8,
-    "IRIB News": 8,
     "Khabar Online": 8,
     "Tabnak": 8,
-    "Asriran": 8,
+    "YJC": 8,
+    "IRIB": 8,
+    "IRIB News": 8,
 
+    "Asr Iran": 7,
     "Iran International": 9,
-    "Hengaw": 8,
-    "Khabar Fouri": 7,
+    "IranIntl": 9,
 
-    "Mashregh News": 7,
+    "Hengaw": 8,
+    "Hengaw News": 8,
+    "Khabar Fouri": 8,
+    "Khabar Fouri": 8,
+
+    "Mashregh": 7,
     "Alef": 7,
     "Entekhab": 8,
-    "Borna News": 7,
-    "Mizan Online": 7,
+    "Borna": 7,
+    "Mizan": 8,
     "SNN": 7,
-    "Defa Press": 7,
+    "Defa Press": 8,
     "ICANA": 8,
-
-    "Fararu": 8,
-    "Hamshahri Online": 8,
-    "Nour News": 8,
+    "Fararu": 7,
+    "Hamshahrionline": 7,
+    "Nour News": 7,
     "IQNA": 7,
-    "Shabestan": 6,
+    "Shabestan": 7,
 
-    "ANA": 7,
-    "Quds Online": 7,
-    "Javan Online": 7,
-    "Aftab News": 7,
-
-    "Ettelaat": 8,
-    "Jame Jam": 7,
-    "Dana": 6,
-
-    "Kayhan": 7,
-    "Shargh": 8,
-    "Etemad Online": 7,
-
-    "Jomhouri Eslami": 7,
-    "Resalat": 7,
-    "Siasat Rooz": 6,
-    "Khorasan News": 7,
-    "Vatan Emrooz": 7,
-    "Ebtekar": 7,
-    "Farhikhtegan": 7,
-    "Jahan News": 7,
-    "Parsine": 7,
-    "Serat News": 6,
-    "Moj News": 7,
-    "IMNA": 6,
-
-    # ========================================================
-    # Economy
-    # ========================================================
-
-    "BBC Business": 9,
-    "WSJ Markets": 9,
-    "WSJ Business": 9,
-
-    "CNBC": 9,
-    "CNBC Top News": 9,
-    "CNBC Business": 9,
-
-    "MarketWatch": 8,
-
-    "Bloomberg": 10,
-    "Bloomberg Markets": 10,
-    "Bloomberg Economics": 10,
-
-    "Financial Times": 10,
-    "The Economist Finance": 9,
-
-    "Fortune": 8,
-    "Business Insider": 8,
-    "Harvard Business Review": 8,
-
-    "Investing.com": 8,
-
-    "CoinDesk": 8,
-    "Cointelegraph": 7,
-    "Decrypt": 7,
-
-    # ========================================================
-    # Iran Economy
-    # ========================================================
-
+    # --------------------------------------------------------
+    # اقتصاد ایران
+    # --------------------------------------------------------
     "تجارت‌نیوز": 9,
     "تجارت نیوز": 9,
     "Tejarat News": 9,
+    "Tejaratnews": 9,
 
     "اقتصاد آنلاین": 9,
     "اقتصادآنلاین": 9,
     "Eghtesad Online": 9,
+    "Eghtesadonline": 9,
 
     "دنیای اقتصاد": 9,
     "Donya-e-Eqtesad": 9,
+    "Donya Eqtesad": 9,
 
-    "اقتصادنیوز": 8,
-    "اقتصاد نیوز": 8,
-    "Eghtesad News": 8,
+    "اقتصادنیوز": 9,
+    "اقتصاد نیوز": 9,
+    "Eghtesad News": 9,
+    "Eghtesadnews": 9,
 
-    "اکوایران": 8,
-    "EcoIran": 8,
+    "خبرگزاری اقتصاد ایران": 8,
+    "Eghtesad Iran": 8,
 
-    "ایبِنا": 8,
-    "IBENA": 8,
-
-    "بورس پرس": 7,
-    "تجارت فردا": 8,
-    "اقتصاد24": 7,
-    "پول نیوز": 6,
-    "گسترش نیوز": 6,
-    "ایران اکونومیست": 6,
-
-    # ========================================================
-    # Technology
-    # ========================================================
-
+    # --------------------------------------------------------
+    # فناوری
+    # --------------------------------------------------------
     "The Verge": 9,
     "TechCrunch": 9,
     "Ars Technica": 8,
     "Engadget": 8,
-    "WIRED": 9,
-
-    "MIT Technology Review": 10,
-
+    "WIRED": 8,
+    "MIT Technology Review": 9,
     "CNET": 8,
     "ZDNET": 8,
     "TechRadar": 8,
@@ -678,16 +447,14 @@ SOURCE_SCORES = {
     "Android Authority": 8,
     "9to5Google": 8,
     "9to5Mac": 8,
-
     "Tom's Hardware": 8,
     "The Register": 8,
 
     "VentureBeat": 8,
     "SiliconANGLE": 7,
-
-    "The Hacker News": 9,
-    "BleepingComputer": 9,
-    "Hacker News": 7,
+    "The Hacker News": 8,
+    "BleepingComputer": 8,
+    "Hacker News": 8,
 
     "Google AI": 9,
     "OpenAI": 9,
@@ -699,36 +466,9 @@ SOURCE_SCORES = {
     "ویجیاتو": 7,
     "Vigiato": 7,
 
-    # ========================================================
-    # Health
-    # ========================================================
-
-    "BBC Health": 9,
-    "STAT": 10,
-    "KFF Health News": 9,
-    "NPR Health": 8,
-
-    "The Guardian Health": 9,
-    "The New York Times Health": 9,
-
-    "ScienceDaily Health": 8,
-
-    "World Health Organization": 10,
-    "WHO": 10,
-    "WHO Disease Outbreak News": 10,
-
-    "FDA MedWatch": 10,
-    "FDA News": 9,
-
-    "CDC MMWR": 10,
-    "National Institute of Environmental Health Sciences": 9,
-
-    "Psychology Today": 7,
-
-    # ========================================================
-    # Sports
-    # ========================================================
-
+    # --------------------------------------------------------
+    # فوتبال و ورزش
+    # --------------------------------------------------------
     "Fabrizio Romano": 10,
     "Fabrizio Romano Telegram": 10,
 
@@ -741,76 +481,53 @@ SOURCE_SCORES = {
     "ESPN": 9,
     "ESPN Soccer": 9,
 
-    "BBC Sport": 9,
-    "BBC Football": 9,
-    "BBC Premier League": 9,
-
     "Transfermarkt": 9,
     "Marca": 9,
+    "AS": 8,
 
     "Manchester Evening News": 9,
 
-    "AS": 8,
-    "AS.com Football": 8,
+    "Varzesh3": 9,
+    "ورزش سه": 9,
+    "Tasnim Sport": 8,
+
+    "Manchester United": 8,
+    "UEFA": 9,
+    "FIFA": 9,
+    "Premier League": 9,
 
     "The Athletic": 9,
     "The Athletic Football": 9,
 
-    "The Guardian Football": 9,
-    "The Guardian Sport": 9,
-
-    "Football Italia": 8,
-    "GOAL": 8,
-    "talkSPORT": 8,
-
-    "CBS Sports": 8,
-    "Yahoo Sports": 8,
-
-    "Formula 1": 9,
-    "Autosport": 9,
-
-    "MLB": 8,
-    "ESPNcricinfo": 8,
-    "UFC": 8,
-
-    "UEFA": 10,
-    "FIFA": 10,
-    "Premier League": 10,
-
-    "Manchester United": 8,
-    "Manchester United Official": 8,
-
+    "Real Madrid": 8,
     "Real Madrid Official": 8,
+    "FC Barcelona": 8,
     "FC Barcelona Official": 8,
 
-    "Varzesh3": 9,
-    "ورزش سه": 9,
+    # --------------------------------------------------------
+    # اقتصاد و بازار جهانی
+    # --------------------------------------------------------
+    "CNBC": 9,
+    "CNBC Top News": 9,
+    "WSJ Markets": 9,
+    "MarketWatch": 8,
 
-    "Tasnim Sport": 8,
+    "CoinDesk": 8,
+    "Cointelegraph": 7,
+    "Decrypt": 7,
+    "Investing.com": 8,
 
-    # ========================================================
-    # Weather
-    # ========================================================
-
+    # --------------------------------------------------------
+    # آب‌وهوا
+    # --------------------------------------------------------
     "Open-Meteo": 9,
-
-    "Iran Meteorological Organization": 10,
-    "IRIMO": 10,
-
+    "IRIMO": 9,
+    "Iran Meteorological Organization": 9,
     "BBC Weather": 9,
-
-    "NOAA Weather": 10,
-    "National Weather Service": 10,
-    "NWS": 10,
-
+    "NOAA": 9,
+    "NOAA Weather": 9,
+    "NOAA NWS": 9,
     "Met Office": 9,
-    "NOAA Hurricane Center": 10,
-
-    # ========================================================
-    # Misc / existing compatibility
-    # ========================================================
-
-    "Tesla Newsroom": 7,
 }
 
 
@@ -822,8 +539,50 @@ DEFAULT_SOURCE_SCORE = 5
 
 
 # ============================================================
-# نرمال‌سازی
+# تبدیل priority به source score
 # ============================================================
+
+def _priority_to_score(priority):
+    """
+    تبدیل priority منبع به امتیاز اهمیت 1 تا 10.
+
+    priority معمولاً در data/sources/*.json بین 0 تا 100 است.
+    """
+
+    try:
+        priority = int(priority)
+    except (TypeError, ValueError):
+        return DEFAULT_SOURCE_SCORE
+
+    if priority >= 95:
+        return 10
+
+    if priority >= 90:
+        return 9
+
+    if priority >= 85:
+        return 8
+
+    if priority >= 80:
+        return 7
+
+    if priority >= 75:
+        return 6
+
+    if priority >= 70:
+        return 5
+
+    if priority >= 60:
+        return 4
+
+    if priority >= 50:
+        return 3
+
+    if priority >= 40:
+        return 2
+
+    return 1
+
 
 def _normalize(value):
     """یکسان‌سازی نام‌ها برای مقایسه."""
@@ -841,46 +600,20 @@ def _normalize(value):
     )
 
 
-# ============================================================
-# دریافت امتیاز منبع
-# ============================================================
-
-def get_source_score(source=None, source_id=None, default=None):
+def _extract_source_values(source):
     """
-    دریافت امتیاز منبع بر اساس شناسه یا نام.
-
-    source می‌تواند:
-        - رشته
-        - دیکشنری
-        - NewsSource
-        - RawNews
-
-    باشد.
-
-    اولویت تشخیص:
-
-    1. source_id
-    2. نام منبع
-    3. مقدار پیش‌فرض
+    استخراج source_id، نام منبع و priority
+    از dict یا شیء NewsSource/RawNews.
     """
 
-    fallback = (
-        DEFAULT_SOURCE_SCORE
-        if default is None
-        else default
-    )
-
+    source_id = None
     source_name = ""
-
-    # --------------------------------------------------------
-    # Dictionary
-    # --------------------------------------------------------
+    priority = None
 
     if isinstance(source, dict):
 
         source_id = (
-            source_id
-            or source.get("source_id")
+            source.get("source_id")
             or source.get("id")
         )
 
@@ -891,23 +624,16 @@ def get_source_score(source=None, source_id=None, default=None):
             or ""
         )
 
-    # --------------------------------------------------------
-    # String
-    # --------------------------------------------------------
+        priority = source.get("priority")
 
     elif isinstance(source, str):
 
         source_name = source
 
-    # --------------------------------------------------------
-    # Object / NewsSource / RawNews
-    # --------------------------------------------------------
-
     elif source is not None:
 
         source_id = (
-            source_id
-            or getattr(source, "source_id", None)
+            getattr(source, "source_id", None)
             or getattr(source, "id", None)
         )
 
@@ -918,29 +644,110 @@ def get_source_score(source=None, source_id=None, default=None):
             or ""
         )
 
+        priority = getattr(source, "priority", None)
+
+    return source_id, source_name, priority
+
+
+def _get_score_from_source_files(source_id):
+    """
+    در صورت ناشناخته بودن source_id، priority منبع را
+    مستقیماً از data/sources/*.json دریافت می‌کند.
+
+    این بخش باعث می‌شود منابع جدید بدون ثبت دستی هم
+    امتیاز مناسب بگیرند.
+    """
+
+    if not source_id:
+        return None
+
+    try:
+        from config.sources import load_sources
+
+        normalized_id = _normalize(source_id).replace(" ", "_")
+
+        for source in load_sources():
+
+            current_id = getattr(source, "id", None)
+
+            if not current_id:
+                continue
+
+            current_id = _normalize(current_id).replace(
+                " ",
+                "_",
+            )
+
+            if current_id == normalized_id:
+
+                priority = getattr(
+                    source,
+                    "priority",
+                    None,
+                )
+
+                if priority is not None:
+                    return _priority_to_score(priority)
+
+    except Exception:
+        pass
+
+    return None
+
+
+def get_source_score(
+    source=None,
+    source_id=None,
+    default=None,
+):
+    """
+    دریافت امتیاز اهمیت منبع.
+
+    ترتیب اولویت:
+
+    1. SOURCE_ID_SCORES
+    2. SOURCE_SCORES بر اساس نام
+    3. priority منبع در data/sources/*.json
+    4. مقدار پیش‌فرض
+    """
+
+    fallback = (
+        DEFAULT_SOURCE_SCORE
+        if default is None
+        else default
+    )
+
+    extracted_id, source_name, priority = (
+        _extract_source_values(source)
+    )
+
+    source_id = source_id or extracted_id
+
     # --------------------------------------------------------
-    # Source ID
+    # 1. شناسه منبع
     # --------------------------------------------------------
 
     if source_id:
 
-        normalized_source_id = (
+        normalized_id = (
             _normalize(source_id)
             .replace(" ", "_")
         )
 
         score = SOURCE_ID_SCORES.get(
-            normalized_source_id
+            normalized_id
         )
 
         if score is not None:
             return score
 
     # --------------------------------------------------------
-    # Source name
+    # 2. نام منبع
     # --------------------------------------------------------
 
-    normalized_name = _normalize(source_name)
+    normalized_name = _normalize(
+        source_name
+    )
 
     if normalized_name:
 
@@ -950,18 +757,35 @@ def get_source_score(source=None, source_id=None, default=None):
                 return score
 
     # --------------------------------------------------------
-    # Fallback
+    # 3. priority خود آبجکت
+    # --------------------------------------------------------
+
+    if priority is not None:
+        return _priority_to_score(priority)
+
+    # --------------------------------------------------------
+    # 4. priority از فایل‌های source
+    # --------------------------------------------------------
+
+    score = _get_score_from_source_files(
+        source_id
+    )
+
+    if score is not None:
+        return score
+
+    # --------------------------------------------------------
+    # 5. fallback
     # --------------------------------------------------------
 
     return max(
         1,
-        min(10, int(fallback))
+        min(
+            10,
+            int(fallback),
+        ),
     )
 
-
-# ============================================================
-# Compatibility wrapper
-# ============================================================
 
 def calculate_source_score(
     news=None,
