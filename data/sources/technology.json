@@ -476,7 +476,7 @@
   },
   {
     "id": "digiato",
-    "name": "دیجیاتو",
+    "name": "Digiato",
     "source_type": "rss",
     "url": "https://digiato.com/feed",
     "country": "IR",
@@ -498,7 +498,7 @@
   },
   {
     "id": "zoomit",
-    "name": "زومیت",
+    "name": "Zoomit",
     "source_type": "rss",
     "url": "https://www.zoomit.ir/feed/",
     "country": "IR",
@@ -523,7 +523,7 @@
   },
   {
     "id": "vigiato",
-    "name": "ویجیاتو",
+    "name": "Vigiato",
     "source_type": "rss",
     "url": "https://vigiato.net/feed",
     "country": "IR",
