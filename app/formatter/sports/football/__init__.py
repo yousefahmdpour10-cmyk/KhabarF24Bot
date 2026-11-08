@@ -8,6 +8,7 @@ from app.formatter.footer import build_footer
 from app.formatter.hashtags import HashtagBuilder
 from app.formatter.source_flags import get_flag
 from .builder import FootballBuilder
+from .match_post import render as render_match_post
 from app.formatter.icons import (
     TITLE,
     SUMMARY,
@@ -32,6 +33,20 @@ class FootballFormatter:
 
         text += build_header("⚽ فوتبال", getattr(news, "is_breaking", False))
         text += "\n\n"
+
+        # پست بازی (نتیجه یا ترکیب ESPN): قالب جمع‌وجور و ثابت
+        if getattr(news, "match_phase", None):
+            text += render_match_post(news)
+            text += "\n\n"
+            text += f"{SOURCE} {flag} {news.source}\n"
+            text += build_footer()
+
+            if hashtags:
+                text += "\n\n"
+                text += hashtags
+
+            return text
+
         text += f"{TITLE} {news.title}\n\n"
 
         # خلاصه‌ی خبر. برای خبرهای RSS این تنها محتوای پست است (جزئیات
