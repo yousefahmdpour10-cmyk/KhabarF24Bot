@@ -92,6 +92,10 @@ class ContentGenerator:
             )
             return news
 
+        # پست بازی (نتیجه/ترکیب ESPN): تیتر + ترجمه‌ی اسم‌ها در یک درخواست
+        if getattr(news, "match_phase", None):
+            return await self._process_match(news, priority)
+
         prompt = build_content_prompt(
             title_text,
             source_text,
@@ -143,6 +147,59 @@ class ContentGenerator:
 
         logger.info(
             f"ContentGenerator: تیتر تولید شد -> {headline[:60]}"
+        )
+
+        return news
+
+    async def _process_match(self, news: RawNews, priority: bool) -> RawNews:
+        """تیتر فارسی و فارسی اسم‌های یک پست بازی (قالبش را match_post.py می‌چیند)."""
+
+        from app.ai.match_prompt import build_match_prompt
+
+        try:
+            raw_response = await self.client.generate(
+                build_match_prompt(news),
+                priority=priority,
+            )
+        except Exception:
+            logger.exception("ContentGenerator: خطا هنگام دریافت پاسخ از Gemini")
+            return news
+
+        if not raw_response:
+            logger.error("ContentGenerator: پاسخی از Gemini دریافت نشد")
+            return news
+
+        cleaned = _CODE_FENCE_RE.sub("", raw_response).strip()
+
+        try:
+            data = json.loads(cleaned)
+        except (json.JSONDecodeError, TypeError):
+            logger.error(
+                "ContentGenerator: JSON نامعتبر از Gemini (بازی) -> "
+                f"{str(raw_response)[:200]}"
+            )
+            return news
+
+        headline = str(data.get("headline") or "").strip() if isinstance(data, dict) else ""
+
+        if len(headline) < MIN_HEADLINE_CHARS:
+            logger.error("ContentGenerator: تیتر بازی خالی یا بسیار کوتاه است")
+            return news
+
+        names = data.get("names") if isinstance(data.get("names"), dict) else {}
+
+        news.title = headline
+        news.summary = ""
+        news.fa_names = {
+            str(key).strip(): str(value).strip()
+            for key, value in names.items()
+            if str(key).strip() and str(value).strip()
+        }
+        news.content_generated = True
+
+        logger.info(
+            f"ContentGenerator: تیتر بازی تولید شد -> {headline[:60]} "
+            f"({len(news.fa_names)} اسم)"
         )
 
         return news
