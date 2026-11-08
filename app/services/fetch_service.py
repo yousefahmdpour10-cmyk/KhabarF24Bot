@@ -6,6 +6,7 @@ Fetch Service
 
 import asyncio
 import time
+from collections import Counter
 from typing import List
 
 from app.fetchers.rss_fetcher import RSSFetcher
@@ -134,7 +135,7 @@ class FetchService:
 
                 return []
 
-            return await fetcher.fetch()
+            return self._postprocess(source, await fetcher.fetch())
 
         except Exception as e:
 
@@ -143,6 +144,43 @@ class FetchService:
             )
 
             return []
+
+    @staticmethod
+    def _postprocess(source: NewsSource, items: List[RawNews]) -> List[RawNews]:
+        """
+        کارهایی که برای همه‌ی انواع fetcher (RSS، تلگرام، سایت) لازم است:
+        - دسته‌های منبع (categories در sources.json) روی هر خبر گذاشته شود.
+          fetcher تلگرام این را نمی‌گذاشت و خبر رومانو بدون راهنما «جهان»
+          می‌شد، نه «فوتبال».
+        - عکسی که در بیشتر خبرهای یک منبع تکراری است، عکس خبر نیست
+          (آواتار کانال تلگرام، لوگوی سایت)؛ حذف می‌شود.
+        """
+
+        categories = list(getattr(source, "categories", []) or [])
+
+        for item in items:
+            if not getattr(item, "source_category_hint", None):
+                item.source_category_hint = list(categories)
+
+        if len(items) >= 4:
+            counts = Counter(
+                item.image_url
+                for item in items
+                if getattr(item, "image_url", "")
+            )
+
+            for url, count in counts.items():
+                if count >= 4 and count / len(items) >= 0.3:
+                    for item in items:
+                        if item.image_url == url:
+                            item.image_url = ""
+
+                    logger.info(
+                        f"{source.name}: عکس تکراری در {count} خبر حذف شد "
+                        f"(آواتار یا لوگو): {url[:80]}"
+                    )
+
+        return items
 
     async def _fetch_limited(
         self,
