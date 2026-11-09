@@ -27,107 +27,186 @@ from app.utils.logger import logger
 FETCH_CONCURRENCY = 10
 SOURCE_TIMEOUT_SECONDS = 90
 
+
+# برای اینکه پیام‌های مربوط به منابع غیرفعال
+# در هر چرخه دوباره تکرار نشوند.
 _logged_disabled = set()
 
 
 class FetchService:
-    async def fetch_source(self, source: NewsSource) -> List[RawNews]:
-        logger.info(f"Fetching: {source.name}")
+    """
+    سرویس مرکزی دریافت خبر از تمام منابع.
+
+    مسیر انتخاب Fetcher:
+
+    RSS
+        ↓
+    Website
+        ↓
+    Sports API
+        ↓
+    API
+        ↓
+    Social
+    """
+
+    # ======================================================
+    # دریافت یک منبع
+    # ======================================================
+
+    async def fetch_source(
+        self,
+        source: NewsSource,
+    ) -> List[RawNews]:
+
+        logger.info(
+            f"Fetching: {source.name}"
+        )
 
         try:
+
             source_type = (
-                getattr(source, "source_type", "") or ""
+                getattr(
+                    source,
+                    "source_type",
+                    "",
+                )
+                or ""
             ).lower().strip()
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # RSS
-            # --------------------------------------------------
+            # ------------------------------------------------
+
             if source_type == "rss":
+
                 fetcher = RSSFetcher(source)
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # Website
-            # --------------------------------------------------
+            # ------------------------------------------------
+
             elif source_type == "website":
+
                 fetcher = WebsiteFetcher(source)
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # Sports API
-            # --------------------------------------------------
+            # ------------------------------------------------
+
             elif source_type in (
                 "sports_api",
                 "sports-api",
                 "sportsapi",
             ):
+
                 fetcher = SportsApiFetcher(source)
 
-            # --------------------------------------------------
-            # Generic API
-            # --------------------------------------------------
+            # ------------------------------------------------
+            # API
+            # ------------------------------------------------
+
             elif source_type == "api":
+
                 fetcher = APIFetcher(source)
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # Social
-            # --------------------------------------------------
+            # ------------------------------------------------
+
             elif source_type == "social":
+
                 fetcher = SocialFetcher(source)
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # Fallback: RSS
-            # --------------------------------------------------
-            elif getattr(source, "has_rss", False):
+            # ------------------------------------------------
+
+            elif getattr(
+                source,
+                "has_rss",
+                False,
+            ):
+
                 logger.warning(
                     f"{source.name}: source_type is not 'rss'. "
                     f"Using RSS fallback."
                 )
+
                 fetcher = RSSFetcher(source)
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # Fallback: API
-            # --------------------------------------------------
-            elif getattr(source, "has_api", False):
+            # ------------------------------------------------
+
+            elif getattr(
+                source,
+                "has_api",
+                False,
+            ):
+
                 logger.warning(
                     f"{source.name}: source_type is not 'api'. "
                     f"Using API fallback."
                 )
+
                 fetcher = APIFetcher(source)
 
-            # --------------------------------------------------
+            # ------------------------------------------------
             # Fallback: Website
-            # --------------------------------------------------
-            elif getattr(source, "supports_scraping", False):
+            # ------------------------------------------------
+
+            elif getattr(
+                source,
+                "supports_scraping",
+                False,
+            ):
+
                 logger.warning(
                     f"{source.name}: source_type is not 'website'. "
                     f"Using website fallback."
                 )
+
                 fetcher = WebsiteFetcher(source)
 
-            # --------------------------------------------------
-            # No fetcher
-            # --------------------------------------------------
+            # ------------------------------------------------
+            # بدون Fetcher
+            # ------------------------------------------------
+
             else:
+
                 logger.warning(
                     f"No fetcher available for {source.name}"
                 )
+
                 return []
 
-            # --------------------------------------------------
-            # Execute fetcher
-            # --------------------------------------------------
+            # ------------------------------------------------
+            # دریافت
+            # ------------------------------------------------
+
             items = await fetcher.fetch()
 
-            return self._postprocess(source, items)
+            # ------------------------------------------------
+            # پردازش مشترک بعد از دریافت
+            # ------------------------------------------------
+
+            return self._postprocess(
+                source,
+                items,
+            )
 
         except Exception as e:
+
             logger.exception(
                 f"Fetch error for {source.name}: {e}"
             )
+
             return []
 
-    # ==========================================================
-    # Post Process
-    # ==========================================================
+    # ======================================================
+    # پردازش مشترک خبرهای دریافت‌شده
+    # ======================================================
 
     @staticmethod
     def _postprocess(
@@ -135,30 +214,55 @@ class FetchService:
         items: List[RawNews],
     ) -> List[RawNews]:
 
+        # --------------------------------------------------
+        # انتقال دسته‌های تعریف‌شده برای منبع
+        # به عنوان hint برای مرحله category detection
+        # --------------------------------------------------
+
         categories = list(
-            getattr(source, "categories", []) or []
+            getattr(
+                source,
+                "categories",
+                [],
+            )
+            or []
         )
 
-        # ------------------------------------------------------
-        # Add source category hints
-        # ------------------------------------------------------
         for item in items:
+
             if not getattr(
                 item,
                 "source_category_hint",
                 None,
             ):
-                item.source_category_hint = list(categories)
 
-        # ------------------------------------------------------
-        # Remove repeated image/avatar/logo
-        # ------------------------------------------------------
+                item.source_category_hint = list(
+                    categories
+                )
+
+        # --------------------------------------------------
+        # حذف عکس تکراری
+        #
+        # اگر یک عکس در تعداد زیادی از خبرهای یک منبع
+        # تکرار شده باشد، احتمال زیادی دارد که:
+        #
+        # - لوگوی سایت
+        # - آواتار کانال
+        # - تصویر پیش‌فرض
+        #
+        # باشد.
+        # --------------------------------------------------
+
         if len(items) >= 4:
 
             counts = Counter(
                 item.image_url
                 for item in items
-                if getattr(item, "image_url", "")
+                if getattr(
+                    item,
+                    "image_url",
+                    "",
+                )
             )
 
             for url, count in counts.items():
@@ -169,7 +273,9 @@ class FetchService:
                 ):
 
                     for item in items:
+
                         if item.image_url == url:
+
                             item.image_url = ""
 
                     logger.info(
@@ -180,18 +286,20 @@ class FetchService:
 
         return items
 
-    # ==========================================================
-    # Limited Fetch
-    # ==========================================================
+    # ======================================================
+    # دریافت محدودشده با Semaphore + Timeout
+    # ======================================================
 
     async def _fetch_limited(
         self,
         source,
         semaphore,
     ):
+
         async with semaphore:
 
             try:
+
                 return await asyncio.wait_for(
                     self.fetch_source(source),
                     timeout=SOURCE_TIMEOUT_SECONDS,
@@ -208,40 +316,60 @@ class FetchService:
 
                 return []
 
-    # ==========================================================
-    # Fetch All Sources
-    # ==========================================================
+            except Exception as e:
 
-    async def fetch_all(self, sources):
+                logger.exception(
+                    f"Limited fetch error for "
+                    f"{source.name}: {e}"
+                )
+
+                return []
+
+    # ======================================================
+    # دریافت تمام منابع
+    # ======================================================
+
+    async def fetch_all(
+        self,
+        sources,
+    ):
 
         started = time.monotonic()
 
+        # --------------------------------------------------
+        # فقط منابع فعال
+        # --------------------------------------------------
+
         enabled = []
 
-        # ------------------------------------------------------
-        # Filter enabled sources
-        # ------------------------------------------------------
         for source in sources:
 
-            if getattr(source, "enabled", True):
+            if getattr(
+                source,
+                "enabled",
+                True,
+            ):
 
                 enabled.append(source)
 
             elif source.name not in _logged_disabled:
 
-                _logged_disabled.add(source.name)
+                _logged_disabled.add(
+                    source.name
+                )
 
                 logger.info(
                     f"Source disabled: {source.name}"
                 )
 
-        # ------------------------------------------------------
-        # DEBUG: Football360
-        # ------------------------------------------------------
         logger.info(
-            f"DEBUG FETCH_ALL | "
+            "DEBUG FETCH_ALL | "
             f"enabled_sources={len(enabled)}"
         )
+
+        # ==================================================
+        # تشخیص Football360 در لیست فعال
+        # ==================================================
 
         football360_in_enabled = [
             source
@@ -249,12 +377,20 @@ class FetchService:
             if (
                 "football360"
                 in str(
-                    getattr(source, "id", "")
+                    getattr(
+                        source,
+                        "id",
+                        "",
+                    )
                 ).lower()
                 or
                 "football360"
                 in str(
-                    getattr(source, "name", "")
+                    getattr(
+                        source,
+                        "name",
+                        "",
+                    )
                 ).lower()
             )
         ]
@@ -275,19 +411,22 @@ class FetchService:
                 f"type={source.source_type} | "
                 f"enabled={source.enabled} | "
                 f"platform="
-                f"{getattr(source, 'social_platform', '')}"
+                f"{getattr(source, 'social_platform', '')} | "
+                f"url={getattr(source, 'url', '')}"
             )
 
-        # ------------------------------------------------------
+        # ==================================================
         # Semaphore
-        # ------------------------------------------------------
+        # ==================================================
+
         semaphore = asyncio.Semaphore(
             FETCH_CONCURRENCY
         )
 
-        # ------------------------------------------------------
-        # Create fetch tasks
-        # ------------------------------------------------------
+        # ==================================================
+        # ساخت Taskها
+        # ==================================================
+
         tasks = [
             self._fetch_limited(
                 source,
@@ -301,25 +440,77 @@ class FetchService:
             f"tasks_created={len(tasks)}"
         )
 
-        # ------------------------------------------------------
-        # Execute all fetch tasks
-        # ------------------------------------------------------
+        # ==================================================
+        # تست مستقیم Football360
+        #
+        # این بخش موقتاً برای تشخیص مشکل اضافه شده.
+        #
+        # اگر اینجا:
+        #
+        # Fetching: Football360 Telegram
+        #
+        # و لاگ‌های Telegram دیده شوند، یعنی خود
+        # Football360 و SocialFetcher سالم هستند و
+        # مشکل فقط در اجرای همزمان Taskهاست.
+        #
+        # اگر اینجا هم اجرا نشود یا خطا بدهد،
+        # مشکل مستقیماً در مسیر Football360 است.
+        # ==================================================
+
+        for source in football360_in_enabled:
+
+            logger.info(
+                "DEBUG FOOTBALL360 DIRECT | "
+                f"START | "
+                f"id={source.id} | "
+                f"name={source.name}"
+            )
+
+            try:
+
+                direct_result = await self._fetch_limited(
+                    source,
+                    semaphore,
+                )
+
+                logger.info(
+                    "DEBUG FOOTBALL360 DIRECT | "
+                    f"END | "
+                    f"id={source.id} | "
+                    f"news_count={len(direct_result)}"
+                )
+
+            except Exception as e:
+
+                logger.exception(
+                    "DEBUG FOOTBALL360 DIRECT | "
+                    f"ERROR | "
+                    f"id={source.id} | "
+                    f"error={e}"
+                )
+
+        # ==================================================
+        # اجرای تمام Taskها
+        # ==================================================
+
         results = await asyncio.gather(
             *tasks
         )
 
-        # ------------------------------------------------------
-        # Flatten results
-        # ------------------------------------------------------
+        # ==================================================
+        # تبدیل لیست‌های جداگانه به یک لیست واحد
+        # ==================================================
+
         all_news = [
             item
             for batch in results
             for item in batch
         ]
 
-        # ------------------------------------------------------
-        # Final log
-        # ------------------------------------------------------
+        # ==================================================
+        # گزارش نهایی
+        # ==================================================
+
         logger.info(
             f"Fetched {len(all_news)} news "
             f"from {len(enabled)} sources "
