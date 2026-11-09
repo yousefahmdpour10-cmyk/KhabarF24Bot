@@ -174,6 +174,14 @@ SOURCE_ID_SCORES = {
     "fabrizio_romano_telegram": 10,
     "di_marzio": 10,
 
+    # منابع جدید فوتبال
+    "football360_telegram": 9,
+
+    "relevo": 9,
+    "gazzetta_calcio": 9,
+    "sportbild": 8,
+    "lequipe_football": 9,
+
     "sky_sports_football": 9,
     "sky_sports": 9,
 
@@ -474,6 +482,17 @@ SOURCE_SCORES = {
 
     "Gianluca Di Marzio": 10,
     "Di Marzio": 10,
+
+    # منابع جدید فوتبال
+    "Football360": 9,
+    "Football360 Telegram": 9,
+
+    "Relevo": 9,
+    "Gazzetta": 9,
+    "Gazzetta dello Sport": 9,
+    "SportBild": 8,
+    "L'Équipe": 9,
+    "L Equipe": 9,
 
     "Sky Sports": 9,
     "Sky Sports Football": 9,
