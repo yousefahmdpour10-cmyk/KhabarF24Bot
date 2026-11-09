@@ -6,7 +6,14 @@ Social Fetcher
 فعلاً:
 - Telegram Public Channels
 
-ساختار برای افزودن شبکه‌های اجتماعی دیگر در آینده آماده است.
+ویژگی‌ها:
+- استخراج متن پست
+- استخراج تصویر واقعی خود پست
+- جلوگیری از انتخاب avatar کانال به‌عنوان تصویر خبر
+- استخراج ویدئو در صورت وجود URL قابل‌دسترسی در HTML عمومی
+- ثبت مستقیم video_url در RawNews
+- نگهداری اطلاعات رسانه در raw_data
+- ساختار آماده برای افزودن شبکه‌های اجتماعی دیگر
 """
 
 import re
@@ -44,6 +51,10 @@ class SocialFetcher(BaseFetcher):
                 "Chrome/153.0 Mobile Safari/537.36"
             )
         }
+
+    # ==================================================
+    # Main
+    # ==================================================
 
     async def fetch(self) -> List[RawNews]:
         """دریافت پست‌های منبع اجتماعی."""
@@ -138,7 +149,7 @@ class SocialFetcher(BaseFetcher):
             news_list: List[RawNews] = []
             seen_urls = set()
 
-            # HTML کانال عمومی معمولاً جدیدترین پست‌ها را دارد.
+            # HTML عمومی کانال معمولاً جدیدترین پست‌ها را دارد.
             for message in messages[-self.MAX_POSTS:]:
                 try:
                     news = self._parse_telegram_post(message)
@@ -225,7 +236,9 @@ class SocialFetcher(BaseFetcher):
         if parts[0] == "s":
             if len(parts) < 2:
                 return None
+
             username = parts[1]
+
         else:
             username = parts[0]
 
@@ -247,10 +260,12 @@ class SocialFetcher(BaseFetcher):
                 timeout=self.timeout,
                 headers=self.headers,
             ) as session:
+
                 async with session.get(
                     url,
                     allow_redirects=True,
                 ) as response:
+
                     if response.status != 200:
                         logger.warning(
                             "Social request failed | source=%s | "
@@ -262,7 +277,8 @@ class SocialFetcher(BaseFetcher):
                         return None
 
                     content_type = response.headers.get(
-                        "Content-Type", ""
+                        "Content-Type",
+                        "",
                     ).lower()
 
                     if (
@@ -327,11 +343,19 @@ class SocialFetcher(BaseFetcher):
         )
 
         if post_link:
-            post_link = urljoin("https://t.me/", post_link)
+            post_link = urljoin(
+                "https://t.me/",
+                post_link,
+            )
 
         published_at = self._extract_datetime(message)
+
         image_url = self._extract_image(message)
         video_url = self._extract_video(message)
+
+        video_content_type = self._extract_video_content_type(
+            message
+        )
 
         related_urls = []
 
@@ -342,13 +366,20 @@ class SocialFetcher(BaseFetcher):
                 if not href:
                     continue
 
-                absolute_url = urljoin("https://t.me/", href)
+                absolute_url = urljoin(
+                    "https://t.me/",
+                    href,
+                )
 
                 if absolute_url not in related_urls:
                     related_urls.append(absolute_url)
 
         # اگر پست متن، عکس و ویدئو ندارد، خبر قابل استفاده‌ای نیست.
-        if not content.strip() and not image_url and not video_url:
+        if (
+            not content.strip()
+            and not image_url
+            and not video_url
+        ):
             return None
 
         # پست رسانه‌ای بدون متن نیز حفظ می‌شود.
@@ -372,6 +403,14 @@ class SocialFetcher(BaseFetcher):
             else "sport"
         )
 
+        # --------------------------------------------------
+        # RawNews
+        # --------------------------------------------------
+        #
+        # مهم:
+        # video_url مستقیماً داخل مدل RawNews قرار می‌گیرد
+        # تا Publisher مجبور نباشد فقط به raw_data وابسته باشد.
+        #
         news = RawNews(
             source_id=self.source.id,
             source=self.source.name,
@@ -380,27 +419,40 @@ class SocialFetcher(BaseFetcher):
             summary=content,
             url=post_link,
             image_url=image_url or "",
+
+            # رسانه
+            video_url=video_url or "",
+            video_content_type=video_content_type or "",
+
             published_at=published_at,
             language=getattr(self.source, "language", ""),
             country=getattr(self.source, "country", ""),
             category=category,
             related_urls=related_urls,
+
             raw_data={
                 "platform": "telegram",
                 "channel": self.source.name,
                 "channel_url": self._get_telegram_url(),
+
                 "video_url": video_url or "",
+                "video_content_type": video_content_type or "",
                 "has_video": bool(video_url),
+
+                "image_url": image_url or "",
                 "has_image": bool(image_url),
+
+                "post_url": post_link or "",
             },
         )
 
         logger.info(
             "TELEGRAM_MEDIA_PARSED | source=%s | "
-            "image=%s | video=%s | text_length=%d",
+            "image=%s | video=%s | video_type=%s | text_length=%d",
             self.source.name,
             bool(image_url),
             bool(video_url),
+            video_content_type or "-",
             len(content),
         )
 
@@ -416,14 +468,14 @@ class SocialFetcher(BaseFetcher):
         استخراج تصویر واقعی خود پست تلگرام.
 
         اولویت:
-        1. تصویر رسانه‌ای خود پیام از photo_wrap
+        1. تصویر اصلی داخل photo_wrap
         2. تصویر داخل photo container
-        3. fallback محدود به photo/video media
+        3. تصویر داخل media container
 
         عمداً از selector عمومی
         '.tgme_widget_message img'
-        استفاده نمی‌شود؛ چون ممکن است تصویر پروفایل
-        کانال را به‌عنوان تصویر خبر برگرداند.
+        استفاده نمی‌شود؛ چون ممکن است avatar کانال
+        به‌عنوان تصویر خبر انتخاب شود.
         """
 
         # --------------------------------------------------
@@ -435,6 +487,8 @@ class SocialFetcher(BaseFetcher):
         )
 
         if photo:
+            # Telegram معمولاً URL تصویر را داخل style
+            # به‌صورت background-image قرار می‌دهد.
             style = photo.get("style", "")
 
             match = re.search(
@@ -446,9 +500,11 @@ class SocialFetcher(BaseFetcher):
             if match:
                 value = match.group(2).strip()
 
-                if value.startswith(
-                    ("http://", "https://")
-                ):
+                value = SocialFetcher._clean_media_url(
+                    value
+                )
+
+                if value:
                     return value
 
             # بعضی نسخه‌های HTML ممکن است تصویر را
@@ -460,9 +516,11 @@ class SocialFetcher(BaseFetcher):
             ):
                 value = photo.get(attribute)
 
-                if value and value.startswith(
-                    ("http://", "https://")
-                ):
+                value = SocialFetcher._clean_media_url(
+                    value
+                )
+
+                if value:
                     return value
 
             # اگر خود photo_wrap شامل img باشد،
@@ -477,9 +535,11 @@ class SocialFetcher(BaseFetcher):
                 ):
                     value = image.get(attribute)
 
-                    if value and value.startswith(
-                        ("http://", "https://")
-                    ):
+                    value = SocialFetcher._clean_media_url(
+                        value
+                    )
+
+                    if value:
                         return value
 
         # --------------------------------------------------
@@ -498,17 +558,17 @@ class SocialFetcher(BaseFetcher):
             ):
                 value = photo_image.get(attribute)
 
-                if value and value.startswith(
-                    ("http://", "https://")
-                ):
+                value = SocialFetcher._clean_media_url(
+                    value
+                )
+
+                if value:
                     return value
 
         # --------------------------------------------------
-        # 3) fallback فقط برای media واقعی
+        # 3) media container
         # --------------------------------------------------
 
-        # اگر Telegram در HTML ساختار متفاوتی داشت،
-        # فقط imgهای داخل media container را بررسی می‌کنیم.
         media_image = message.select_one(
             ".tgme_widget_message_media img"
         )
@@ -521,15 +581,42 @@ class SocialFetcher(BaseFetcher):
             ):
                 value = media_image.get(attribute)
 
-                if value and value.startswith(
-                    ("http://", "https://")
-                ):
+                value = SocialFetcher._clean_media_url(
+                    value
+                )
+
+                if value:
                     return value
 
-        # مهم:
-        # اینجا عمداً به صورت عمومی دنبال
-        # '.tgme_widget_message img'
-        # نمی‌گردیم تا avatar کانال انتخاب نشود.
+        # --------------------------------------------------
+        # 4) fallback بسیار محدود
+        # --------------------------------------------------
+        #
+        # فقط زمانی که عنصر دارای class مربوط به media
+        # باشد. هیچ‌وقت کل message را برای img جستجو نمی‌کنیم.
+        #
+        for selector in (
+            '[class*="photo"] img',
+            '[class*="media"] img',
+        ):
+            image = message.select_one(selector)
+
+            if not image:
+                continue
+
+            for attribute in (
+                "src",
+                "data-src",
+                "data-original",
+            ):
+                value = image.get(attribute)
+
+                value = SocialFetcher._clean_media_url(
+                    value
+                )
+
+                if value:
+                    return value
 
         return None
 
@@ -540,47 +627,208 @@ class SocialFetcher(BaseFetcher):
     @staticmethod
     def _extract_video(message) -> Optional[str]:
         """
-        استخراج URL مستقیم ویدئو، اگر در HTML عمومی موجود باشد.
+        استخراج URL ویدئوی واقعی پست.
 
-        صفحه عمومی تلگرام ممکن است فایل ویدئو را نمایش ندهد.
+        Telegram public widget ممکن است ویدئو را در چند
+        ساختار مختلف HTML نمایش دهد.
+
+        اولویت:
+        1. video[src]
+        2. source[src]
+        3. data-src
+        4. data-video
+        5. لینک مستقیم فایل داخل media container
+
+        اگر URL مستقیم فایل در HTML عمومی موجود نباشد،
+        این تابع None برمی‌گرداند؛ چون نباید URL جعلی
+        یا URL صفحه پست را به عنوان video_url ثبت کنیم.
         """
 
-        video = message.select_one(
-            ".tgme_widget_message_video video, "
-            ".tgme_widget_message_video source, "
-            ".tgme_widget_message video, "
-            ".tgme_widget_message source"
+        selectors = (
+            ".tgme_widget_message_video video",
+            ".tgme_widget_message_video source",
+            ".tgme_widget_message_media video",
+            ".tgme_widget_message_media source",
+            ".tgme_widget_message video",
+            ".tgme_widget_message source",
         )
 
-        if not video:
-            return None
+        for selector in selectors:
+            element = message.select_one(selector)
 
-        for attribute in ("src", "data-src"):
-            value = video.get(attribute)
+            if not element:
+                continue
 
-            if value and value.startswith(
-                ("http://", "https://")
+            for attribute in (
+                "src",
+                "data-src",
+                "data-video",
             ):
-                return value
+                value = element.get(attribute)
 
-        parent = video.find_parent("video")
+                value = SocialFetcher._clean_media_url(
+                    value
+                )
 
-        if parent:
-            value = parent.get("src")
+                if value:
+                    return value
 
-            if value and value.startswith(
-                ("http://", "https://")
+        # بعضی ساختارها URL را روی parent نگه می‌دارند.
+        video = message.select_one(
+            ".tgme_widget_message_video"
+        )
+
+        if video:
+            for attribute in (
+                "data-src",
+                "data-video",
+                "src",
             ):
-                return value
+                value = video.get(attribute)
+
+                value = SocialFetcher._clean_media_url(
+                    value
+                )
+
+                if value:
+                    return value
+
+        # بررسی لینک‌های داخل media container.
+        media_container = message.select_one(
+            ".tgme_widget_message_media"
+        )
+
+        if media_container:
+            for link in media_container.select(
+                "a[href]"
+            ):
+                href = link.get("href")
+
+                href = SocialFetcher._clean_media_url(
+                    href
+                )
+
+                if not href:
+                    continue
+
+                lower = href.lower()
+
+                # فقط URLهایی که شبیه فایل ویدئو هستند.
+                if any(
+                    extension in lower
+                    for extension in (
+                        ".mp4",
+                        ".webm",
+                        ".mov",
+                        ".m4v",
+                        ".mkv",
+                    )
+                ):
+                    return href
 
         return None
+
+    # ==================================================
+    # Video Content Type
+    # ==================================================
+
+    @staticmethod
+    def _extract_video_content_type(
+        message,
+    ) -> str:
+        """استخراج MIME type ویدئو در صورت وجود."""
+
+        selectors = (
+            ".tgme_widget_message_video video",
+            ".tgme_widget_message_video source",
+            ".tgme_widget_message_media video",
+            ".tgme_widget_message_media source",
+        )
+
+        for selector in selectors:
+            element = message.select_one(selector)
+
+            if not element:
+                continue
+
+            for attribute in (
+                "type",
+                "data-type",
+            ):
+                value = element.get(attribute)
+
+                if value:
+                    value = str(value).strip()
+
+                    if value:
+                        return value
+
+        return ""
+
+    # ==================================================
+    # Media URL Cleanup
+    # ==================================================
+
+    @staticmethod
+    def _clean_media_url(value) -> Optional[str]:
+        """
+        پاک‌سازی URL رسانه.
+
+        URLهای نسبی به HTTPS تبدیل می‌شوند.
+        URLهای data/blob یا URLهای خالی حذف می‌شوند.
+        """
+
+        if not value:
+            return None
+
+        value = str(value).strip()
+
+        if not value:
+            return None
+
+        # حذف quotationهای اضافه
+        value = value.strip("\"'")
+
+        if not value:
+            return None
+
+        # URLهایی که برای دانلود مستقیم قابل استفاده نیستند.
+        if value.startswith(
+            (
+                "data:",
+                "blob:",
+                "javascript:",
+            )
+        ):
+            return None
+
+        if value.startswith("//"):
+            value = "https:" + value
+
+        elif value.startswith("/"):
+            value = urljoin(
+                "https://t.me/",
+                value,
+            )
+
+        if not value.startswith(
+            (
+                "http://",
+                "https://",
+            )
+        ):
+            return None
+
+        return value
 
     # ==================================================
     # Date
     # ==================================================
 
     @staticmethod
-    def _extract_datetime(message) -> Optional[datetime]:
+    def _extract_datetime(
+        message,
+    ) -> Optional[datetime]:
         """استخراج زمان انتشار پست."""
 
         time_element = message.select_one("time")
@@ -595,8 +843,12 @@ class SocialFetcher(BaseFetcher):
 
         try:
             return datetime.fromisoformat(
-                datetime_value.replace("Z", "+00:00")
+                datetime_value.replace(
+                    "Z",
+                    "+00:00",
+                )
             )
+
         except (ValueError, TypeError):
             return None
 
