@@ -363,69 +363,21 @@ class FetchService:
                 )
 
         logger.info(
-            "DEBUG FETCH_ALL | "
-            f"enabled_sources={len(enabled)}"
+            f"Fetched source candidates: "
+            f"{len(enabled)} enabled sources"
         )
 
-        # ==================================================
-        # تشخیص Football360 در لیست فعال
-        # ==================================================
-
-        football360_in_enabled = [
-            source
-            for source in enabled
-            if (
-                "football360"
-                in str(
-                    getattr(
-                        source,
-                        "id",
-                        "",
-                    )
-                ).lower()
-                or
-                "football360"
-                in str(
-                    getattr(
-                        source,
-                        "name",
-                        "",
-                    )
-                ).lower()
-            )
-        ]
-
-        logger.info(
-            "DEBUG FETCH_ALL | "
-            "Football360 in enabled list = "
-            f"{len(football360_in_enabled)}"
-        )
-
-        for source in football360_in_enabled:
-
-            logger.info(
-                "DEBUG FETCH_ALL | "
-                "Football360 task candidate | "
-                f"id={source.id} | "
-                f"name={source.name} | "
-                f"type={source.source_type} | "
-                f"enabled={source.enabled} | "
-                f"platform="
-                f"{getattr(source, 'social_platform', '')} | "
-                f"url={getattr(source, 'url', '')}"
-            )
-
-        # ==================================================
-        # Semaphore
-        # ==================================================
+        # --------------------------------------------------
+        # ساخت Semaphore
+        # --------------------------------------------------
 
         semaphore = asyncio.Semaphore(
             FETCH_CONCURRENCY
         )
 
-        # ==================================================
+        # --------------------------------------------------
         # ساخت Taskها
-        # ==================================================
+        # --------------------------------------------------
 
         tasks = [
             self._fetch_limited(
@@ -436,70 +388,21 @@ class FetchService:
         ]
 
         logger.info(
-            "DEBUG FETCH_ALL | "
-            f"tasks_created={len(tasks)}"
+            f"Starting fetch for "
+            f"{len(tasks)} sources..."
         )
 
-        # ==================================================
-        # تست مستقیم Football360
-        #
-        # این بخش موقتاً برای تشخیص مشکل اضافه شده.
-        #
-        # اگر اینجا:
-        #
-        # Fetching: Football360 Telegram
-        #
-        # و لاگ‌های Telegram دیده شوند، یعنی خود
-        # Football360 و SocialFetcher سالم هستند و
-        # مشکل فقط در اجرای همزمان Taskهاست.
-        #
-        # اگر اینجا هم اجرا نشود یا خطا بدهد،
-        # مشکل مستقیماً در مسیر Football360 است.
-        # ==================================================
-
-        for source in football360_in_enabled:
-
-            logger.info(
-                "DEBUG FOOTBALL360 DIRECT | "
-                f"START | "
-                f"id={source.id} | "
-                f"name={source.name}"
-            )
-
-            try:
-
-                direct_result = await self._fetch_limited(
-                    source,
-                    semaphore,
-                )
-
-                logger.info(
-                    "DEBUG FOOTBALL360 DIRECT | "
-                    f"END | "
-                    f"id={source.id} | "
-                    f"news_count={len(direct_result)}"
-                )
-
-            except Exception as e:
-
-                logger.exception(
-                    "DEBUG FOOTBALL360 DIRECT | "
-                    f"ERROR | "
-                    f"id={source.id} | "
-                    f"error={e}"
-                )
-
-        # ==================================================
-        # اجرای تمام Taskها
-        # ==================================================
+        # --------------------------------------------------
+        # اجرای همزمان تمام منابع
+        # --------------------------------------------------
 
         results = await asyncio.gather(
             *tasks
         )
 
-        # ==================================================
-        # تبدیل لیست‌های جداگانه به یک لیست واحد
-        # ==================================================
+        # --------------------------------------------------
+        # تبدیل خروجی‌ها به یک لیست واحد
+        # --------------------------------------------------
 
         all_news = [
             item
@@ -507,15 +410,18 @@ class FetchService:
             for item in batch
         ]
 
-        # ==================================================
+        # --------------------------------------------------
         # گزارش نهایی
-        # ==================================================
+        # --------------------------------------------------
+
+        elapsed = (
+            time.monotonic() - started
+        )
 
         logger.info(
             f"Fetched {len(all_news)} news "
             f"from {len(enabled)} sources "
-            f"in "
-            f"{time.monotonic() - started:.1f}s."
+            f"in {elapsed:.1f}s."
         )
 
         return all_news
