@@ -305,11 +305,42 @@ async def main():
 
     logger.info(f"Loaded {len(sources)} sources")
 
+    # ==========================================================
+    # DEBUG موقت برای Football360 Telegram
+    # بررسی می‌کند منبع واقعاً از JSON لود شده،
+    # enabled است و تنظیمات Social آن درست هستند.
+    # ==========================================================
+
+    football360_sources = [
+        src
+        for src in sources
+        if "football360" in str(getattr(src, "id", "")).lower()
+        or "football360" in str(getattr(src, "name", "")).lower()
+    ]
+
+    if football360_sources:
+        for src in football360_sources:
+            logger.info(
+                "DEBUG Football360 | "
+                f"id={src.id} | "
+                f"name={src.name} | "
+                f"type={src.source_type} | "
+                f"enabled={src.enabled} | "
+                f"platform={src.social_platform} | "
+                f"url={src.url}"
+            )
+    else:
+        logger.warning(
+            "DEBUG Football360 | "
+            "Football360 Telegram was NOT found in loaded sources."
+        )
+
     api_sources = [
         src for src in sources
         if str(getattr(src, "source_type", "")).lower()
         in ("sports_api", "sports-api", "sportsapi")
     ]
+
     logger.info(
         "Match-report sources: "
         + (
@@ -336,6 +367,7 @@ async def main():
                 for item in all_news
                 if getattr(item, "source_id", "") in MATCH_REPORT_SOURCE_IDS
             )
+
             logger.info(
                 f"Fetched {len(all_news)} news "
                 f"({match_reports} match reports)"
@@ -351,24 +383,30 @@ async def main():
             persian_sport = sum(
                 1 for n in tiers["sport"] if _is_persian(n)
             )
+
             logger.info(
                 "Tiers: "
                 + ", ".join(f"{t}={len(tiers[t])}" for t in TIER_PRIORITY)
                 + f" | persian_sport={persian_sport}"
             )
+
             logger.info(
                 "Sport tier sources: "
                 + _top(Counter(_source_key(n) for n in tiers["sport"]))
             )
 
             generic_sport = [
-                n for n in tiers["sport"] if not getattr(n, "sport", None)
+                n
+                for n in tiers["sport"]
+                if not getattr(n, "sport", None)
             ]
+
             if generic_sport:
                 logger.info(
                     "Sport category without a specific sport: "
                     + " | ".join(
-                        f"{_source_key(n)}: {str(getattr(n, 'title', ''))[:50]}"
+                        f"{_source_key(n)}: "
+                        f"{str(getattr(n, 'title', ''))[:50]}"
                         for n in generic_sport[:8]
                     )
                 )
@@ -393,6 +431,7 @@ async def main():
                 news, tier = picked
 
                 source = _source_key(news)
+
                 title = str(
                     getattr(news, "title", "") or ""
                 )[:100]
@@ -445,7 +484,11 @@ async def main():
                             source,
                             title,
                         )
-                        await asyncio.sleep(MIN_GAP_BETWEEN_CANDIDATES)
+
+                        await asyncio.sleep(
+                            MIN_GAP_BETWEEN_CANDIDATES
+                        )
+
                         continue
 
                     # این ویژگی در pipeline پس از ارسال تلگرام تنظیم می‌شود.
@@ -458,19 +501,23 @@ async def main():
                         # را جلو نمی‌برد. فقط پست عادی نوبت را جلو می‌برد.
                         if tier == "timely":
                             CandidatePicker.timely_streak += 1
+
                         elif tier != "breaking":
                             CandidatePicker.timely_streak = 0
                             picker.advance()
 
                         logger.info(
-                            "Successful publication: %s/%s | tier=%s | source=%s",
+                            "Successful publication: %s/%s | "
+                            "tier=%s | source=%s",
                             published_count,
                             MAX_PUBLISH_PER_CYCLE,
                             tier,
                             source,
                         )
+
                     else:
                         stats["publish_failed"] += 1
+
                         logger.warning(
                             "Not counted as published | "
                             "source=%s | title=%s",
@@ -480,6 +527,7 @@ async def main():
 
                 except Exception:
                     stats["errors"] += 1
+
                     logger.exception(
                         "Candidate failed; continuing | "
                         "source=%s | title=%s",
@@ -487,7 +535,9 @@ async def main():
                         title,
                     )
 
-                await asyncio.sleep(MIN_GAP_BETWEEN_CANDIDATES)
+                await asyncio.sleep(
+                    MIN_GAP_BETWEEN_CANDIDATES
+                )
 
             logger.info(
                 "Cycle finished: "
@@ -504,7 +554,8 @@ async def main():
 
             if rejected_sources:
                 logger.info(
-                    "Rejected for low credibility: " + _top(rejected_sources)
+                    "Rejected for low credibility: "
+                    + _top(rejected_sources)
                 )
 
             await asyncio.sleep(CHECK_INTERVAL)
