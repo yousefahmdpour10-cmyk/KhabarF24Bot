@@ -4,140 +4,702 @@ Category Keywords
 """
 
 CATEGORY_KEYWORDS = {
+
+    # ==========================================================
     # سیاست داخلی و بین‌المللی
+    # ==========================================================
+
     "politics": [
-        "رئیس جمهور", "رئیس‌جمهور", "رئیس جمهوری",
-        "نخست وزیر", "نخست‌وزیر", "وزیر خارجه",
-        "وزیر کشور", "وزیر دفاع", "وزیر امور خارجه",
-        "وزارت خارجه", "وزارت امور خارجه",
-        "دولت", "هیئت دولت", "پارلمان", "مجلس",
-        "نماینده مجلس", "قانون‌گذاری", "قانون جدید",
-        "انتخابات", "انتخابات ریاست جمهوری",
-        "انتخابات پارلمانی", "رأی‌گیری", "رای‌گیری",
-        "حزب سیاسی", "ائتلاف سیاسی", "اپوزیسیون",
-        "مخالفان دولت", "مذاکرات سیاسی", "دیپلماسی",
-        "روابط دیپلماتیک", "سفیر", "سفارت",
-        "تحریم سیاسی", "تحریم اقتصادی", "قطعنامه",
-        "سازمان ملل", "شورای امنیت", "ناتو",
-        "کاخ سفید", "کرملین", "کنگره آمریکا",
-        "سنای آمریکا", "پارلمان اروپا",
-        "President", "Prime Minister", "Foreign Minister",
-        "Foreign Ministry", "Secretary of State",
-        "Government", "Parliament", "Election",
-        "Presidential Election", "Political Party",
-        "Opposition", "Diplomacy", "Diplomatic",
-        "Ambassador", "Embassy", "Sanctions",
-        "United Nations", "Security Council",
-        "NATO", "White House", "Kremlin",
-        "Congress", "Senate", "European Parliament",
-        "Legislation", "Coalition Government",
+
+        "رئیس جمهور",
+        "رئیس‌جمهور",
+        "رئیس جمهوری",
+        "رئیس‌جمهوری",
+
+        "نخست وزیر",
+        "نخست‌وزیر",
+
+        "وزیر خارجه",
+        "وزیر کشور",
+        "وزیر دفاع",
+        "وزیر امور خارجه",
+
+        "وزارت خارجه",
+        "وزارت امور خارجه",
+
+        "دولت",
+        "هیئت دولت",
+
+        "پارلمان",
+        "مجلس",
+        "نماینده مجلس",
+
+        "قانون‌گذاری",
+        "قانون جدید",
+
+        "انتخابات",
+        "انتخابات ریاست جمهوری",
+        "انتخابات پارلمانی",
+        "رأی‌گیری",
+        "رای‌گیری",
+
+        "حزب سیاسی",
+        "ائتلاف سیاسی",
+        "اپوزیسیون",
+        "مخالفان دولت",
+
+        "مذاکرات سیاسی",
+        "دیپلماسی",
+        "روابط دیپلماتیک",
+
+        "سفیر",
+        "سفارت",
+
+        "تحریم سیاسی",
+        "تحریم اقتصادی",
+
+        "قطعنامه",
+
+        "سازمان ملل",
+        "شورای امنیت",
+        "ناتو",
+
+        "کاخ سفید",
+        "کرملین",
+        "کنگره آمریکا",
+        "سنای آمریکا",
+        "پارلمان اروپا",
+
+        "President",
+        "Prime Minister",
+        "Foreign Minister",
+        "Foreign Ministry",
+        "Secretary of State",
+
+        "Government",
+        "Parliament",
+        "Election",
+        "Presidential Election",
+        "Political Party",
+        "Opposition",
+
+        "Diplomacy",
+        "Diplomatic",
+
+        "Ambassador",
+        "Embassy",
+
+        "Sanctions",
+
+        "United Nations",
+        "Security Council",
+
+        "NATO",
+        "White House",
+        "Kremlin",
+
+        "Congress",
+        "Senate",
+        "European Parliament",
+
+        "Legislation",
+        "Coalition Government",
+
+        # جنگ و مسائل نظامی
+        "جنگ",
+        "حمله نظامی",
+        "حمله هوایی",
+        "حمله موشکی",
+        "موشک",
+        "پهپاد",
+
+        "ارتش",
+        "سپاه",
+        "سپاه پاسداران",
+        "نیروهای مسلح",
+        "نظامی",
+
+        "آتش‌بس",
+        "آتش بس",
+
+        "درگیری نظامی",
+
+        "وزارت دفاع",
+        "پنتاگون",
+
+        "اسرائیل",
+        "فلسطین",
+        "غزه",
+        "حماس",
+        "حزب‌الله",
+
+        "اوکراین",
+        "روسیه",
+
+        "ترامپ",
+        "بایدن",
+        "نتانیاهو",
+        "پوتین",
+        "زلنسکی",
+
+        "عراقچی",
+        "پزشکیان",
+        "خامنه‌ای",
+        "رهبر انقلاب",
+
+        "شورای عالی امنیت ملی",
+
+        "مذاکرات هسته‌ای",
+        "برنامه هسته‌ای",
+
+        "War",
+        "Missile",
+        "Airstrike",
+        "Military",
+        "Army",
+        "Troops",
+        "Ceasefire",
+
+        "Israel",
+        "Gaza",
+        "Hamas",
+        "Hezbollah",
+
+        "Ukraine",
+        "Russia",
+
+        "Trump",
+        "Netanyahu",
+        "Putin",
+        "Zelensky",
+
+        "Pentagon",
+        "IDF",
+        "Nuclear Talks",
     ],
 
-    # ایران: اخبار مرتبط با کشور ایران
+    # ==========================================================
+    # ایران
+    # ==========================================================
+
     "iran": [
-        "ایران", "ایرانی", "ایرانیان",
-        "جمهوری اسلامی ایران", "تهران", "تهرانی",
-        "اصفهان", "شیراز", "مشهد", "تبریز",
-        "یزد", "کرمان", "اهواز", "قم",
-        "ارومیه", "اردبیل", "زنجان", "قزوین",
-        "رشت", "ساری", "گرگان", "بندرعباس",
-        "بوشهر", "سنندج", "کرمانشاه", "خرم‌آباد",
-        "ایلام", "بیرجند", "زاهدان", "سمنان",
-        "شهرکرد", "یاسوج", "همدان", "اراک",
-        "کیش", "قشم", "سیستان و بلوچستان",
-        "خوزستان", "آذربایجان شرقی", "آذربایجان غربی",
-        "وزارت کشور ایران", "بانک مرکزی ایران",
-        "مجلس شورای اسلامی", "دولت ایران",
-        "Iran", "Iranian", "Iranian government",
-        "Islamic Republic of Iran", "Tehran",
-        "Isfahan", "Shiraz", "Mashhad", "Tabriz",
-        "Iranian parliament", "Iranian president",
-        "Iranian foreign ministry", "Central Bank of Iran",
+
+        "ایران",
+        "ایرانی",
+        "ایرانیان",
+
+        "جمهوری اسلامی ایران",
+        "جمهوری اسلامی",
+
+        "تهران",
+        "تهرانی",
+
+        "اصفهان",
+        "شیراز",
+        "مشهد",
+        "تبریز",
+        "یزد",
+        "کرمان",
+        "اهواز",
+        "قم",
+        "ارومیه",
+        "اردبیل",
+        "زنجان",
+        "قزوین",
+        "رشت",
+        "ساری",
+        "گرگان",
+        "بندرعباس",
+        "بوشهر",
+        "سنندج",
+        "کرمانشاه",
+        "خرم‌آباد",
+        "ایلام",
+        "بیرجند",
+        "زاهدان",
+        "سمنان",
+        "شهرکرد",
+        "یاسوج",
+        "همدان",
+        "اراک",
+
+        "کیش",
+        "قشم",
+
+        "سیستان و بلوچستان",
+        "خوزستان",
+        "آذربایجان شرقی",
+        "آذربایجان غربی",
+
+        "وزارت کشور ایران",
+        "بانک مرکزی ایران",
+        "مجلس شورای اسلامی",
+        "دولت ایران",
+
+        "Iran",
+        "Iranian",
+        "Iranian government",
+        "Islamic Republic of Iran",
+
+        "Tehran",
+        "Isfahan",
+        "Shiraz",
+        "Mashhad",
+        "Tabriz",
+
+        "Iranian parliament",
+        "Iranian president",
+        "Iranian foreign ministry",
+        "Central Bank of Iran",
     ],
 
+    # ==========================================================
     # اقتصاد، بازار و امور مالی
+    # ==========================================================
+
     "economy": [
-        "اقتصاد", "اقتصادی", "رشد اقتصادی",
-        "رکود اقتصادی", "تورم", "نرخ تورم",
-        "نرخ بهره", "نرخ سود", "بانک مرکزی",
-        "نرخ ارز", "قیمت دلار", "قیمت یورو",
-        "قیمت طلا", "قیمت سکه", "بازار ارز",
-        "بازار طلا", "بورس", "بازار سهام",
-        "شاخص بورس", "سهامداران", "سرمایه‌گذاری",
-        "سرمایه‌گذار", "بودجه", "کسری بودجه",
-        "درآمد دولت", "مالیات", "صادرات",
-        "واردات", "تجارت خارجی", "تعرفه گمرکی",
-        "قیمت نفت", "قیمت گاز", "اوپک",
-        "بیت کوین", "بیت‌کوین", "رمزارز",
-        "ارز دیجیتال", "کریپتوکارنسی",
-        "Bitcoin", "Cryptocurrency", "Crypto Market",
-        "Oil Prices", "Gold Prices", "Inflation",
-        "Interest Rates", "Central Bank",
-        "Stock Market", "Share Prices",
-        "Economic Growth", "Economic Recession",
-        "Investment", "Investor", "GDP",
-        "Gross Domestic Product", "Trade Deficit",
-        "International Trade", "Import Tariff",
-        "Exports", "Imports", "Unemployment Rate",
-        "Cost of Living", "Consumer Prices",
-        "Federal Reserve", "European Central Bank",
-        "OPEC", "Brent Crude", "Financial Markets",
-        "Bankruptcy", "Public Debt", "Budget Deficit",
+
+        "اقتصاد",
+        "اقتصادی",
+        "رشد اقتصادی",
+        "رکود اقتصادی",
+
+        "تورم",
+        "نرخ تورم",
+
+        "نرخ بهره",
+        "نرخ سود",
+
+        "بانک مرکزی",
+
+        "نرخ ارز",
+        "قیمت ارز",
+
+        "قیمت دلار",
+        "قیمت یورو",
+
+        "قیمت طلا",
+        "قیمت طلای",
+        "قیمت سکه",
+
+        "بازار ارز",
+        "بازار طلا",
+
+        "بورس",
+        "بازار سهام",
+        "شاخص بورس",
+        "سهامداران",
+
+        "سرمایه‌گذاری",
+        "سرمایه‌گذار",
+
+        "بودجه",
+        "کسری بودجه",
+        "درآمد دولت",
+        "مالیات",
+
+        "صادرات",
+        "واردات",
+        "تجارت خارجی",
+        "تعرفه گمرکی",
+
+        "قیمت نفت",
+        "قیمت گاز",
+        "اوپک",
+
+        "بیت کوین",
+        "بیت‌کوین",
+        "رمزارز",
+        "رمز ارز",
+        "ارز دیجیتال",
+        "کریپتوکارنسی",
+        "کریپتو",
+
+        "تتر",
+        "اتریوم",
+
+        "صرافی رمزارزی",
+        "صرافی ارز دیجیتال",
+        "بایننس",
+        "کوین‌بیس",
+        "دارایی دیجیتال",
+
+        "Bitcoin",
+        "Cryptocurrency",
+        "Crypto Market",
+        "Crypto",
+
+        "Tether",
+        "Ethereum",
+        "Binance",
+        "Coinbase",
+        "Stablecoin",
+
+        "Oil Prices",
+        "Gold Prices",
+        "Inflation",
+        "Interest Rates",
+        "Central Bank",
+
+        "Stock Market",
+        "Share Prices",
+
+        "Economic Growth",
+        "Economic Recession",
+
+        "Investment",
+        "Investor",
+        "GDP",
+        "Gross Domestic Product",
+
+        "Trade Deficit",
+        "International Trade",
+        "Import Tariff",
+
+        "Exports",
+        "Imports",
+
+        "Unemployment Rate",
+        "Cost of Living",
+        "Consumer Prices",
+
+        "Federal Reserve",
+        "European Central Bank",
+        "OPEC",
+
+        "Brent Crude",
+        "Financial Markets",
+
+        "Bankruptcy",
+        "Public Debt",
+        "Budget Deficit",
+
+        # طلا
+        "طلا امروز",
+        "طلای امروز",
+        "طلای ۱۸ عیار",
+        "طلای 18 عیار",
+        "قیمت طلای ۱۸ عیار",
+        "قیمت طلای 18 عیار",
+        "اونس طلا",
+        "اونس جهانی طلا",
+        "بازار طلا",
+        "افزایش قیمت طلا",
+        "کاهش قیمت طلا",
+        "رکورد قیمت طلا",
+        "رکورد جدید طلا",
+
+        # سکه
+        "سکه امروز",
+        "قیمت سکه امروز",
+        "سکه امامی",
+        "سکه بهار آزادی",
+        "نیم سکه",
+        "ربع سکه",
+        "افزایش قیمت سکه",
+        "کاهش قیمت سکه",
+        "رکورد قیمت سکه",
+        "رکورد جدید سکه",
+
+        # دلار و ارز
+        "دلار امروز",
+        "قیمت دلار امروز",
+        "نرخ دلار",
+        "افزایش قیمت دلار",
+        "کاهش قیمت دلار",
+        "افزایش نرخ دلار",
+        "کاهش نرخ دلار",
+        "افزایش نرخ ارز",
+        "کاهش نرخ ارز",
+        "رکورد قیمت دلار",
+        "رکورد جدید دلار",
+
+        # تتر
+        "قیمت تتر",
+        "تتر امروز",
+        "نرخ تتر",
+        "افزایش قیمت تتر",
+        "کاهش قیمت تتر",
+        "رکورد تتر",
+        "رکورد قیمت تتر",
+        "رکورد جدید تتر",
+
+        # خودرو
+        "قیمت خودرو",
+        "قیمت ماشین",
+        "قیمت خودرو امروز",
+        "قیمت ماشین امروز",
+        "جدول قیمت خودرو",
+        "جدول قیمت ماشین",
+        "قیمت روز خودرو",
+        "قیمت روز ماشین",
+        "افزایش قیمت خودرو",
+        "کاهش قیمت خودرو",
+        "افزایش قیمت ماشین",
+        "کاهش قیمت ماشین",
+        "بازار خودرو",
+        "بازار ماشین",
+        "رکورد قیمت خودرو",
+        "رکورد قیمت ماشین",
+
+        # تغییر قیمت عمومی
+        "افزایش قیمت",
+        "کاهش قیمت",
+        "افزایش نرخ",
+        "کاهش نرخ",
+        "گرانی",
+        "ارزان شدن",
+        "گران شد",
+        "ارزان شد",
+        "گران شدن",
+        "رکورد قیمت",
+        "رکورد جدید",
+
+        # انگلیسی قیمت‌ها
+        "gold price",
+        "gold prices",
+        "gold today",
+        "gold record",
+        "gold hits record",
+
+        "dollar price",
+        "dollar today",
+        "currency rate",
+        "euro price",
+        "euro today",
+
+        "tether price",
+        "usdt price",
+        "tether today",
+        "tether record",
+
+        "bitcoin price",
+        "bitcoin prices",
+        "bitcoin today",
+
+        "car prices",
+        "car price",
+        "vehicle prices",
+        "vehicle price",
+        "auto market",
+        "car prices rise",
+        "car prices fall",
+
+        "price increase",
+        "price rise",
+        "price rises",
+        "price decrease",
+        "price fall",
+        "price falls",
+        "prices rise",
+        "prices fall",
+        "record price",
+        "new price record",
     ],
 
+    # ==========================================================
     # فناوری و علم
+    # ==========================================================
+
     "technology": [
-        "هوش مصنوعی", "هوش مصنوعی مولد",
-        "یادگیری ماشین", "مدل زبانی", "چت‌بات",
-        "فناوری", "تکنولوژی", "رباتیک",
-        "نرم‌افزار", "سخت‌افزار", "سیستم‌عامل",
-        "امنیت سایبری", "حمله سایبری", "هک",
-        "نشت اطلاعات", "داده‌های کاربران",
-        "تراشه", "نیمه‌رسانا", "پردازنده",
-        "گوشی هوشمند", "تلفن همراه", "اپلیکیشن",
-        "شبکه اجتماعی", "رایانش ابری",
-        "اینترنت ماهواره‌ای", "ماهواره", "فضاپیما",
-        "شرکت فناوری", "استارتاپ فناوری",
-        "اپل", "گوگل", "مایکروسافت", "متا",
-        "انویدیا", "تسلا", "اسپیس‌ایکس", "اوپن‌ای‌آی",
-        "Artificial Intelligence", "Machine Learning",
-        "Large Language Model", "Chatbot",
-        "Technology", "Technology Company",
-        "Software Update", "Operating System",
-        "Cybersecurity", "Cyber Attack", "Data Breach",
-        "Semiconductor", "Computer Chip",
-        "Smartphone", "Mobile App", "Cloud Computing",
-        "Satellite Internet", "Spacecraft",
-        "Apple Inc", "Google", "Microsoft", "Meta Platforms",
-        "NVIDIA", "Tesla", "SpaceX", "OpenAI",
-        "Product Launch", "Tech Startup",
-        "Quantum Computing", "Robotics",
+
+        "هوش مصنوعی",
+        "هوش مصنوعی مولد",
+        "یادگیری ماشین",
+        "مدل زبانی",
+        "چت‌بات",
+
+        "فناوری",
+        "تکنولوژی",
+
+        "رباتیک",
+        "نرم‌افزار",
+        "سخت‌افزار",
+        "سیستم‌عامل",
+
+        "امنیت سایبری",
+        "حمله سایبری",
+        "حمله هکری",
+        "هک",
+        "هکرها",
+        "باج‌افزار",
+        "نشت اطلاعات",
+        "داده‌های کاربران",
+
+        "تراشه",
+        "نیمه‌رسانا",
+        "پردازنده",
+
+        "گوشی هوشمند",
+        "تلفن همراه",
+        "اپلیکیشن",
+
+        "شبکه اجتماعی",
+        "رایانش ابری",
+
+        "اینترنت ماهواره‌ای",
+        "ماهواره",
+        "فضاپیما",
+
+        "شرکت فناوری",
+        "استارتاپ فناوری",
+
+        "اپل",
+        "گوگل",
+        "مایکروسافت",
+        "متا",
+        "انویدیا",
+        "تسلا",
+        "اسپیس‌ایکس",
+        "اوپن‌ای‌آی",
+
+        "Artificial Intelligence",
+        "Machine Learning",
+        "Large Language Model",
+        "Chatbot",
+
+        "Technology",
+        "Technology Company",
+
+        "Software Update",
+        "Operating System",
+
+        "Cybersecurity",
+        "Cyber Attack",
+        "Data Breach",
+
+        "Semiconductor",
+        "Computer Chip",
+
+        "Smartphone",
+        "Mobile App",
+        "Cloud Computing",
+
+        "Satellite Internet",
+        "Spacecraft",
+
+        "Apple Inc",
+        "Google",
+        "Microsoft",
+        "Meta Platforms",
+        "NVIDIA",
+        "Tesla",
+        "SpaceX",
+        "OpenAI",
+
+        "Product Launch",
+        "Tech Startup",
+
+        "Quantum Computing",
+        "Robotics",
+
+        "Ransomware",
+        "Hackers",
     ],
 
+    # ==========================================================
     # سلامت و پزشکی
+    # ==========================================================
+
     "health": [
-        "سلامت", "بهداشت", "بیماری", "بیمار",
-        "پزشک", "پزشکی", "بیمارستان", "درمان",
-        "دارو", "داروسازی", "واکسن", "واکسیناسیون",
-        "ویروس", "باکتری", "همه‌گیری",
-        "اپیدمی", "جراحی", "پرستار",
-        "سلامت روان", "بارداری", "تغذیه",
-        "سرطان", "دیابت", "بیماری قلبی",
-        "فشار خون", "سازمان بهداشت جهانی",
-        "Health", "Healthcare", "Medical",
-        "Medicine", "Hospital", "Patient",
-        "Doctor", "Physician", "Nurse",
-        "Vaccine", "Vaccination", "Virus",
-        "Disease", "Pandemic", "Epidemic",
-        "Surgery", "Mental Health", "Pregnancy",
-        "Cancer", "Diabetes", "Heart Disease",
-        "Blood Pressure", "World Health Organization",
-        "Clinical Trial", "Medical Research",
-        "Public Health", "Drug Approval",
+
+        "سلامت",
+        "بهداشت",
+        "بیماری",
+        "بیمار",
+
+        "پزشک",
+        "پزشکی",
+        "بیمارستان",
+        "درمان",
+
+        "دارو",
+        "داروسازی",
+
+        "واکسن",
+        "واکسیناسیون",
+
+        "ویروس",
+        "باکتری",
+        "همه‌گیری",
+        "اپیدمی",
+
+        "جراحی",
+        "پرستار",
+
+        "سلامت روان",
+        "بارداری",
+        "تغذیه",
+
+        "سرطان",
+        "دیابت",
+        "بیماری قلبی",
+        "فشار خون",
+
+        "سازمان بهداشت جهانی",
+
+        # نوشیدنی و تغذیه
+        "نوشابه انرژی‌زا",
+        "نوشابه انرژی زا",
+        "نوشابه‌های انرژی‌زا",
+        "نوشابه های انرژی زا",
+        "نوشابه انرژی‌زای",
+        "نوشابه انرژی زای",
+
+        "نوشابه",
+        "کافئین",
+        "مصرف کافئین",
+        "نوشیدنی انرژی‌زا",
+        "نوشیدنی انرژی زا",
+
+        "ممنوعیت نوشابه",
+        "ممنوعیت نوشیدنی انرژی‌زا",
+
+        "Health",
+        "Healthcare",
+        "Medical",
+        "Medicine",
+        "Hospital",
+        "Patient",
+        "Doctor",
+        "Physician",
+        "Nurse",
+
+        "Vaccine",
+        "Vaccination",
+        "Virus",
+        "Disease",
+        "Pandemic",
+        "Epidemic",
+
+        "Surgery",
+        "Mental Health",
+        "Pregnancy",
+
+        "Cancer",
+        "Diabetes",
+        "Heart Disease",
+        "Blood Pressure",
+
+        "World Health Organization",
+        "Clinical Trial",
+        "Medical Research",
+        "Public Health",
+        "Drug Approval",
+
+        "Energy Drink",
+        "Energy Drinks",
+        "Soft Drink",
+        "Soft Drinks",
+        "Caffeine",
     ],
 
+    # ==========================================================
     # هواشناسی و حوادث طبیعی
+    # ==========================================================
+
     "weather": [
+
         "هواشناسی",
         "پیش‌بینی هوا",
         "پیش‌بینی آب‌وهوا",
@@ -155,6 +717,7 @@ CATEGORY_KEYWORDS = {
         "سامانه بارشی",
         "سامانه بارندگی",
         "سامانه جوی",
+
         "توده هوای سرد",
         "توده هوای گرم",
 
@@ -192,6 +755,7 @@ CATEGORY_KEYWORDS = {
         "اخطار جوی",
         "هشدار آب‌وهوایی",
         "هشدار آب و هوایی",
+
         "هشدار بارندگی",
         "هشدار باران",
         "هشدار برف",
@@ -204,7 +768,7 @@ CATEGORY_KEYWORDS = {
         "آبگرفتگی",
         "آب‌گرفتگی معابر",
         "آبگرفتگی معابر",
-        "آبگرفتگی زمین‌های کم‌ارتفاع",
+
         "طغیان رودخانه",
         "طغیان رودخانه‌ها",
         "طغیان ناگهانی رودخانه",
@@ -214,12 +778,14 @@ CATEGORY_KEYWORDS = {
         "خشکسالی",
         "موج گرما",
         "موج سرما",
+
         "دمای هوا",
         "کاهش دما",
         "افزایش دما",
         "افت دما",
         "افزایش دمای هوا",
         "کاهش دمای هوا",
+
         "یخبندان",
         "سرمای شدید",
         "گرمای شدید",
@@ -238,6 +804,7 @@ CATEGORY_KEYWORDS = {
         "رانش زمین",
         "فوران آتشفشان",
         "آتشفشان",
+
         "آتش‌سوزی جنگل",
         "آتش سوزی جنگل",
 
@@ -295,42 +862,147 @@ CATEGORY_KEYWORDS = {
         "Wildfire",
     ],
 
+    # ==========================================================
     # ورزش
+    # ==========================================================
+
     "sport": [
-        "فوتبال", "فوتبالی", "بسکتبال", "والیبال",
-        "تنیس", "تنیس روی میز", "کشتی آزاد", "کشتی فرنگی", "بوکس",
-        "وزنه‌برداری", "دوومیدانی", "شنا",
-        "دوچرخه‌سواری", "فرمول یک", "فرمول وان",
-        "المپیک", "پارالمپیک", "جام جهانی",
-        "لیگ قهرمانان", "لیگ برتر", "لیگ ملت‌ها",
-        "قهرمانی", "مسابقات ورزشی", "تیم ملی",
-        "بازیکن", "سرمربی", "مربی", "داور",
-        "گلزنی", "گلزن", "گل‌به‌خودی",
-        "پنالتی", "ضربات پنالتی", "کارت قرمز",
-        "کارت زرد", "ترکیب تیم", "نقل و انتقالات",
-        "نقل‌وانتقالات", "مصدومیت بازیکن",
-        "فوتبال زنان", "فوتبال مردان",
-        "Football", "Soccer", "Basketball",
-        "Volleyball", "Tennis", "Table Tennis",
-        "Wrestling", "Boxing", "Weightlifting",
-        "Athletics", "Swimming", "Cycling",
-        "Formula One", "Formula 1", "Olympics",
-        "Paralympics", "World Cup", "Champions League",
-        "Premier League", "Europa League",
-        "National Team", "Football Club",
-        "Head Coach", "Manager", "Referee",
-        "Goal Scorer", "Penalty Shootout",
-        "Red Card", "Yellow Card", "Team Lineup",
-        "Transfer News", "Transfer Window",
-        "Injury Update", "Match Report", "Final Score",
-        "Playoff", "Grand Slam", "League Table",
-        "Fixture", "Kick-off", "Kickoff",
+
+        "فوتبال",
+        "فوتبالی",
+        "بسکتبال",
+        "والیبال",
+        "تنیس",
+        "تنیس روی میز",
+
+        "کشتی آزاد",
+        "کشتی فرنگی",
+        "بوکس",
+        "وزنه‌برداری",
+        "دوومیدانی",
+        "شنا",
+        "دوچرخه‌سواری",
+
+        "فرمول یک",
+        "فرمول وان",
+
+        "المپیک",
+        "پارالمپیک",
+        "جام جهانی",
+
+        "لیگ قهرمانان",
+        "لیگ برتر",
+        "لیگ ملت‌ها",
+
+        "قهرمانی",
+        "مسابقات ورزشی",
+        "تیم ملی",
+
+        "بازیکن",
+        "سرمربی",
+        "مربی",
+        "داور",
+
+        "گلزنی",
+        "گلزن",
+        "گل‌به‌خودی",
+        "پنالتی",
+        "ضربات پنالتی",
+
+        "کارت قرمز",
+        "کارت زرد",
+
+        "ترکیب تیم",
+
+        "نقل و انتقالات",
+        "نقل‌وانتقالات",
+
+        "مصدومیت بازیکن",
+
+        "فوتبال زنان",
+        "فوتبال مردان",
+
+        "Football",
+        "Soccer",
+        "Basketball",
+        "Volleyball",
+        "Tennis",
+        "Table Tennis",
+        "Wrestling",
+        "Boxing",
+        "Weightlifting",
+        "Athletics",
+        "Swimming",
+        "Cycling",
+
+        "Formula One",
+        "Formula 1",
+        "Olympics",
+        "Paralympics",
+
+        "World Cup",
+        "Champions League",
+        "Premier League",
+        "Europa League",
+
+        "National Team",
+        "Football Club",
+
+        "Head Coach",
+        "Manager",
+        "Referee",
+
+        "Goal Scorer",
+        "Penalty Shootout",
+
+        "Red Card",
+        "Yellow Card",
+        "Team Lineup",
+
+        "Transfer News",
+        "Transfer Window",
+
+        "Injury Update",
+        "Match Report",
+        "Final Score",
+
+        "Playoff",
+        "Grand Slam",
+        "League Table",
+
+        "Fixture",
+        "Kick-off",
+        "Kickoff",
     ],
 }
 
 
-from .extra_keywords import EXTRA_KEYWORDS
+# --------------------------------------------------------------
+# کلیدواژه‌های تکمیلی
+# --------------------------------------------------------------
+#
+# اگر extra_keywords.py وجود دارد، از آن استفاده می‌کنیم.
+# اگر فایل وجود نداشته باشد، اجرای برنامه به خاطر import
+# متوقف نمی‌شود.
+# --------------------------------------------------------------
 
-for _category, _words in EXTRA_KEYWORDS.items():
-    _existing = CATEGORY_KEYWORDS.setdefault(_category, [])
-    _existing.extend([w for w in _words if w not in _existing])
+try:
+    from .extra_keywords import EXTRA_KEYWORDS
+
+    for _category, _words in EXTRA_KEYWORDS.items():
+
+        _existing = CATEGORY_KEYWORDS.setdefault(
+            _category,
+            [],
+        )
+
+        _existing.extend(
+            [
+                word
+                for word in _words
+                if word not in _existing
+            ]
+        )
+
+except ImportError:
+    pass
