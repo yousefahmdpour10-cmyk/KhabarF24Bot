@@ -13,9 +13,52 @@ from app.utils.logger import logger
 from app.utils.text_matching import keyword_in_text
 
 
-# حداقل امتیاز لازم برای تشخیص یک رشته ورزشی.
-# یک کلیدواژه ضعیف به‌تنهایی نباید خبر را ورزشی کند.
+# ----------------------------------------------------------------------
+# حداقل امتیاز لازم برای تشخیص رشته ورزشی
+# ----------------------------------------------------------------------
+
+# یک کلیدواژه عمومی نباید به‌تنهایی خبر را ورزشی کند.
 MIN_SPORT_SCORE = 2
+
+
+# ----------------------------------------------------------------------
+# کلمات عمومی که به‌تنهایی نشانه کافی برای ورزش نیستند
+# ----------------------------------------------------------------------
+
+GENERIC_SPORT_WORDS = {
+    "اخراج",
+    "برکناری",
+    "مصدومیت",
+    "مصدوم",
+    "آسیب",
+    "آسیب دیدگی",
+    "شکست",
+    "پیروزی",
+    "برد",
+    "باخت",
+    "رکورد",
+    "قهرمان",
+    "قهرمانی",
+    "بازگشت",
+    "دیدار",
+    "مقابل",
+    "انتقال",
+    "انتقالات",
+    "سرمربی",
+    "مربی",
+    "کاپیتان",
+    "بازیکن",
+    "داور",
+    "فدراسیون",
+    "رقابت",
+    "مسابقه",
+    "تور",
+    "لیگ",
+    "جام",
+    "فینال",
+    "نیمه نهایی",
+    "نیمه‌نهایی",
+}
 
 
 def _own_names(sport_id: str, sport: dict) -> set:
@@ -26,6 +69,7 @@ def _own_names(sport_id: str, sport: dict) -> set:
     volleyball / والیبال
     basketball / بسکتبال
     """
+
     names = {
         str(sport.get("name", "")).strip().lower(),
         sport_id.replace("_", " ").strip().lower(),
@@ -34,17 +78,37 @@ def _own_names(sport_id: str, sport: dict) -> set:
     return {name for name in names if name}
 
 
+def _is_generic_sport_keyword(keyword: str) -> bool:
+    """
+    مشخص می‌کند یک کلیدواژه بیش از حد عمومی است.
+
+    این کلمات فقط وقتی همراه با نشانه‌های تخصصی رشته باشند
+    می‌توانند به تشخیص ورزش کمک کنند.
+    """
+
+    normalized = str(keyword or "").strip().lower()
+
+    return normalized in {
+        item.lower()
+        for item in GENERIC_SPORT_WORDS
+    }
+
+
 class SportDetector:
     """
     تشخیص رشته ورزشی.
 
     امتیازدهی:
+
     - نام مستقیم رشته: 3 امتیاز
     - کلیدواژه تخصصی/قوی: 2 امتیاز
-    - کلیدواژه عمومی‌تر: 1 امتیاز
+    - کلیدواژه معمولی: 1 امتیاز
+    - کلیدواژه عمومی ورزشی: به‌تنهایی کافی نیست
 
-    برای جلوگیری از تشخیص اشتباه، امتیاز نهایی باید حداقل
-    MIN_SPORT_SCORE باشد.
+    نکته مهم:
+    کلماتی مثل «اخراج»، «مصدومیت»، «شکست» و «پیروزی»
+    نباید یک خبر سیاسی، اقتصادی، سلامت یا هر خبر غیرورزشی
+    را فقط به خاطر وجود این کلمات ورزشی کنند.
     """
 
     async def process(
@@ -52,60 +116,117 @@ class SportDetector:
         news: RawNews,
     ) -> RawNews:
 
-        # اگر fetcher مطمئنی (مثل ESPN) رشته را از قبل مشخص کرده،
-        # آن را با حدس کلیدواژه‌ای خراب نمی‌کنیم.
+        # --------------------------------------------------------------
+        # اگر fetcher مطمئنی مثل ESPN رشته را قبلاً مشخص کرده،
+        # همان تشخیص را حفظ می‌کنیم.
+        # --------------------------------------------------------------
+
         if getattr(news, "sport", None):
+
             logger.info(
                 "Sport: %s (از منبع مشخص شده)",
-                getattr(news, "sport_name", news.sport),
+                getattr(
+                    news,
+                    "sport_name",
+                    news.sport,
+                ),
             )
+
             return news
 
         title = getattr(news, "title", "") or ""
         summary = getattr(news, "summary", "") or ""
 
-        # عنوان و خلاصه برای تشخیص رشته کافی هستند و نباید متن کامل
-        # باعث ورود کلیدواژه‌های تصادفی و بی‌ربط شود.
+        # فقط عنوان + خلاصه.
+        # متن کامل عمداً وارد تشخیص رشته نمی‌شود.
         text = f"{title} {summary}".strip()
 
         scores = defaultdict(int)
 
+        # --------------------------------------------------------------
+        # تشخیص رشته از روی متن
+        # --------------------------------------------------------------
+
         for sport_id, sport in SPORTS.items():
 
-            own_names = _own_names(sport_id, sport)
-
-            # کلیدواژه‌های قوی‌تر هر رشته.
-            strong_keywords = set(
-                str(keyword).strip().lower()
-                for keyword in sport.get("strong_keywords", [])
-                if keyword
+            own_names = _own_names(
+                sport_id,
+                sport,
             )
 
-            for keyword in sport.get("keywords", []):
+            strong_keywords = {
+                str(keyword).strip().lower()
+                for keyword in sport.get(
+                    "strong_keywords",
+                    [],
+                )
+                if keyword
+            }
+
+            for keyword in sport.get(
+                "keywords",
+                [],
+            ):
 
                 if not keyword:
                     continue
 
-                keyword_normalized = str(keyword).strip().lower()
+                keyword_normalized = (
+                    str(keyword)
+                    .strip()
+                    .lower()
+                )
 
-                if not keyword_in_text(keyword, text):
+                if not keyword_in_text(
+                    keyword,
+                    text,
+                ):
                     continue
 
-                # نام مستقیم رشته:
-                # فوتبال / football / بسکتبال / basketball ...
+                # ------------------------------------------------------
+                # نام مستقیم رشته
+                # فوتبال / football
+                # بسکتبال / basketball
+                # ------------------------------------------------------
+
                 if keyword_normalized in own_names:
+
                     scores[sport_id] += 3
 
-                # نشانه تخصصی رشته:
-                # MLB / pitcher / NBA / Wimbledon / UFC ...
+                # ------------------------------------------------------
+                # کلیدواژه تخصصی رشته
+                # NBA / UFC / Wimbledon / pitcher / ...
+                # ------------------------------------------------------
+
                 elif keyword_normalized in strong_keywords:
+
                     scores[sport_id] += 2
 
-                # سایر کلیدواژه‌ها
+                # ------------------------------------------------------
+                # کلیدواژه‌های عمومی
+                # ------------------------------------------------------
+
+                elif _is_generic_sport_keyword(
+                    keyword_normalized
+                ):
+
+                    # این کلمات به‌تنهایی نباید رشته را
+                    # ورزشی تشخیص دهند.
+                    scores[sport_id] += 0
+
                 else:
+
                     scores[sport_id] += 1
 
+        # --------------------------------------------------------------
+        # hint منبع
+        # --------------------------------------------------------------
+
         hint_sport = self._hint_sport(news)
+
+        # --------------------------------------------------------------
+        # انتخاب بهترین رشته
+        # --------------------------------------------------------------
 
         if scores:
 
@@ -116,26 +237,53 @@ class SportDetector:
 
             best_score = scores[best]
 
-            # اگر شواهد کافی برای هیچ رشته‌ای وجود ندارد،
-            # صرفاً به خاطر یک کلمه عمومی نباید ورزش تشخیص داده شود.
+            # ----------------------------------------------------------
+            # اگر امتیاز کافی نیست:
+            #
+            # فقط hint منبع را زمانی قبول می‌کنیم که خود منبع
+            # مشخصاً تک‌رشته‌ای باشد و این خبر حداقل یک نشانه
+            # ورزشی واقعی داشته باشد.
+            # ----------------------------------------------------------
+
             if best_score < MIN_SPORT_SCORE:
 
-                # فقط در صورتی از hint منبع استفاده می‌کنیم که
-                # منبع واقعاً تک‌رشته‌ای باشد.
-                if hint_sport:
+                if hint_sport and best_score > 0:
+
                     best = hint_sport
                     best_score = MIN_SPORT_SCORE
+
                 else:
+
                     best = None
 
-            # اگر منبع مشخصاً متعلق به یک رشته است و شواهد متنی
-            # برای رشته دیگری بسیار ضعیف است، hint منبع اولویت دارد.
-            elif hint_sport and best != hint_sport and best_score <= 2:
+            # ----------------------------------------------------------
+            # اگر متن چند رشته را نشان دهد:
+            #
+            # hint منبع فقط وقتی برنده می‌شود که امتیاز متن
+            # برای رشته دیگر خیلی ضعیف باشد.
+            # ----------------------------------------------------------
 
-                hint_score = scores.get(hint_sport, 0)
+            elif (
+                hint_sport
+                and best != hint_sport
+                and best_score <= 2
+            ):
 
-                if hint_score >= 2 or best_score <= 1:
+                hint_score = scores.get(
+                    hint_sport,
+                    0,
+                )
+
+                if (
+                    hint_score >= 2
+                    or best_score <= 1
+                ):
+
                     best = hint_sport
+
+            # ----------------------------------------------------------
+            # ثبت تشخیص
+            # ----------------------------------------------------------
 
             if best:
 
@@ -147,16 +295,27 @@ class SportDetector:
                 logger.info(
                     "Sport: %s | score=%s | source_hint=%s",
                     news.sport_name,
-                    scores.get(best, best_score),
+                    scores.get(
+                        best,
+                        best_score,
+                    ),
                     hint_sport,
                 )
 
-                # مسابقه / لیگ / جام برای هشتگ دوم پست
-                if not getattr(news, "league", None):
+                # ------------------------------------------------------
+                # تشخیص لیگ / جام
+                # ------------------------------------------------------
+
+                if not getattr(
+                    news,
+                    "league",
+                    None,
+                ):
 
                     league = detect_league(text)
 
                     if league:
+
                         news.league = league
 
                         logger.info(
@@ -166,30 +325,23 @@ class SportDetector:
 
                 return news
 
-        elif hint_sport:
+        # --------------------------------------------------------------
+        # نکته بسیار مهم:
+        #
+        # قبلاً اینجا اگر hint_sport وجود داشت، بدون هیچ نشانه متنی
+        # خبر را ورزشی می‌کردیم.
+        #
+        # این رفتار حذف شده است.
+        #
+        # بنابراین:
+        #
+        # Football360 + خبر سیاسی
+        # Football360 + خبر اقتصادی
+        # Football360 + خبر سلامت
+        #
+        # فقط به دلیل منبع، sport نمی‌شوند.
+        # --------------------------------------------------------------
 
-            # هیچ کلیدواژه‌ای پیدا نشده ولی منبع مشخصاً
-            # درباره یک رشته خاص است.
-            news.sport = hint_sport
-            news.sport_name = SPORTS[hint_sport]["name"]
-            news.sport_emoji = SPORTS[hint_sport]["emoji"]
-            news.sport_hashtag = SPORTS[hint_sport]["hashtag"]
-
-            logger.info(
-                "Sport: %s (از دسته‌ی منبع)",
-                news.sport_name,
-            )
-
-            if not getattr(news, "league", None):
-
-                league = detect_league(text)
-
-                if league:
-                    news.league = league
-
-            return news
-
-        # هیچ تشخیص معتبر ورزشی وجود ندارد.
         news.sport = None
         news.sport_name = None
         news.sport_emoji = None
@@ -205,15 +357,14 @@ class SportDetector:
         مثال:
         ["sport", "football", "transfer"] → football
 
-        اگر منبع خودش یک رشته مشخص را اعلام کرده باشد،
-        حتی برای منابع فارسی نیز معتبر است.
+        برای منابع فارسی نیز معتبر است.
 
         مثال:
         Football360:
         ["sport", "football"] → football
 
-        منابع چندرشته‌ای که فقط "sport" دارند،
-        همچنان بدون تشخیص زیررشته باقی می‌مانند.
+        اما فقط وجود hint منبع به‌تنهایی برای ورزشی کردن
+        یک خبر کافی نیست.
         """
 
         for hint in getattr(
@@ -227,6 +378,7 @@ class SportDetector:
             ).strip().lower()
 
             if normalized in SPORTS:
+
                 return normalized
 
         return None
