@@ -205,16 +205,26 @@ class SportDetector:
         مثال:
         ["sport", "football", "transfer"] → football
 
-        منابع فارسی را عمداً کنار می‌گذاریم، چون بسیاری از
-        خبرگزاری‌های فارسی چندرشته‌ای هستند.
+        اگر منبع خودش یک رشته مشخص را اعلام کرده باشد،
+        حتی برای منابع فارسی نیز معتبر است.
+
+        مثال:
+        Football360:
+        ["sport", "football"] → football
+
+        منابع چندرشته‌ای که فقط "sport" دارند،
+        همچنان بدون تشخیص زیررشته باقی می‌مانند.
         """
 
-        if str(getattr(news, "language", "") or "").lower() == "fa":
-            return None
+        for hint in getattr(
+            news,
+            "source_category_hint",
+            None,
+        ) or []:
 
-        for hint in getattr(news, "source_category_hint", None) or []:
-
-            normalized = str(hint).strip().lower()
+            normalized = str(
+                hint
+            ).strip().lower()
 
             if normalized in SPORTS:
                 return normalized
