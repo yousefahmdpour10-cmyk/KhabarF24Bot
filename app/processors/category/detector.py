@@ -8,11 +8,18 @@ from app.utils.text_matching import keyword_in_text
 
 MIN_CATEGORY_SCORE = 2
 
-# در صورت برابر بودن امتیازها، این ترتیب برای انتخاب دسته استفاده می‌شود.
-# «ورزش» آخر است: خبر ورزشیِ واقعی را SportDetector قبل از این مرحله
-# مشخص می‌کند (و همین‌جا برمی‌گردد)، پس ورزش اینجا فقط با کلیدواژه‌های
-# کلی می‌آید و نباید در تساوی بر بقیه‌ی دسته‌ها غلبه کند. (قبلاً اول بود و
-# یک کلمه‌ی مبهم مثل Manager در «asset manager» خبر رمزارز را ورزش می‌کرد.)
+# --------------------------------------------------------------
+# اولویت دسته‌ها در صورت برابر بودن امتیاز
+# --------------------------------------------------------------
+#
+# ورزش آخر است چون SportDetector قبل از این مرحله ورزش را
+# مشخص می‌کند.
+#
+# نکته مهم:
+# source_category_hint برای منابع تخصصی مثل BBC Health و BBC
+# Business امتیاز جداگانه دارد و در حالت عادی باعث می‌شود
+# دسته تخصصی منبع، دسته عمومی مثل politics را شکست دهد.
+#
 CATEGORY_PRIORITY = (
     "politics",
     "economy",
@@ -23,86 +30,244 @@ CATEGORY_PRIORITY = (
     "sport",
 )
 
-# منبعی که اولین دسته‌اش یکی از این‌هاست (BBC Business ← economy،
-# CoinDesk ← economy، BBC Health ← health ...)، مشخصاً درباره‌ی همان
-# موضوع است و ۲ امتیاز اولیه می‌گیرد. politics و iran عمداً نیستند: فیدهای
-# چندموضوعی (جهان، خبرگزاری‌های ایرانی) آن را برای همه‌ی خبرها دارند.
-SOURCE_PRIOR_CATEGORIES = {"economy", "technology", "health"}
-SOURCE_PRIOR_SCORE = 2
+
+# --------------------------------------------------------------
+# دسته‌های تخصصی که source hint آنها معتبر است.
+# --------------------------------------------------------------
+#
+# مثال:
+#
+# BBC Health:
+# ["health"]
+#
+# BBC Business:
+# ["economy"]
+#
+# CoinDesk:
+# ["economy", ...]
+#
+# این منابع عملاً درباره یک حوزه مشخص فعالیت می‌کنند.
+#
+SOURCE_PRIOR_CATEGORIES = {
+    "economy",
+    "technology",
+    "health",
+}
+
+# قبلاً 2 بود.
+#
+# مشکل:
+# BBC Health + کلمه "Government"
+#
+# politics = 2
+# health   = 2
+#
+# و چون politics در CATEGORY_PRIORITY جلوتر بود،
+# خبر سلامت اشتباهاً politics می‌شد.
+#
+# با 3:
+#
+# politics = 2
+# health   = 3
+#
+# بنابراین health انتخاب می‌شود.
+#
+SOURCE_PRIOR_SCORE = 3
 
 
 class CategoryDetector:
     """تشخیص دسته خبر با استفاده از عنوان، خلاصه و متن خبر."""
 
     async def process(self, news: RawNews) -> RawNews:
-        # اگر منبع یا پردازشگر قبلی ورزش را مشخص کرده، همان اولویت دارد.
-        detected_sport = getattr(news, "sport", None)
+
+        # ------------------------------------------------------
+        # اگر SportDetector قبلاً رشته ورزشی را مشخص کرده،
+        # همان اولویت مطلق دارد.
+        # ------------------------------------------------------
+
+        detected_sport = getattr(
+            news,
+            "sport",
+            None,
+        )
 
         if detected_sport:
             news.category = "sport"
+
             logger.info(
                 "Category: sport | detected sport=%s",
                 detected_sport,
             )
+
             return news
 
-        title = getattr(news, "title", "") or ""
-        summary = getattr(news, "summary", "") or ""
-        content = getattr(news, "content", "") or ""
+        # ------------------------------------------------------
+        # متن خبر
+        # ------------------------------------------------------
 
-        # عنوان و خلاصه وزن بیشتری در تشخیص دارند؛ متن کامل کمک تکمیلی است.
-        primary_text = f"{title} {summary}".strip()
-        full_text = f"{primary_text} {content}".strip()
+        title = getattr(
+            news,
+            "title",
+            "",
+        ) or ""
+
+        summary = getattr(
+            news,
+            "summary",
+            "",
+        ) or ""
+
+        content = getattr(
+            news,
+            "content",
+            "",
+        ) or ""
+
+        # عنوان و خلاصه وزن بیشتری دارند.
+        primary_text = (
+            f"{title} {summary}"
+        ).strip()
+
+        full_text = (
+            f"{primary_text} {content}"
+        ).strip()
 
         scores = defaultdict(int)
 
+        # ------------------------------------------------------
+        # امتیازدهی بر اساس محتوای خبر
+        # ------------------------------------------------------
+
         for category, keywords in CATEGORY_KEYWORDS.items():
+
             for keyword in keywords:
+
                 if not keyword:
                     continue
 
-                # تطبیق در عنوان و خلاصه
-                if keyword_in_text(keyword, primary_text):
+                # ----------------------------------------------
+                # عنوان + خلاصه
+                # ----------------------------------------------
+
+                if keyword_in_text(
+                    keyword,
+                    primary_text,
+                ):
                     scores[category] += 2
 
-                # متن کامل فقط امتیاز تکمیلی می‌گیرد.
-                elif content and keyword_in_text(keyword, content):
+                # ----------------------------------------------
+                # متن کامل
+                # ----------------------------------------------
+
+                elif (
+                    content
+                    and keyword_in_text(
+                        keyword,
+                        content,
+                    )
+                ):
                     scores[category] += 1
 
-        # اگر خبر ورزشی از قبل مشخص نشده، کلیدواژه‌ها و برچسب منبع کمک می‌کنند.
-        source_hints = getattr(news, "source_category_hint", None) or []
+        # ------------------------------------------------------
+        # source category hints
+        # ------------------------------------------------------
+        #
+        # مثال:
+        #
+        # BBC Health:
+        # ["health"]
+        #
+        # Football360:
+        # ["sport", "football"]
+        #
+        # BBC Business:
+        # ["economy"]
+        #
+        # برای ورزش فقط به عنوان کمک استفاده می‌شود،
+        # چون SportDetector قبلاً فرصت تشخیص داشته است.
+        # ------------------------------------------------------
+
+        source_hints = getattr(
+            news,
+            "source_category_hint",
+            None,
+        ) or []
+
         normalized_hints = {
             str(item).strip().lower()
             for item in source_hints
             if item
         }
 
-        if normalized_hints & {"sport", "sports", "football"}:
+        # ------------------------------------------------------
+        # ورزش
+        # ------------------------------------------------------
+
+        if normalized_hints & {
+            "sport",
+            "sports",
+            "football",
+        }:
             scores["sport"] += 2
 
-        # منبع تک‌موضوعی (اولین دسته‌اش اقتصاد/فناوری/سلامت): امتیاز اولیه
-        first_hint = str(source_hints[0]).strip().lower() if source_hints else ""
+        # ------------------------------------------------------
+        # منبع تخصصی
+        # ------------------------------------------------------
+        #
+        # این بخش مهم‌ترین اصلاح است.
+        #
+        # BBC Health:
+        # health +3
+        #
+        # BBC Business:
+        # economy +3
+        #
+        # در نتیجه کلمات عمومی مثل Government نمی‌توانند
+        # به‌سادگی یک خبر سلامت را سیاسی کنند.
+        # ------------------------------------------------------
+
+        first_hint = (
+            str(source_hints[0]).strip().lower()
+            if source_hints
+            else ""
+        )
 
         if first_hint in SOURCE_PRIOR_CATEGORIES:
             scores[first_hint] += SOURCE_PRIOR_SCORE
 
-        # نام ایران به‌تنهایی نباید باعث شود دسته خبر «ایران» شود.
-        # برای دسته iran باید نشانه‌های محتوایی کافی وجود داشته باشد.
+        # ------------------------------------------------------
+        # دسته ایران
+        # ------------------------------------------------------
+        #
+        # صرف وجود نام ایران نباید خبر را ایرانی کند.
+        #
+        # حداقل دو امتیاز محتوایی لازم است.
+        # ------------------------------------------------------
+
         if scores.get("iran", 0) < MIN_CATEGORY_SCORE:
             scores.pop("iran", None)
+
+        # ------------------------------------------------------
+        # انتخاب دسته
+        # ------------------------------------------------------
 
         final_category = "general"
 
         if scores:
-            best_score = max(scores.values())
+
+            best_score = max(
+                scores.values()
+            )
 
             if best_score >= MIN_CATEGORY_SCORE:
+
                 tied_categories = {
                     category
                     for category, score in scores.items()
                     if score == best_score
                 }
 
+                # در تساوی از ترتیب اولویت استفاده می‌کنیم.
                 final_category = next(
                     (
                         category
@@ -112,22 +277,47 @@ class CategoryDetector:
                     sorted(tied_categories)[0],
                 )
 
-        # برچسب منبع فقط در صورت نبود تشخیص محتوایی استفاده می‌شود.
+        # ------------------------------------------------------
+        # fallback به source hint
+        # ------------------------------------------------------
+        #
+        # فقط زمانی که محتوای خبر هیچ دسته‌ای را
+        # به حداقل امتیاز نرسانده باشد.
+        # ------------------------------------------------------
+
         if final_category == "general":
-            valid_categories = set(CATEGORY_KEYWORDS.keys())
-            valid_hints = normalized_hints & valid_categories
+
+            valid_categories = set(
+                CATEGORY_KEYWORDS.keys()
+            )
+
+            valid_hints = (
+                normalized_hints
+                & valid_categories
+            )
 
             if "sport" in valid_hints:
+
                 final_category = "sport"
+
             elif len(valid_hints) == 1:
-                final_category = next(iter(valid_hints))
+
+                final_category = next(
+                    iter(valid_hints)
+                )
 
         news.category = final_category
 
         logger.info(
-            "Category: %s | source=%s | scores=%s",
+            "Category: %s | source=%s | "
+            "source_hints=%s | scores=%s",
             final_category,
-            getattr(news, "source", "Unknown"),
+            getattr(
+                news,
+                "source",
+                "Unknown",
+            ),
+            list(normalized_hints),
             dict(scores),
         )
 
