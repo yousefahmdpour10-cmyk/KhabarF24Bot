@@ -40,7 +40,16 @@ from app.utils.http_client import HTTPClient
 
 logger = logging.getLogger(__name__)
 
-MAX_ARTICLE_PAGES_PER_FETCH = 30
+# حداکثر صفحه‌ی مقاله‌ای که از «هر منبع» در یک دریافت بررسی می‌شود
+MAX_ARTICLE_PAGES_PER_FETCH = 12
+
+# بودجه‌ی «سراسری»: با ۲۰۰+ منبع، چرخه‌ی اول هزاران صفحه‌ی مقاله بود و
+# دریافت ده‌ها دقیقه طول می‌کشید. حالا در هر بازه‌ی زمانی حداکثر این‌قدر
+# صفحه برای همه‌ی منابع بررسی می‌شود؛ بقیه‌ی خبرها (که نتیجه‌شان هنوز ذخیره
+# نشده) در دریافت‌های بعد نوبت می‌گیرند. (عکس و ویدئوی RSS محدود نمی‌شود.)
+PAGE_BUDGET_PER_WINDOW = 400
+PAGE_BUDGET_WINDOW_SECONDS = 180
+_page_budget = {"left": PAGE_BUDGET_PER_WINDOW, "started": 0.0}
 MAX_CONCURRENT_PAGE_REQUESTS = 5
 MAX_HTML_CHARS = 1_500_000
 
@@ -50,6 +59,21 @@ MAX_CACHED_ARTICLES = 5000
 _ARTICLE_MEDIA_CACHE: Dict[str, Tuple[str, str, str, str]] = {}
 
 BBC_HOSTS = ("bbc.com", "bbc.co.uk", "bbci.co.uk", "bbc.in")
+
+
+def _take_page_budget(wanted: int) -> int:
+    """چند صفحه‌ی دیگر مجاز است بررسی شود؟ (بودجه‌ی مشترک همه‌ی منابع)"""
+
+    now = time.monotonic()
+
+    if now - _page_budget["started"] >= PAGE_BUDGET_WINDOW_SECONDS:
+        _page_budget["left"] = PAGE_BUDGET_PER_WINDOW
+        _page_budget["started"] = now
+
+    granted = max(0, min(wanted, _page_budget["left"]))
+    _page_budget["left"] -= granted
+
+    return granted
 
 # لینک‌های news.google.com صفحه‌ی میانی (redirect) هستند، نه خود مقاله؛
 # عکسشان همیشه لوگوی Google News است. پس بررسی‌شان نمی‌کنیم.
@@ -134,6 +158,9 @@ class RSSFetcher(BaseFetcher):
                     "RSS_ENTRY_ERROR | source=%s",
                     self.source_name,
                 )
+
+        # از بودجه‌ی سراسری کم کن؛ اگر کم بود فقط تعدادی بررسی می‌شود
+        article_jobs = article_jobs[:_take_page_budget(len(article_jobs))]
 
         await self._inspect_articles(article_jobs)
 
