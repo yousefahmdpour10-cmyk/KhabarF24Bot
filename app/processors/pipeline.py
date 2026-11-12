@@ -10,6 +10,7 @@ from app.processors.language.detector import LanguageDetector
 from app.processors.sport import SportDetector
 from app.processors.category import CategoryDetector
 from app.processors.duplicate import DuplicateChecker
+from app.processors.duplicate.story_match import is_same_story
 from app.processors.credibility import CredibilityChecker
 from app.processors.importance import ImportanceScorer
 
@@ -133,9 +134,12 @@ class NewsPipeline:
             # همین خبر قبلاً از منبع دیگری منتشر شده (تیتر فارسی تقریباً
             # یکسان)؛ دوباره منتشر نمی‌شود.
             # (پست‌های ESPN تیتر فارسیِ قالبی دارند و مستثنی‌اند)
-            if (
-                not getattr(news, "skip_story_repeat", False)
-                and self.duplicate.is_story_repeat(news)
+            if not getattr(news, "skip_story_repeat", False) and (
+                self.duplicate.is_story_repeat(news)
+                or is_same_story(
+                    getattr(news, "title", ""),
+                    self.duplicate.headlines[-300:],
+                )
             ):
                 news.is_duplicate = True
                 self.duplicate.mark_seen(news)
