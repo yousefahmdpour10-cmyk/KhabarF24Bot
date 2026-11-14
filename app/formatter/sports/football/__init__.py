@@ -8,7 +8,11 @@ from app.formatter.footer import build_footer
 from app.formatter.hashtags import HashtagBuilder
 from app.formatter.source_flags import get_flag
 from .builder import FootballBuilder
-from .match_post import render as render_match_post
+
+try:
+    from .match_post import render as render_match_post
+except ImportError:  # فایل match_post.py نصب نشده: قالب قبلی استفاده می‌شود
+    render_match_post = None
 from app.formatter.icons import (
     TITLE,
     SUMMARY,
@@ -35,17 +39,23 @@ class FootballFormatter:
         text += "\n\n"
 
         # پست بازی (نتیجه یا ترکیب ESPN): قالب جمع‌وجور و ثابت
-        if getattr(news, "match_phase", None):
-            text += render_match_post(news)
-            text += "\n\n"
-            text += f"{SOURCE} {flag} {news.source}\n"
-            text += build_footer()
+        if getattr(news, "match_phase", None) and render_match_post:
+            try:
+                body = render_match_post(news)
+            except Exception:
+                body = None
 
-            if hashtags:
+            if body:
+                text += body
                 text += "\n\n"
-                text += hashtags
+                text += f"{SOURCE} {flag} {news.source}\n"
+                text += build_footer()
 
-            return text
+                if hashtags:
+                    text += "\n\n"
+                    text += hashtags
+
+                return text
 
         text += f"{TITLE} {news.title}\n\n"
 
