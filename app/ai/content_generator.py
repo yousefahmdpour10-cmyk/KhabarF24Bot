@@ -92,9 +92,19 @@ class ContentGenerator:
             )
             return news
 
-        # پست بازی (نتیجه/ترکیب ESPN): تیتر + ترجمه‌ی اسم‌ها در یک درخواست
+        # پست بازی (نتیجه/ترکیب ESPN): تیتر + ترجمه‌ی اسم‌ها در یک درخواست.
+        # اگر این مسیر خطای کد داد (مثلاً match_prompt.py نصب نشده)، قبل از
+        # هر درخواست Gemini به مسیر عادی (تیتر و خلاصه) برمی‌گردیم، تا
+        # پست‌های ESPN به‌خاطر یک فایل جاافتاده کلاً متوقف نشوند.
         if getattr(news, "match_phase", None):
-            return await self._process_match(news, priority)
+            try:
+                return await self._process_match(news, priority)
+
+            except Exception:
+                logger.exception(
+                    "ContentGenerator: مسیر پست بازی خطا داد؛ "
+                    "مسیر عادی استفاده می‌شود"
+                )
 
         prompt = build_content_prompt(
             title_text,
