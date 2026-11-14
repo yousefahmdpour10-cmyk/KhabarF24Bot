@@ -542,6 +542,11 @@ async def publish_cycle(pipeline, all_news):
 
         except Exception:
             stats["errors"] += 1
+
+            # خبری که خطا می‌دهد هر چرخه دوباره امتحان نشود (لاگ را پر
+            # می‌کرد و اگر وقت‌دار بود هر بار اول صف می‌ایستاد)
+            FAILED_UNTIL[key] = time.monotonic() + FAIL_COOLDOWN_SECONDS
+
             logger.exception(
                 "Candidate failed; continuing | source=%s | title=%s",
                 source,
@@ -572,8 +577,36 @@ async def publish_cycle(pipeline, all_news):
     return processed_count, published_count
 
 
+def check_installed_modules():
+    """
+    در شروع، یک خط لاگ می‌نویسد که فایل‌های «پست بازی» نصب‌اند یا نه.
+    (نبودن آن‌ها قبلاً پست‌های ESPN را بی‌صدا می‌انداخت.)
+    """
+
+    problems = []
+
+    for module in (
+        "app.formatter.sports.football.match_post",
+        "app.ai.match_prompt",
+        "app.processors.duplicate.story_match",
+    ):
+        try:
+            __import__(module)
+        except Exception as exc:
+            problems.append(f"{module} ({type(exc).__name__}: {exc})")
+
+    if problems:
+        logger.warning(
+            "Missing or broken modules: " + "; ".join(problems)
+        )
+    else:
+        logger.info("Match-post modules: OK")
+
+
 async def main(max_cycles=None):
     logger.info("KhabarF24 Bot Started Successfully")
+
+    check_installed_modules()
 
     deadline = time.monotonic() + MAX_RUNTIME_SECONDS
     fetch_service = FetchService()
