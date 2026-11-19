@@ -603,10 +603,36 @@ def check_installed_modules():
         logger.info("Match-post modules: OK")
 
 
+def log_seen_state(label):
+    """
+    وضعیت فایل «خبرهای دیده‌شده» را در لاگ می‌نویسد. اگر در شروع اجرا
+    exists=False باشد، مرحله‌ی Restore (cache) چیزی برنگردانده؛ اگر در
+    پایان اجرا exists=False باشد، ربات چیزی ننوشته و Save هم چیزی ندارد
+    که ذخیره کند.
+    """
+
+    try:
+        from app.processors.duplicate.checker import STATE_PATH
+
+        folder = STATE_PATH.parent
+        files = sorted(p.name for p in folder.iterdir()) if folder.exists() else None
+        exists = STATE_PATH.exists()
+        size = STATE_PATH.stat().st_size if exists else 0
+
+        logger.info(
+            f"Seen-state ({label}): exists={exists} size={size}B "
+            f"dir={files} path={STATE_PATH}"
+        )
+
+    except Exception as exc:
+        logger.warning(f"Seen-state ({label}): cannot inspect ({exc})")
+
+
 async def main(max_cycles=None):
     logger.info("KhabarF24 Bot Started Successfully")
 
     check_installed_modules()
+    log_seen_state("at start")
 
     deadline = time.monotonic() + MAX_RUNTIME_SECONDS
     fetch_service = FetchService()
@@ -685,6 +711,8 @@ async def main(max_cycles=None):
             task.cancel()
 
         await asyncio.gather(*tasks, return_exceptions=True)
+
+        log_seen_state("at exit")
 
 
 if __name__ == "__main__":
