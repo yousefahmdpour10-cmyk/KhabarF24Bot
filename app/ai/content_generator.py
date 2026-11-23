@@ -197,9 +197,22 @@ class ContentGenerator:
             return news
 
         names = data.get("names") if isinstance(data.get("names"), dict) else {}
+        countries = (
+            data.get("countries")
+            if isinstance(data.get("countries"), dict)
+            else {}
+        )
 
         news.title = headline
         news.summary = ""
+
+        # خلاصه‌ی یک‌جمله‌ای بازی (فقط پست نتیجه) و کشور هر تیم (برای پرچم)
+        news.match_summary = str(data.get("summary") or "").strip()[:300]
+        news.fa_countries = {
+            str(key).strip(): str(value).strip().upper()
+            for key, value in countries.items()
+            if str(key).strip() and len(str(value).strip()) == 2
+        }
         news.fa_names = {
             str(key).strip(): str(value).strip()
             for key, value in names.items()
