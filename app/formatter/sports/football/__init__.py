@@ -36,9 +36,8 @@ class FootballFormatter:
         flag = get_flag(news.source)
 
         text += build_header("⚽ فوتبال", getattr(news, "is_breaking", False))
-        text += "\n\n"
 
-        # پست بازی (نتیجه یا ترکیب ESPN): قالب جمع‌وجور و ثابت
+        # پست بازی (نتیجه یا ترکیب ESPN): قالب فشرده و ثابت، بدون خط خالی
         if getattr(news, "match_phase", None) and render_match_post:
             try:
                 body = render_match_post(news)
@@ -46,17 +45,19 @@ class FootballFormatter:
                 body = None
 
             if body:
+                text += "\n"
                 text += body
-                text += "\n\n"
+                text += "\n"
                 text += f"{SOURCE} {flag} {news.source}\n"
                 text += build_footer()
 
                 if hashtags:
-                    text += "\n\n"
+                    text += "\n"
                     text += hashtags
 
                 return text
 
+        text += "\n\n"
         text += f"{TITLE} {news.title}\n\n"
 
         # خلاصه‌ی خبر. برای خبرهای RSS این تنها محتوای پست است (جزئیات
