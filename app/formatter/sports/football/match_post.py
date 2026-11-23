@@ -1,11 +1,12 @@
 """
 Match Post
 
-قالب «جمع‌وجور» پست بازی: نتیجه (بعد از بازی) و ترکیب اصلی (قبل از بازی).
+قالب پست بازی (نتیجه بعد از بازی، ترکیب قبل از بازی): پرچم تیم‌ها، رقم‌های
+ایموجی در نتیجه و ایموجی هر خط ترکیب (دروازه‌بان، دفاع، میانه، حمله).
 
-اسم‌های فارسی از news.fa_names می‌آیند (Gemini همان یک درخواستی که تیتر
-را می‌سازد، اسم‌ها را هم ترجمه می‌کند). اگر اسمی در آن نبود، همان اسم
-انگلیسی ESPN چاپ می‌شود.
+اسم‌های فارسی (news.fa_names) و کد کشور تیم‌ها (news.fa_countries) را
+Gemini در همان یک درخواستی که تیتر را می‌سازد می‌دهد. اگر چیزی نبود، اسم
+انگلیسی ESPN چاپ می‌شود و پرچم (در صورت نبودن کشور) حذف می‌شود.
 """
 
 import re
@@ -24,6 +25,27 @@ LEAGUE_FA = {
     "Conference League": "لیگ کنفرانس اروپا",
 }
 
+# لیگ‌های داخلی: همه‌ی تیم‌ها از یک کشورند (اگر Gemini کشور نداد)
+LEAGUE_DEFAULT_COUNTRY = {
+    "Premier League": "GB",
+    "La Liga": "ES",
+    "Serie A": "IT",
+    "Bundesliga": "DE",
+    "Ligue 1": "FR",
+}
+
+MONTHS_FA = {
+    1: "ژانویه", 2: "فوریه", 3: "مارس", 4: "آوریل", 5: "مه", 6: "ژوئن",
+    7: "ژوئیه", 8: "اوت", 9: "سپتامبر", 10: "اکتبر", 11: "نوامبر",
+    12: "دسامبر",
+}
+
+# برچسب کوتاه‌تر برای آمار (برچسب‌های خود fetcher ← نمایش)
+STAT_LABELS = {
+    "مالکیت توپ": "مالکیت",
+    "شوت در چارچوب": "چارچوب",
+}
+
 # «Name (54') (pen.) - Team»  /  «Name (45') (o.g.)»
 _EVENT_RE = re.compile(
     r"^(?P<player>.+?) \((?P<minute>[^)]*)\)"
@@ -35,18 +57,41 @@ _EVENT_RE = re.compile(
 _STAT_RE = re.compile(r"^(?P<label>[^:]+): (?P<a>.+?) - (?P<b>.+)$")
 
 _NUMBER_PREFIX_RE = re.compile(r"^\d+\s+")
-_RESULT_EXTRA_RE = re.compile(r"(\(.+\))\s*$")
+_RESULT_EXTRA_RE = re.compile(r"\((.+)\)\s*$")
 
+
+# ----------------------------------------------------------------------
+# ابزارهای کوچک
+# ----------------------------------------------------------------------
 
 def digits(text) -> str:
     return str(text).translate(_PERSIAN_DIGITS)
 
 
-def clean_minute(minute: str) -> str:
-    """«90'+4'» ← «90+4'»، «54» ← «54'»."""
+def keycap(number) -> str:
+    """۲ ← 2️⃣ ،  ۱۰ ← 1️⃣0️⃣"""
 
+    try:
+        value = str(int(number))
+    except (TypeError, ValueError):
+        return str(number)
+
+    return "".join(f"{d}\uFE0F\u20E3" for d in value)
+
+
+def country_flag(code) -> str:
+    """کد دو حرفی کشور ← ایموجی پرچم (مثل IT ← 🇮🇹). نامعتبر ← رشته‌ی خالی."""
+
+    code = str(code or "").strip().upper()
+
+    if not re.fullmatch(r"[A-Z]{2}", code):
+        return ""
+
+    return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in code)
+
+
+def _minute(minute: str) -> str:
     minute = str(minute or "").strip()
-    minute = re.sub(r"'(?=\+)", "", minute)
 
     if minute and not minute.endswith("'"):
         minute += "'"
@@ -64,7 +109,7 @@ def parse_event(line: str) -> Optional[dict]:
 
     return {
         "player": match.group("player").strip(),
-        "minute": clean_minute(match.group("minute")),
+        "minute": _minute(match.group("minute")),
         "team": (match.group("team") or "").strip(),
         "penalty": tag == "(pen.)",
         "own_goal": tag == "(o.g.)",
@@ -77,7 +122,11 @@ def parse_stat(line: str) -> Optional[Tuple[str, str, str]]:
     if not match:
         return None
 
-    return match.group("label").strip(), match.group("a").strip(), match.group("b").strip()
+    return (
+        match.group("label").strip(),
+        match.group("a").strip(),
+        match.group("b").strip(),
+    )
 
 
 def _strip_number(player: str) -> str:
@@ -96,7 +145,7 @@ def _formation_of(team_label: str) -> Tuple[str, Optional[str]]:
 
 
 # ----------------------------------------------------------------------
-# اسم‌هایی که باید ترجمه شوند
+# اسم‌هایی که باید ترجمه شوند (برای پرامپت Gemini)
 # ----------------------------------------------------------------------
 
 def collect_names(news) -> List[str]:
@@ -134,25 +183,64 @@ def collect_names(news) -> List[str]:
 
 
 # ----------------------------------------------------------------------
-# رندر
+# نام، پرچم، تاریخ
 # ----------------------------------------------------------------------
 
-def _fa(names: Dict[str, str], value: str) -> str:
+def _fa(names: Dict[str, str], value) -> str:
     value = str(value or "").strip()
     return (names or {}).get(value) or value
 
 
-def _league_line(news, label: str) -> str:
-    league = str(getattr(news, "league", "") or "")
-    return f"🏆 {LEAGUE_FA.get(league, league)} · {label}"
+def _flags(news) -> Dict[str, str]:
+    """نام انگلیسی تیم ← پرچم (برای دو تیم بازی)."""
 
+    info = getattr(news, "match_info", None) or {}
+    codes = getattr(news, "fa_countries", None) or {}
+    default = LEAGUE_DEFAULT_COUNTRY.get(str(getattr(news, "league", "") or ""))
+
+    flags = {}
+
+    for team in (info.get("home"), info.get("away")):
+        if team:
+            flags[team] = country_flag(codes.get(team) or default)
+
+    return flags
+
+
+def _with_flag(flag: str, text: str) -> str:
+    return f"{flag} {text}".strip()
+
+
+def _date_fa(match_date: Optional[str]) -> str:
+    """«2026-11-05» ← «۵ نوامبر ۲۰۲۶»."""
+
+    match = re.match(r"^(\d{4})-(\d{2})-(\d{2})", str(match_date or ""))
+
+    if not match:
+        return ""
+
+    year, month, day = (int(g) for g in match.groups())
+    name = MONTHS_FA.get(month)
+
+    if not name:
+        return ""
+
+    return digits(f"{day} {name} {year}")
+
+
+def _league_fa(news) -> str:
+    league = str(getattr(news, "league", "") or "")
+    return LEAGUE_FA.get(league, league)
+
+
+# ----------------------------------------------------------------------
+# رندر
+# ----------------------------------------------------------------------
 
 def render(news) -> str:
-    """متن پست بازی (بدون سرتیتر و پاورقی)."""
+    """بدنه‌ی پست بازی (بدون سرتیتر، منبع و پاورقی)؛ بدون خط خالی."""
 
-    phase = getattr(news, "match_phase", None)
-
-    if phase == "lineup":
+    if getattr(news, "match_phase", None) == "lineup":
         return _render_lineup(news)
 
     return _render_result(news)
@@ -163,40 +251,42 @@ def _stat_value(value: str) -> str:
 
     if value.endswith("%"):
         try:
-            return digits(f"{round(float(value[:-1]))}") + "٪"
+            return f"{round(float(value[:-1]))}٪"
         except ValueError:
             pass
 
-    return digits(value)
+    return value
 
 
 def _render_result(news) -> str:
     names = getattr(news, "fa_names", None) or {}
     info = getattr(news, "match_info", None) or {}
+    flags = _flags(news)
 
-    home = _fa(names, info.get("home"))
-    away = _fa(names, info.get("away"))
+    home_en, away_en = info.get("home"), info.get("away")
+    home, away = _fa(names, home_en), _fa(names, away_en)
 
-    lines: List[str] = []
+    lines: List[str] = [f"🔥 پایان بازی در {_league_fa(news)}"]
 
-    headline = str(getattr(news, "title", "") or "").strip()
-
-    if headline:
-        lines += [f"📰 {headline}", ""]
-
-    lines += [_league_line(news, "پایان بازی"), ""]
-
-    score = f"⚽ {home} {digits(info.get('home_goals', ''))} - {digits(info.get('away_goals', ''))} {away}"
-    lines.append(score)
+    score_parts = [
+        flags.get(home_en, ""),
+        home,
+        keycap(info.get("home_goals", "")),
+        "─",
+        keycap(info.get("away_goals", "")),
+        away,
+        flags.get(away_en, ""),
+    ]
+    lines.append(" ".join(p for p in score_parts if p))
 
     extra = _RESULT_EXTRA_RE.search(str(getattr(news, "result", "") or ""))
-    if extra:
-        lines.append(digits(extra.group(1)))
 
-    # ---- گل‌ها (هر گل با پاس‌گلش در یک خط) ----
+    if extra:
+        lines.append(f"🔸 {extra.group(1)}")
+
+    # ---- گل‌ها (پاس‌گل کنار هر گل) ----
     assists = [parse_event(a) for a in getattr(news, "assists", None) or []]
     assists = [a for a in assists if a]
-    goal_lines = []
 
     for raw in getattr(news, "goals", None) or []:
         goal = parse_event(raw)
@@ -204,10 +294,10 @@ def _render_result(news) -> str:
         if not goal:
             continue
 
-        text = f"{digits(goal['minute'])} {_fa(names, goal['player'])}"
+        text = f"⚽ {goal['minute']} {_fa(names, goal['player'])}"
 
-        if goal["team"]:
-            text += f" ({_fa(names, goal['team'])})"
+        if goal["team"] and flags.get(goal["team"]):
+            text += f" {flags[goal['team']]}"
 
         if goal["penalty"]:
             text += " · پنالتی"
@@ -226,28 +316,13 @@ def _render_result(news) -> str:
             assists.remove(assist)
             text += f" · پاس: {_fa(names, assist['player'])}"
 
-        goal_lines.append(text)
+        lines.append(text)
 
-    if goal_lines:
-        lines += ["", "🥅 گل‌ها"] + goal_lines
+    # ---- خلاصه‌ی یک‌جمله‌ای ----
+    summary = str(getattr(news, "match_summary", "") or "").strip()
 
-    # ---- کارت‌ها ----
-    for attr, icon, title in (
-        ("yellow_cards", "🟨", "کارت زرد"),
-        ("red_cards", "🟥", "کارت قرمز"),
-    ):
-        cards = []
-
-        for raw in getattr(news, attr, None) or []:
-            card = parse_event(raw)
-
-            if card:
-                who = _fa(names, card["player"])
-                team = f" ({_fa(names, card['team'])})" if card["team"] else ""
-                cards.append(f"{who} {digits(card['minute'])}{team}")
-
-        if cards:
-            lines += ["", f"{icon} {title}: " + " · ".join(cards)]
+    if summary:
+        lines.append(f"💥 {summary}")
 
     # ---- آمار ----
     stat_lines = []
@@ -257,16 +332,51 @@ def _render_result(news) -> str:
 
         if stat:
             label, a, b = stat
-            stat_lines.append(f"{label}: {_stat_value(a)} - {_stat_value(b)}")
+            label = STAT_LABELS.get(label, label)
+            stat_lines.append(f"{label}: {_stat_value(a)} ─ {_stat_value(b)}")
 
     if stat_lines:
-        lines += ["", "📊 آمار بازی"] + stat_lines
+        lines.append("📊 آمار")
+        lines += stat_lines
 
-    # ---- ورزشگاه ----
-    stadium = getattr(news, "stadium", None)
+    # ---- کارت‌ها: به تفکیک تیم ----
+    for attr, icon, title in (
+        ("yellow_cards", "🟨", "کارت‌ها"),
+        ("red_cards", "🟥", "کارت قرمز"),
+    ):
+        by_team: Dict[str, List[str]] = {}
 
-    if stadium:
-        lines += ["", f"🏟 {_fa(names, stadium)}"]
+        for raw in getattr(news, attr, None) or []:
+            card = parse_event(raw)
+
+            if card:
+                by_team.setdefault(card["team"], []).append(
+                    f"{_fa(names, card['player'])} {card['minute']}"
+                )
+
+        if by_team:
+            groups = []
+
+            for team in [t for t in (home_en, away_en) if t in by_team] + [
+                t for t in by_team if t not in (home_en, away_en)
+            ]:
+                groups.append(
+                    _with_flag(flags.get(team, ""), " · ".join(by_team[team]))
+                )
+
+            lines.append(f"{icon} {title}")
+            lines.append(" | ".join(groups))
+
+    # ---- اطلاعات بازی ----
+    lines.append(f"🏆 {_league_fa(news)}")
+
+    if getattr(news, "stadium", None):
+        lines.append(f"🏟️ {_fa(names, news.stadium)}")
+
+    date = _date_fa(getattr(news, "match_date", None))
+
+    if date:
+        lines.append(f"📅 {date}")
 
     return "\n".join(lines)
 
@@ -274,36 +384,30 @@ def _render_result(news) -> str:
 def _render_lineup(news) -> str:
     names = getattr(news, "fa_names", None) or {}
     info = getattr(news, "match_info", None) or {}
+    flags = _flags(news)
 
-    home = _fa(names, info.get("home"))
-    away = _fa(names, info.get("away"))
+    home_en, away_en = info.get("home"), info.get("away")
+    home, away = _fa(names, home_en), _fa(names, away_en)
 
-    lines: List[str] = []
-
-    headline = str(getattr(news, "title", "") or "").strip()
-
-    if headline:
-        lines += [f"📰 {headline}", ""]
-
-    lines += [_league_line(news, "ترکیب اصلی"), "", f"⚽ {home} - {away}"]
-
-    when = []
+    lines: List[str] = [
+        f"🔥 ترکیب اصلی {home} و {away} اعلام شد",
+        f"🏆 {_league_fa(news)} · ترکیب اصلی",
+        f"{_with_flag(flags.get(home_en, ''), home)} 🆚 "
+        f"{_with_flag(flags.get(away_en, ''), away)}",
+    ]
 
     if getattr(news, "match_time", None):
-        when.append(f"🕒 ساعت {digits(news.match_time)} به وقت تهران")
+        lines.append(f"🕒 {digits(news.match_time)} به وقت تهران")
 
     if getattr(news, "stadium", None):
-        when.append(f"🏟 {_fa(names, news.stadium)}")
-
-    if when:
-        lines.append(" · ".join(when))
+        lines.append(f"🏟️ {_fa(names, news.stadium)}")
 
     if getattr(news, "referee", None):
         lines.append(f"👨‍⚖️ داور: {_fa(names, news.referee)}")
 
     lineup = getattr(news, "lineup", None) or {}
 
-    for side in ("home", "away"):
+    for side, team_en in (("home", home_en), ("away", away_en)):
         team = lineup.get(side) or {}
         starters = [
             _fa(names, _strip_number(p)) for p in team.get("starting") or []
@@ -312,23 +416,26 @@ def _render_lineup(news) -> str:
         if not starters:
             continue
 
-        team_name, formation = _formation_of(team.get("name"))
-        title = _fa(names, team_name) or (home if side == "home" else away)
+        label_name, formation = _formation_of(team.get("name"))
+        title = _fa(names, label_name or team_en)
 
-        header = f"📋 {title}"
+        header = f"📋 {_with_flag(flags.get(team_en, ''), title)}"
+
         if formation:
-            header += f" ({digits(formation)})"
+            header += f" · {digits(formation)}"
 
-        lines += ["", header]
-        lines += _formation_rows(starters, formation)
+        lines.append(header)
+        lines += _lineup_rows(starters, formation)
 
     return "\n".join(lines)
 
 
-def _formation_rows(players: List[str], formation: Optional[str]) -> List[str]:
+def _lineup_rows(players: List[str], formation: Optional[str]) -> List[str]:
     """
-    ترکیب را به ردیف‌های «دروازه‌بان / دفاع / میانه / حمله» بر اساس سیستم
-    (مثل ۴-۳-۳) می‌چیند. اگر سیستم با تعداد بازیکن نمی‌خواند، یک ردیف.
+    ترکیب را به خط‌های «🧤 دروازه‌بان / 🛡️ دفاع / ⚙️ میانه / 🎯 هافبک‌های
+    حمله‌ای / ⚡ مهاجم» بر اساس سیستم (مثل ۴-۲-۳-۱) می‌چیند.
+
+    اگر سیستم با تعداد بازیکن نخواند، همه در یک خط می‌آیند.
     """
 
     try:
@@ -336,14 +443,36 @@ def _formation_rows(players: List[str], formation: Optional[str]) -> List[str]:
     except ValueError:
         sizes = []
 
-    if sizes and 1 + sum(sizes) == len(players):
-        rows = [players[:1]]
-        index = 1
+    if not sizes or 1 + sum(sizes) != len(players):
+        return ["⚙️ " + " · ".join(players)]
 
-        for size in sizes:
-            rows.append(players[index:index + size])
-            index += size
+    rows, index = [], 1
 
-        return [" · ".join(row) for row in rows if row]
+    for size in sizes:
+        rows.append(players[index:index + size])
+        index += size
 
-    return [" · ".join(players)]
+    # rows: [دفاع، (میانه‌ها...)، حمله]
+    out = [("🧤", players[:1])]
+
+    if len(rows) == 1:
+        out.append(("🛡️", rows[0]))
+    else:
+        defense, attack, middle = rows[0], rows[-1], rows[1:-1]
+
+        out.append(("🛡️", defense))
+
+        if len(middle) == 1:
+            middle_icons = ["⚙️"]
+        elif len(middle) == 2:
+            middle_icons = ["⚙️", "🎯"]
+        else:
+            middle_icons = ["⚙️"] * (len(middle) - 1) + ["🎯"]
+
+        out += list(zip(middle_icons, middle))
+
+        # سه مهاجم (۴-۳-۳): ESPN ترتیب «مهاجم میانی» را مشخص نمی‌کند،
+        # پس هر سه در یک خط می‌آیند، نه این‌که یکی اشتباه «مهاجم» شود.
+        out.append(("🎯" if len(attack) >= 3 else "⚡", attack))
+
+    return [f"{icon} " + " · ".join(row) for icon, row in out if row]
