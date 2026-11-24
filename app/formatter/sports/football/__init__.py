@@ -37,7 +37,8 @@ class FootballFormatter:
 
         text += build_header("⚽ فوتبال", getattr(news, "is_breaking", False))
 
-        # پست بازی (نتیجه یا ترکیب ESPN): قالب فشرده و ثابت، بدون خط خالی
+        # پست بازی (نتیجه یا ترکیب ESPN): قالب ثابت؛ فاصله‌ی خط‌ها در
+        # match_post.LINE_SEPARATOR تنظیم می‌شود
         if getattr(news, "match_phase", None) and render_match_post:
             try:
                 body = render_match_post(news)
@@ -47,7 +48,7 @@ class FootballFormatter:
             if body:
                 text += "\n"
                 text += body
-                text += "\n"
+                text += "\n\n"
                 text += f"{SOURCE} {flag} {news.source}\n"
                 text += build_footer()
 
