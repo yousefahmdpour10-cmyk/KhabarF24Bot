@@ -12,8 +12,19 @@ Gemini در همان یک درخواستی که تیتر را می‌سازد م
 import re
 from typing import Dict, List, Optional, Tuple
 
+# فاصله‌ی بین خط‌های پست: "\n\n" = یک خط خالی بین هر دو خط، "\n" = چسبیده
+LINE_SEPARATOR = "\n\n"
+
 _PERSIAN_DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 
+# حرف‌های عربی/کردی که Gemini گاهی در ترجمه‌ی اسم‌ها می‌گذارد ← فارسی
+_FA_LETTERS = str.maketrans({
+    "ي": "ی", "ى": "ی", "ې": "ی", "ێ": "ی",
+    "ك": "ک", "ڪ": "ک",
+    "ۆ": "و", "ۊ": "و",
+    "ە": "ه", "ہ": "ه", "ھ": "ه",
+    "ڕ": "ر", "ڵ": "ل",
+}) 
 LEAGUE_FA = {
     "Premier League": "لیگ برتر انگلیس",
     "La Liga": "لالیگا",
@@ -188,7 +199,7 @@ def collect_names(news) -> List[str]:
 
 def _fa(names: Dict[str, str], value) -> str:
     value = str(value or "").strip()
-    return (names or {}).get(value) or value
+    return ((names or {}).get(value) or value).translate(_FA_LETTERS)
 
 
 def _flags(news) -> Dict[str, str]:
@@ -378,7 +389,7 @@ def _render_result(news) -> str:
     if date:
         lines.append(f"📅 {date}")
 
-    return "\n".join(lines)
+    return LINE_SEPARATOR.join(lines)
 
 
 def _render_lineup(news) -> str:
@@ -427,7 +438,7 @@ def _render_lineup(news) -> str:
         lines.append(header)
         lines += _lineup_rows(starters, formation)
 
-    return "\n".join(lines)
+    return LINE_SEPARATOR.join(lines)
 
 
 def _lineup_rows(players: List[str], formation: Optional[str]) -> List[str]:
