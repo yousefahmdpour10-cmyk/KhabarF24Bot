@@ -27,11 +27,16 @@ Media Extractor
   مستقیم توسط FFmpeg باشد.
 - embedded_player_url فقط آدرس player / iframe است.
 - فایل‌های صوتی مثل MP3 هرگز نباید به عنوان video_url برگردند.
+- اگر چند ویدئو در صفحه بود، ویدئویی که «شاهد» معتبرتری دارد انتخاب
+  می‌شود (og:video، بعد VideoObject، بعد تگ video، ...) نه اولین‌ی که
+  پیدا شد؛ و ویدئویی که تاریخ قدیمی در آدرسش است (ویدئوی خبر مرتبطِ
+  قدیمی) رد می‌شود.
 """
 
 import json
 import re
-from typing import Any, List, Optional, Tuple
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -232,6 +237,79 @@ URL_PREFIXES = (
     "//",
     "/",
 )
+
+
+# ----------------------------------------------------------------------
+# تازگی ویدئو (تاریخ داخل آدرس)
+# ----------------------------------------------------------------------
+
+# ویدئویی که تاریخش (در آدرس) از این‌قدر روز قدیمی‌تر باشد، ویدئوی خود
+# خبر نیست (معمولاً ویدئوی یک خبر «مرتبط» قدیمی کنار صفحه است).
+MAX_VIDEO_AGE_DAYS = 14
+
+# تاریخ‌هایی که داخل آدرس ویدئو می‌آیند:
+#   CNBC:  .../Y2025/M03D28/...      دیگران:  /2025/03/28/  ،  2025-03-28
+#   زمان epoch (۱۰ رقم ثانیه یا ۱۳ رقم میلی‌ثانیه): 1794927772-...-hd_L.mp4
+_URL_DATE_PATTERNS = (
+    re.compile(r"/Y(\d{4})/M(\d{1,2})D(\d{1,2})(?:/|$)"),
+    re.compile(r"/(20\d{2})/(\d{1,2})/(\d{1,2})/"),
+    re.compile(r"(?<!\d)(20\d{2})[-_](\d{2})[-_](\d{2})(?!\d)"),
+)
+_URL_EPOCH_RE = re.compile(r"(?<!\d)(1[5-9]\d{8})(\d{3})?(?!\d)")
+
+
+def dates_in_url(url: str) -> List[datetime]:
+    """همه‌ی تاریخ‌هایی که می‌شود از آدرس بیرون کشید (UTC)."""
+
+    found: List[datetime] = []
+    text = str(url or "")
+
+    for pattern in _URL_DATE_PATTERNS:
+        for year, month, day in pattern.findall(text):
+            try:
+                found.append(
+                    datetime(
+                        int(year),
+                        int(month),
+                        int(day),
+                        tzinfo=timezone.utc,
+                    )
+                )
+            except ValueError:
+                continue
+
+    for seconds, _millis in _URL_EPOCH_RE.findall(text):
+        try:
+            found.append(
+                datetime.fromtimestamp(int(seconds), timezone.utc)
+            )
+        except (ValueError, OverflowError, OSError):
+            continue
+
+    return found
+
+
+def is_stale_video_url(
+    url: str,
+    now: Optional[datetime] = None,
+    max_age_days: int = MAX_VIDEO_AGE_DAYS,
+) -> bool:
+    """
+    آیا آدرس تاریخی دارد که از max_age_days روز قدیمی‌تر است؟
+
+    اگر چند تاریخ در آدرس بود، «تازه‌ترین» ملاک است (محتاطانه: فقط وقتی
+    رد می‌کنیم که هیچ نشانه‌ی تازگی نباشد). آدرس بی‌تاریخ هرگز قدیمی
+    حساب نمی‌شود.
+    """
+
+    dates = dates_in_url(url)
+
+    if not dates:
+        return False
+
+    now = now or datetime.now(timezone.utc)
+
+    return max(dates) < now - timedelta(days=max_age_days)
 
 
 # ----------------------------------------------------------------------
@@ -457,6 +535,13 @@ class MediaCollector:
 
         self.images: List[str] = []
 
+        # رتبه‌ی «شاهد» هر آدرس ویدئو (کمتر = معتبرتر):
+        # 0 متای og:video | 1 JSON تایپ‌شده‌ی VideoObject یا
+        #   <link rel=video_src> | 2 تگ video/source یا کلید «ویدئو»ی
+        #   JSON بدون نوع | 3 ویژگی data-* | 4 آدرسی که فقط در متن خام
+        #   صفحه دیده شد
+        self.rank: Dict[str, int] = {}
+
     # --------------------------------------------------------------
     # URL
     # --------------------------------------------------------------
@@ -485,6 +570,26 @@ class MediaCollector:
             marker in path
             for marker in PLAYER_PATH_MARKERS
         ):
+            return True
+
+        return any(
+            host == host_name
+            or host.endswith("." + host_name)
+            for host_name in EMBED_HOSTS
+        )
+
+    @staticmethod
+    def is_embed_host(
+        url: str,
+    ) -> bool:
+        """
+        فقط player واقعی (YouTube، Vimeo، BBC embed). آدرسی که صرفاً
+        «/video/» دارد معمولاً لینک ناوبری یک ویدئوی دیگر است.
+        """
+
+        host = url_host(url)
+
+        if "/av/embed/" in url_path(url):
             return True
 
         return any(
@@ -542,11 +647,15 @@ class MediaCollector:
         self,
         url: Any,
         media_type: str = "",
+        rank: int = 2,
     ) -> None:
         url = self.absolute(url)
 
         if not url:
             return
+
+        if rank < self.rank.get(url, 99):
+            self.rank[url] = rank
 
         media_type = (
             media_type or ""
@@ -653,6 +762,24 @@ class MediaCollector:
             )
         ]
 
+        # ویدئوی قدیمی (تاریخ در آدرس) رد می‌شود و بقیه به ترتیب
+        # «معتبرترین شاهد»؛ بین هم‌رتبه‌ها ترتیب صفحه حفظ می‌شود.
+        def usable(items):
+            fresh = [
+                item
+                for item in items
+                if not is_stale_video_url(item[0])
+            ]
+
+            return sorted(
+                fresh,
+                key=lambda item: self.rank.get(item[0], 2),
+            )
+
+        progressive = usable(progressive)
+        streams = usable(streams)
+        weak = usable(self.weak)
+
         chosen: Optional[
             Tuple[str, str]
         ] = None
@@ -671,8 +798,8 @@ class MediaCollector:
         # آمده‌اند اینجا قرار دارند.
         # فایل صوتی قبلاً حذف شده است.
         # ----------------------------------------------------------
-        elif self.weak:
-            chosen = self.weak[0]
+        elif weak:
+            chosen = weak[0]
 
         # ----------------------------------------------------------
         # اگر فقط stream داشتیم، خود stream را به عنوان
@@ -814,6 +941,7 @@ def _scan_meta(
             collector.add_video(
                 value,
                 meta.get("type", ""),
+                rank=0,
             )
 
         elif key in OG_IMAGE_NAMES:
@@ -827,6 +955,7 @@ def _scan_meta(
             collector.add_video(
                 value,
                 meta.get("type", ""),
+                rank=0,
             )
 
         elif key in (
@@ -854,7 +983,11 @@ def _scan_data_attributes(
             ):
                 continue
 
-            if not value.strip():
+            # شناسه‌ی عددی (data-video-id="123") آدرس نیست؛ قبلاً به
+            # «ویدئوی» ساختگی https://site/.../123 تبدیل می‌شد.
+            if not value.strip().startswith(
+                URL_PREFIXES
+            ):
                 continue
 
             candidate = collector.absolute(
@@ -883,7 +1016,8 @@ def _scan_data_attributes(
                 or attr != "data-src"
             ):
                 collector.add_video(
-                    candidate
+                    candidate,
+                    rank=3,
                 )
 
 
@@ -913,49 +1047,31 @@ def _scan_raw_urls(
     if not text:
         return
 
-    # URLهای عادی
-    for match in VIDEO_URL_RE.findall(
-        text
+    # URLهای عادی و URLهای escape شده
+    for pattern in (
+        VIDEO_URL_RE,
+        ESCAPED_VIDEO_URL_RE,
     ):
-        candidate = _clean_raw_url(
-            match
-        )
-
-        if looks_like_video(candidate):
-            collector.add_video(
-                candidate
-            )
-
-        elif (
-            collector.is_player_page(
-                candidate
-            )
+        for match in pattern.findall(
+            text
         ):
-            collector.add_embed(
-                candidate
+            candidate = _clean_raw_url(
+                match
             )
 
-    # URLهای escape شده
-    for match in ESCAPED_VIDEO_URL_RE.findall(
-        text
-    ):
-        candidate = _clean_raw_url(
-            match
-        )
+            if looks_like_video(candidate):
+                # فقط در متن خام دیده شده: کم‌اعتبارترین شاهد
+                collector.add_video(
+                    candidate,
+                    rank=4,
+                )
 
-        if looks_like_video(candidate):
-            collector.add_video(
+            elif collector.is_embed_host(
                 candidate
-            )
-
-        elif (
-            collector.is_player_page(
-                candidate
-            )
-        ):
-            collector.add_embed(
-                candidate
-            )
+            ):
+                collector.add_embed(
+                    candidate
+                )
 
 
 # ----------------------------------------------------------------------
@@ -1023,6 +1139,7 @@ def scan_json(
             collector.add_video(
                 value,
                 media_type,
+                rank=1 if is_video_node else 2,
             )
             return
 
@@ -1042,6 +1159,7 @@ def scan_json(
                 collector.add_video(
                     value,
                     media_type,
+                    rank=1 if is_video_node else 4,
                 )
 
             elif looks_like_image(
@@ -1072,6 +1190,7 @@ def scan_json(
                 collector.add_video(
                     value,
                     media_type,
+                    rank=1,
                 )
 
             elif is_image_node:
@@ -1086,6 +1205,7 @@ def scan_json(
                 collector.add_video(
                     value,
                     media_type,
+                    rank=4,
                 )
 
             return
@@ -1311,6 +1431,7 @@ def _scan_links(
             collector.add_video(
                 candidate,
                 media_type,
+                rank=1 if "video" in rel else 3,
             )
 
         elif (
