@@ -708,7 +708,7 @@ async def _encode_watermarked_video(
         "[0:v][logo]overlay="
         f"x=main_w*{LOGO_MARGIN_RATIO}:"
         f"y=main_h-overlay_h-main_h*{LOGO_MARGIN_RATIO}:"
-        "format=auto[v]"
+        "format=auto:shortest=1[v]"
     )
 
     command = [
@@ -811,6 +811,19 @@ async def _encode_watermarked_video(
 
             "-max_muxing_queue_size",
             "2048",
+
+            # --------------------------------------------------
+            # پایان خروجی
+            #
+            # لوگو با -loop 1 یک ورودی بی‌پایان است؛ بدون این دو
+            # گزینه ffmpeg هیچ‌وقت تمام نمی‌شد و بعد از
+            # PROCESS_TIMEOUT_SECONDS کشته می‌شد (واترمارک همیشه
+            # شکست می‌خورد). -t هم سقف ایمنی است.
+            # --------------------------------------------------
+
+            "-shortest",
+            "-t",
+            str(MAX_DURATION_SECONDS + 10),
 
             # --------------------------------------------------
             # خروجی
