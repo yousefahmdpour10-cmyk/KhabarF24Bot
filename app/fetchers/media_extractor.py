@@ -159,9 +159,11 @@ VIDEO_URL_RE = re.compile(
     re.IGNORECASE,
 )
 
-# URLهای escape شده داخل JSON/JS
+# URLهای escape شده داخل JSON/JS (http:\/\/cdn.com\/a\/b.m3u8). اسلش
+# escape‌شده (\/) و \u002F و \u0026 جزو آدرس‌اند؛ قبلاً الگو در اولین
+# بک‌اسلش قطع می‌شد و چنین آدرسی هیچ‌وقت پیدا نمی‌شد.
 ESCAPED_VIDEO_URL_RE = re.compile(
-    r"""https?:\\?/\\?/[^\s"'<>\\]+""",
+    r"""https?:(?:\\?/|\\u002[Ff]){2}(?:[^\s"'<>\\]|\\/|\\u002[Ff]|\\u0026)+""",
     re.IGNORECASE,
 )
 
