@@ -1,0 +1,41 @@
+name: Aparat Check
+
+# آزمایش دستی: آپارات از سرور GitHub چه چیزی می‌دهد؟ چیزی منتشر نمی‌کند.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "نام کاربری کانال آپارات"
+        default: "ft360_ir"
+      video_url:
+        description: "اختیاری: آدرس یک صفحه‌ی ویدئو (https://www.aparat.com/v/...)"
+        default: ""
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: KhabarF24-v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Aparat check
+        env:
+          APARAT_CHANNEL: ${{ github.event.inputs.channel }}
+          APARAT_VIDEO_URL: ${{ github.event.inputs.video_url }}
+        run: python tools/aparat_check.py
