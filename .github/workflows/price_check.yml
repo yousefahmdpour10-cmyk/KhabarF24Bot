@@ -1,0 +1,23 @@
+name: Price Check
+
+# آزمایش دستی: کدام منبع قیمت از سرور GitHub باز می‌شود؟ چیزی منتشر نمی‌کند.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: KhabarF24-v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Price check
+        run: python tools/price_check.py
