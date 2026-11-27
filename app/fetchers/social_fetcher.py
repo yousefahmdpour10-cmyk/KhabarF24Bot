@@ -353,6 +353,13 @@ class SocialFetcher(BaseFetcher):
         image_url = self._extract_image(message)
         video_url = self._extract_video(message)
 
+        # پست ویدئویی عکس جداگانه ندارد؛ عکس بندانگشتی خود ویدئو
+        # (نه آواتار کانال) تصویر پست می‌شود.
+        if video_url and not image_url:
+            image_url = self._extract_video_thumb(message)
+
+        video_seconds = self._extract_video_duration(message)
+
         video_content_type = self._extract_video_content_type(
             message
         )
@@ -438,6 +445,7 @@ class SocialFetcher(BaseFetcher):
                 "video_url": video_url or "",
                 "video_content_type": video_content_type or "",
                 "has_video": bool(video_url),
+                "video_duration": video_seconds,
 
                 "image_url": image_url or "",
                 "has_image": bool(image_url),
@@ -448,12 +456,14 @@ class SocialFetcher(BaseFetcher):
 
         logger.info(
             "TELEGRAM_MEDIA_PARSED | source=%s | "
-            "image=%s | video=%s | video_type=%s | text_length=%d",
+            "image=%s | video=%s | video_type=%s | text_length=%d | "
+            "video_seconds=%d",
             self.source.name,
             bool(image_url),
             bool(video_url),
             video_content_type or "-",
             len(content),
+            video_seconds,
         )
 
         return news
@@ -599,26 +609,120 @@ class SocialFetcher(BaseFetcher):
             '[class*="photo"] img',
             '[class*="media"] img',
         ):
-            image = message.select_one(selector)
+            for image in message.select(selector):
 
-            if not image:
+                # آواتار کانال (tgme_widget_message_user_photo)
+                # تصویر خبر نیست. قبلاً selector بالا همین را
+                # برای هر پستِ بدون عکس برمی‌داشت.
+                if SocialFetcher._is_avatar(image):
+                    continue
+
+                for attribute in (
+                    "src",
+                    "data-src",
+                    "data-original",
+                ):
+                    value = image.get(attribute)
+
+                    value = SocialFetcher._clean_media_url(
+                        value
+                    )
+
+                    if value:
+                        return value
+
+        return None
+
+    @staticmethod
+    def _is_avatar(image) -> bool:
+        """آیا این img داخل بخش «کاربر/آواتار» پست است؟"""
+
+        for parent in image.parents:
+            classes = (
+                parent.get("class") or []
+                if hasattr(parent, "get")
+                else []
+            )
+
+            if any(
+                str(name).startswith("tgme_widget_message_user")
+                for name in classes
+            ):
+                return True
+
+        return False
+
+    # ==================================================
+    # Video thumbnail / duration
+    # ==================================================
+
+    @staticmethod
+    def _extract_video_thumb(message) -> Optional[str]:
+        """عکس بندانگشتیِ ویدئوی پست (background-image یا poster)."""
+
+        for selector in (
+            ".tgme_widget_message_video_thumb",
+            ".tgme_widget_message_roundvideo_thumb",
+            ".tgme_widget_message_video_player",
+        ):
+            element = message.select_one(selector)
+
+            if not element:
                 continue
 
-            for attribute in (
-                "src",
-                "data-src",
-                "data-original",
-            ):
-                value = image.get(attribute)
+            match = re.search(
+                r"""background-image\s*:\s*url\(\s*(['"]?)(.*?)\1\s*\)""",
+                element.get("style", ""),
+                re.IGNORECASE,
+            )
 
+            if match:
                 value = SocialFetcher._clean_media_url(
-                    value
+                    match.group(2).strip()
                 )
 
                 if value:
                     return value
 
+        video = message.select_one(
+            ".tgme_widget_message video"
+        )
+
+        if video:
+            value = SocialFetcher._clean_media_url(
+                video.get("poster")
+            )
+
+            if value:
+                return value
+
         return None
+
+    @staticmethod
+    def _extract_video_duration(message) -> int:
+        """مدت ویدئو به ثانیه («3:25» ← 205)؛ نامشخص ← 0."""
+
+        element = message.select_one(
+            ".message_video_duration, .js-message_video_duration"
+        )
+
+        if not element:
+            return 0
+
+        try:
+            numbers = [
+                int(part)
+                for part in element.get_text(strip=True).split(":")
+            ]
+        except ValueError:
+            return 0
+
+        seconds = 0
+
+        for number in numbers:
+            seconds = seconds * 60 + number
+
+        return seconds
 
     # ==================================================
     # Video
@@ -831,7 +935,11 @@ class SocialFetcher(BaseFetcher):
     ) -> Optional[datetime]:
         """استخراج زمان انتشار پست."""
 
-        time_element = message.select_one("time")
+        # در پست ویدئویی اولین <time> «مدت ویدئو» است و datetime ندارد؛
+        # پس فقط <time datetime=...> (تاریخ انتشار) را می‌گیریم.
+        time_element = message.select_one(
+            ".tgme_widget_message_date time[datetime], time[datetime]"
+        )
 
         if not time_element:
             return None
