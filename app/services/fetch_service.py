@@ -284,6 +284,58 @@ class FetchService:
                         f"(آواتار یا لوگو): {url[:80]}"
                     )
 
+        # --------------------------------------------------
+        # ویدئوی مشترک بین چند خبر «متفاوت» یک منبع
+        #
+        # اگر یک فایل ویدئو برای دو خبر یا بیشتر از همین منبع آمده،
+        # ویدئوی خود خبر نیست؛ ویدئوی ویژه‌ی صفحه (مثلاً «ویدئوی
+        # روز») است که در همه‌ی صفحه‌ها تکرار می‌شود. مثال DW: یک
+        # master.m3u8 درباره‌ی اعتراض کردهای عراق به سه خبر بی‌ربط
+        # (موسیقی عربستان، حمله‌ی سایبری به فیفا، غرق شدن تانکر)
+        # چسبیده بود. (دو آیتم با «آدرس یکسان» یک خبرند، نه دو خبر.)
+        # --------------------------------------------------
+
+        owners = {}
+
+        for item in items:
+
+            video = getattr(
+                item,
+                "video_url",
+                "",
+            ) or ""
+
+            if video:
+
+                key = str(
+                    getattr(item, "url", "")
+                    or getattr(item, "title", "")
+                )
+
+                owners.setdefault(
+                    video,
+                    set(),
+                ).add(key)
+
+        for video, keys in owners.items():
+
+            if len(keys) < 2:
+                continue
+
+            for item in items:
+
+                if getattr(item, "video_url", "") == video:
+
+                    item.video_url = ""
+
+                    if hasattr(item, "video_content_type"):
+                        item.video_content_type = ""
+
+            logger.info(
+                f"{source.name}: ویدئوی مشترک بین "
+                f"{len(keys)} خبر متفاوت حذف شد: {video[:80]}"
+            )
+
         return items
 
     # ======================================================
